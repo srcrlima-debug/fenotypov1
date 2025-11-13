@@ -35,7 +35,7 @@ const Home = () => {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-6">
-      <div className="max-w-2xl w-full text-center space-y-8 animate-fade-in">
+      <div className="max-w-3xl w-full text-center space-y-6 animate-fade-in">
         {user && (
           <div className="absolute top-6 right-6 flex gap-2">
             {isAdmin && (
@@ -59,20 +59,17 @@ const Home = () => {
           </div>
         )}
 
-        <div className="mb-8">
+        <div className="mb-6 animate-scale-in">
           <img src={logoVertical} alt="Fenotypo" className="h-56 mx-auto" />
         </div>
         
-        <div className="space-y-4">
-          <h1 className="text-5xl font-bold text-foreground tracking-tight">
-            Treinamento de Avaliação Fenotípica
-          </h1>
-          <p className="text-xl text-muted-foreground max-w-lg mx-auto">
-            Desenvolva suas habilidades através de um programa estruturado de 30 páginas
+        <div className="space-y-4 px-4">
+          <p className="text-lg text-foreground leading-relaxed max-w-2xl mx-auto">
+            <span className="font-semibold">FENOTYPO</span> é uma aplicação web desenvolvida pelo Prof. Dr. Cristhian Lima, doutor em Ciências Sociais, para treinar pessoas que irão atuar em bancas de confirmação fenotípica para acesso por meio de ações afirmativas.
           </p>
         </div>
 
-        <div className="pt-4 space-y-4">
+        <div className="pt-6 space-y-4">
           {!loading && !user ? (
             <div className="space-y-3">
               <p className="text-muted-foreground">Faça login para iniciar o treinamento</p>
@@ -103,7 +100,7 @@ const Home = () => {
           )}
         </div>
 
-        <div className="pt-8 flex items-center justify-center gap-8 text-sm text-muted-foreground">
+        <div className="pt-6 flex items-center justify-center gap-8 text-sm text-muted-foreground flex-wrap">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-primary" />
             <span>30 Páginas</span>
