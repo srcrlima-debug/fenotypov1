@@ -17,8 +17,13 @@ import {
   Award,
   XCircle,
   Timer,
-  Target
+  Target,
+  Download,
+  FileText,
+  AlertTriangle
 } from 'lucide-react';
+import jsPDF from 'jspdf';
+import Papa from 'papaparse';
 import {
   ChartContainer,
   ChartTooltip,
@@ -87,6 +92,32 @@ interface KPIs {
   consenso: number;
 }
 
+interface ConsensusData {
+  fotoId: number;
+  consenso: number;
+  baixoConsenso: boolean;
+  viesPorGenero?: { [key: string]: number };
+  viesPorFaixaEtaria?: { [key: string]: number };
+  viesPorRegiao?: { [key: string]: number };
+}
+
+interface TemporalData {
+  sequencia: number;
+  tempoMedio: number;
+  respostasDeferidas: number;
+  respostasIndeferidas: number;
+}
+
+interface CrossAnalysisData {
+  genero: string;
+  faixaEtaria: string;
+  regiao: string;
+  totalDeferido: number;
+  totalIndeferido: number;
+  total: number;
+  percentDeferido: number;
+}
+
 const AdminDashboard = () => {
   const { sessionId } = useParams<{ sessionId: string }>();
   const navigate = useNavigate();
@@ -101,6 +132,10 @@ const AdminDashboard = () => {
     regiao: {},
   });
   const [kpis, setKPIs] = useState<KPIs | null>(null);
+  const [consensusData, setConsensusData] = useState<ConsensusData[]>([]);
+  const [temporalData, setTemporalData] = useState<TemporalData[]>([]);
+  const [crossAnalysis, setCrossAnalysis] = useState<CrossAnalysisData[]>([]);
+  const [rawEvaluations, setRawEvaluations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [dateFilter, setDateFilter] = useState({ start: '', end: '' });
 
@@ -274,6 +309,109 @@ const AdminDashboard = () => {
 
       setKPIs({ mostDeferida, mostIndeferida, longestTime, consenso });
 
+      // Store raw evaluations for export
+      setRawEvaluations(evaluations || []);
+
+      // Calculate Consensus Analysis with demographic bias
+      const consensusArray: ConsensusData[] = [];
+      for (let i = 1; i <= 30; i++) {
+        const photoEvals = evaluations?.filter(e => e.foto_id === i) || [];
+        const total = photoEvals.length;
+        
+        if (total === 0) continue;
+
+        const deferidos = photoEvals.filter(e => e.resposta === 'DEFERIDO').length;
+        const indeferidos = photoEvals.filter(e => e.resposta === 'INDEFERIDO').length;
+        const maxVotes = Math.max(deferidos, indeferidos);
+        const consensoPercent = (maxVotes / total) * 100;
+
+        // Calculate bias by demographic
+        const viesPorGenero: { [key: string]: number } = {};
+        const viesPorFaixaEtaria: { [key: string]: number } = {};
+        const viesPorRegiao: { [key: string]: number } = {};
+
+        photoEvals.forEach(e => {
+          if (e.genero) {
+            if (!viesPorGenero[e.genero]) viesPorGenero[e.genero] = 0;
+            if (e.resposta === 'DEFERIDO') viesPorGenero[e.genero]++;
+          }
+          if (e.faixa_etaria) {
+            if (!viesPorFaixaEtaria[e.faixa_etaria]) viesPorFaixaEtaria[e.faixa_etaria] = 0;
+            if (e.resposta === 'DEFERIDO') viesPorFaixaEtaria[e.faixa_etaria]++;
+          }
+          if (e.regiao) {
+            if (!viesPorRegiao[e.regiao]) viesPorRegiao[e.regiao] = 0;
+            if (e.resposta === 'DEFERIDO') viesPorRegiao[e.regiao]++;
+          }
+        });
+
+        // Convert to percentages
+        Object.keys(viesPorGenero).forEach(key => {
+          const totalForGroup = photoEvals.filter(e => e.genero === key).length;
+          viesPorGenero[key] = (viesPorGenero[key] / totalForGroup) * 100;
+        });
+
+        consensusArray.push({
+          fotoId: i,
+          consenso: consensoPercent,
+          baixoConsenso: consensoPercent < 70,
+          viesPorGenero,
+          viesPorFaixaEtaria,
+          viesPorRegiao,
+        });
+      }
+      setConsensusData(consensusArray);
+
+      // Calculate Temporal Analysis (evaluator fatigue)
+      const sortedEvals = [...(evaluations || [])].sort((a, b) => 
+        new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      );
+
+      const temporalMap: { [key: number]: { tempos: number[]; deferidos: number; indeferidos: number } } = {};
+      sortedEvals.forEach((evaluation, index) => {
+        const sequencia = Math.floor(index / 100); // Group by 100 evaluations
+        if (!temporalMap[sequencia]) {
+          temporalMap[sequencia] = { tempos: [], deferidos: 0, indeferidos: 0 };
+        }
+        temporalMap[sequencia].tempos.push(evaluation.tempo_gasto);
+        if (evaluation.resposta === 'DEFERIDO') temporalMap[sequencia].deferidos++;
+        else if (evaluation.resposta === 'INDEFERIDO') temporalMap[sequencia].indeferidos++;
+      });
+
+      const temporalArray: TemporalData[] = Object.entries(temporalMap).map(([seq, data]) => ({
+        sequencia: parseInt(seq),
+        tempoMedio: data.tempos.reduce((a, b) => a + b, 0) / data.tempos.length,
+        respostasDeferidas: data.deferidos,
+        respostasIndeferidas: data.indeferidos,
+      }));
+      setTemporalData(temporalArray);
+
+      // Calculate Cross Analysis (Gênero x Idade x Região)
+      const crossMap: { [key: string]: CrossAnalysisData } = {};
+      evaluations?.forEach(evaluation => {
+        const key = `${evaluation.genero || 'N/A'}_${evaluation.faixa_etaria || 'N/A'}_${evaluation.regiao || 'N/A'}`;
+        if (!crossMap[key]) {
+          crossMap[key] = {
+            genero: evaluation.genero || 'N/A',
+            faixaEtaria: evaluation.faixa_etaria || 'N/A',
+            regiao: evaluation.regiao || 'N/A',
+            totalDeferido: 0,
+            totalIndeferido: 0,
+            total: 0,
+            percentDeferido: 0,
+          };
+        }
+        crossMap[key].total++;
+        if (evaluation.resposta === 'DEFERIDO') crossMap[key].totalDeferido++;
+        else if (evaluation.resposta === 'INDEFERIDO') crossMap[key].totalIndeferido++;
+      });
+
+      const crossArray = Object.values(crossMap).map(item => ({
+        ...item,
+        percentDeferido: item.total > 0 ? (item.totalDeferido / item.total) * 100 : 0,
+      }));
+      setCrossAnalysis(crossArray.sort((a, b) => b.total - a.total));
+
     } catch (error: any) {
       toast({
         title: 'Erro ao carregar dados',
@@ -287,6 +425,64 @@ const AdminDashboard = () => {
 
   const formatTime = (seconds: number) => {
     return `${Math.round(seconds)}s`;
+  };
+
+  const exportToCSV = () => {
+    const csv = Papa.unparse(rawEvaluations);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `avaliacao_${session?.nome}_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    toast({
+      title: 'Exportado com sucesso',
+      description: 'Dados exportados para CSV',
+    });
+  };
+
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+    
+    // Title
+    doc.setFontSize(18);
+    doc.text(`Relatório: ${session?.nome}`, 20, 20);
+    
+    doc.setFontSize(12);
+    doc.text(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 20, 30);
+    
+    // Stats
+    doc.setFontSize(14);
+    doc.text('Estatísticas Gerais', 20, 45);
+    doc.setFontSize(10);
+    doc.text(`Total de Participantes: ${stats?.totalParticipants}`, 20, 55);
+    doc.text(`Avaliações Concluídas: ${stats?.totalEvaluations}`, 20, 62);
+    doc.text(`Taxa de Conclusão: ${stats?.completionRate.toFixed(1)}%`, 20, 69);
+    doc.text(`Tempo Médio: ${formatTime(stats?.averageTime || 0)}`, 20, 76);
+    
+    // KPIs
+    doc.setFontSize(14);
+    doc.text('Principais Indicadores', 20, 91);
+    doc.setFontSize(10);
+    doc.text(`Foto Mais Deferida: #${kpis?.mostDeferida.fotoId} (${kpis?.mostDeferida.percent.toFixed(1)}%)`, 20, 101);
+    doc.text(`Foto Mais Indeferida: #${kpis?.mostIndeferida.fotoId} (${kpis?.mostIndeferida.percent.toFixed(1)}%)`, 20, 108);
+    doc.text(`Maior Tempo Médio: #${kpis?.longestTime.fotoId} (${formatTime(kpis?.longestTime.time || 0)})`, 20, 115);
+    doc.text(`Consenso Geral: ${kpis?.consenso.toFixed(1)}%`, 20, 122);
+    
+    // Low consensus photos
+    doc.setFontSize(14);
+    doc.text('Fotos com Baixo Consenso (<70%)', 20, 137);
+    doc.setFontSize(10);
+    const lowConsensus = consensusData.filter(c => c.baixoConsenso);
+    lowConsensus.slice(0, 10).forEach((item, idx) => {
+      doc.text(`Foto #${item.fotoId}: ${item.consenso.toFixed(1)}% de consenso`, 20, 147 + (idx * 7));
+    });
+    
+    doc.save(`relatorio_${session?.nome}_${new Date().toISOString().split('T')[0]}.pdf`);
+    
+    toast({
+      title: 'Relatório gerado',
+      description: 'PDF baixado com sucesso',
+    });
   };
 
   if (loading) {
@@ -620,6 +816,184 @@ const AdminDashboard = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Export Buttons */}
+        <div className="flex gap-4 justify-end">
+          <Button onClick={exportToCSV} variant="outline" className="gap-2">
+            <Download className="h-4 w-4" />
+            Exportar CSV
+          </Button>
+          <Button onClick={exportToPDF} variant="default" className="gap-2">
+            <FileText className="h-4 w-4" />
+            Gerar Relatório PDF
+          </Button>
+        </div>
+
+        {/* Consensus Analysis */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Target className="h-5 w-5" />
+              Análise de Consenso
+            </CardTitle>
+            <CardDescription>
+              Fotos com baixo consenso (&lt;70%) e análise de viés demográfico
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[100px]">Foto</TableHead>
+                    <TableHead>Consenso</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Viés por Gênero</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {consensusData
+                    .filter(c => c.baixoConsenso)
+                    .slice(0, 10)
+                    .map((item) => (
+                      <TableRow key={item.fotoId}>
+                        <TableCell className="font-medium">
+                          #{item.fotoId}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold">{item.consenso.toFixed(1)}%</span>
+                            <Progress value={item.consenso} className="w-20" />
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2 text-destructive">
+                            <AlertTriangle className="h-4 w-4" />
+                            Baixo Consenso
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-xs space-y-1">
+                            {Object.entries(item.viesPorGenero || {}).map(([genero, percent]) => (
+                              <div key={genero}>
+                                {genero}: {percent.toFixed(1)}% deferido
+                              </div>
+                            ))}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                </TableBody>
+              </Table>
+              {consensusData.filter(c => c.baixoConsenso).length === 0 && (
+                <div className="p-8 text-center text-muted-foreground">
+                  Todas as fotos têm consenso satisfatório (&gt;70%)
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Temporal Analysis */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5" />
+              Análise Temporal - Fadiga do Avaliador
+            </CardTitle>
+            <CardDescription>
+              Mudança no tempo de resposta ao longo da avaliação
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer
+              config={{
+                tempo: { label: 'Tempo Médio (s)', color: 'hsl(var(--primary))' },
+              }}
+              className="h-[300px]"
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={temporalData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis 
+                    dataKey="sequencia" 
+                    stroke="hsl(var(--foreground))" 
+                    label={{ value: 'Sequência (a cada 100 avaliações)', position: 'insideBottom', offset: -5 }} 
+                  />
+                  <YAxis stroke="hsl(var(--foreground))" label={{ value: 'Tempo (s)', angle: -90, position: 'insideLeft' }} />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Line 
+                    type="monotone" 
+                    dataKey="tempoMedio" 
+                    stroke="hsl(var(--primary))" 
+                    strokeWidth={2} 
+                    dot={{ fill: 'hsl(var(--primary))' }} 
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+            <div className="mt-4 p-4 bg-muted rounded-lg">
+              <p className="text-sm text-muted-foreground">
+                {temporalData.length > 1 && temporalData[0].tempoMedio > temporalData[temporalData.length - 1].tempoMedio
+                  ? '📉 Observa-se uma tendência de respostas mais rápidas ao longo do tempo, sugerindo possível fadiga ou familiarização com a tarefa.'
+                  : '📈 O tempo de resposta se mantém relativamente estável ao longo da avaliação.'}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Cross Analysis */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Comparação entre Perfis Demográficos
+            </CardTitle>
+            <CardDescription>
+              Cruzamento: Gênero x Faixa Etária x Região
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="rounded-md border max-h-[500px] overflow-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Gênero</TableHead>
+                    <TableHead>Faixa Etária</TableHead>
+                    <TableHead>Região</TableHead>
+                    <TableHead>Total Avaliações</TableHead>
+                    <TableHead>Deferidos</TableHead>
+                    <TableHead>Indeferidos</TableHead>
+                    <TableHead>% Deferido</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {crossAnalysis.slice(0, 20).map((item, idx) => (
+                    <TableRow key={idx}>
+                      <TableCell>{item.genero}</TableCell>
+                      <TableCell>{item.faixaEtaria}</TableCell>
+                      <TableCell>{item.regiao}</TableCell>
+                      <TableCell className="font-semibold">{item.total}</TableCell>
+                      <TableCell className="text-accent">{item.totalDeferido}</TableCell>
+                      <TableCell className="text-destructive">{item.totalIndeferido}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold">{item.percentDeferido.toFixed(1)}%</span>
+                          <Progress value={item.percentDeferido} className="w-16" />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            {crossAnalysis.length > 20 && (
+              <p className="text-sm text-muted-foreground mt-4">
+                Mostrando top 20 combinações de {crossAnalysis.length} total
+              </p>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Photo Analysis */}
         <Card>
