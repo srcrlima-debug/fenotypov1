@@ -1,10 +1,14 @@
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { CheckCircle2, Home, RotateCcw } from "lucide-react";
+import { CheckCircle2, Home, RotateCcw, CheckCircle, XCircle } from "lucide-react";
+import { useAssessment } from "@/contexts/AssessmentContext";
+import { Card } from "@/components/ui/card";
 
 const Results = () => {
   const navigate = useNavigate();
+  const { assessments, getStats, resetAssessments } = useAssessment();
+  const stats = getStats();
 
   // Disable browser back button
   useEffect(() => {
@@ -21,6 +25,7 @@ const Results = () => {
   }, []);
 
   const handleRestart = () => {
+    resetAssessments();
     navigate("/training/1");
   };
 
@@ -45,21 +50,53 @@ const Results = () => {
         </div>
 
         <div className="bg-white/10 backdrop-blur-sm rounded-xl p-8 border border-white/20">
-          <div className="grid grid-cols-3 gap-6 text-primary-foreground">
+          <div className="grid grid-cols-2 gap-8 text-primary-foreground mb-6">
             <div className="space-y-2">
-              <div className="text-3xl font-bold">30</div>
-              <div className="text-sm opacity-80">Páginas Completas</div>
+              <div className="flex items-center gap-2 justify-center">
+                <CheckCircle className="w-8 h-8" />
+                <div className="text-4xl font-bold">{stats.deferido}</div>
+              </div>
+              <div className="text-sm opacity-80">Deferidos</div>
             </div>
             <div className="space-y-2">
-              <div className="text-3xl font-bold">100%</div>
-              <div className="text-sm opacity-80">Progresso</div>
-            </div>
-            <div className="space-y-2">
-              <div className="text-3xl font-bold">✓</div>
-              <div className="text-sm opacity-80">Certificado</div>
+              <div className="flex items-center gap-2 justify-center">
+                <XCircle className="w-8 h-8" />
+                <div className="text-4xl font-bold">{stats.indeferido}</div>
+              </div>
+              <div className="text-sm opacity-80">Indeferidos</div>
             </div>
           </div>
         </div>
+
+        {/* Detailed Results List */}
+        {assessments.length > 0 && (
+          <Card className="bg-white/10 backdrop-blur-sm border-white/20 p-6">
+            <h3 className="text-xl font-bold text-primary-foreground mb-4">
+              Resumo das Avaliações
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-64 overflow-y-auto">
+              {assessments.map((assessment) => (
+                <div
+                  key={assessment.page}
+                  className={`flex items-center justify-between p-3 rounded-lg ${
+                    assessment.decision === "DEFERIDO"
+                      ? "bg-green-600/20 border border-green-500/30"
+                      : "bg-red-600/20 border border-red-500/30"
+                  }`}
+                >
+                  <span className="text-primary-foreground font-medium">
+                    Página {assessment.page}
+                  </span>
+                  {assessment.decision === "DEFERIDO" ? (
+                    <CheckCircle className="w-5 h-5 text-green-300" />
+                  ) : (
+                    <XCircle className="w-5 h-5 text-red-300" />
+                  )}
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
 
         <div className="pt-4 flex flex-col sm:flex-row gap-4 justify-center">
           <Button

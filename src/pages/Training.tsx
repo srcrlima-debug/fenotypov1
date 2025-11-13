@@ -2,11 +2,13 @@ import { useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { ArrowRight, BookOpen } from "lucide-react";
+import { BookOpen, CheckCircle, XCircle } from "lucide-react";
+import { useAssessment } from "@/contexts/AssessmentContext";
 
 const Training = () => {
   const { page } = useParams<{ page: string }>();
   const navigate = useNavigate();
+  const { addAssessment } = useAssessment();
   const currentPage = parseInt(page || "1");
   const totalPages = 30;
   const progress = (currentPage / totalPages) * 100;
@@ -32,7 +34,8 @@ const Training = () => {
     }
   }, [currentPage, navigate]);
 
-  const handleNext = () => {
+  const handleDecision = (decision: "DEFERIDO" | "INDEFERIDO") => {
+    addAssessment(currentPage, decision);
     if (currentPage < totalPages) {
       navigate(`/training/${currentPage + 1}`);
     } else {
@@ -68,31 +71,51 @@ const Training = () => {
 
       {/* Main Content */}
       <div className="flex-1 flex items-center justify-center p-6">
-        <div className="max-w-3xl w-full space-y-8 animate-fade-in">
-          <div className="bg-card rounded-xl border border-border p-12 shadow-soft">
-            <div className="text-center space-y-6">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-primary text-primary-foreground text-2xl font-bold shadow-soft">
-                {currentPage}
+        <div className="max-w-4xl w-full space-y-8 animate-fade-in">
+          {/* Image Display Area */}
+          <div className="bg-card rounded-xl border border-border shadow-soft overflow-hidden">
+            <div className="aspect-video bg-muted flex items-center justify-center">
+              <div className="text-center space-y-3">
+                <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-primary text-primary-foreground text-3xl font-bold shadow-soft">
+                  {currentPage}
+                </div>
+                <p className="text-muted-foreground font-medium">
+                  Foto para avaliação fenotípica #{currentPage}
+                </p>
               </div>
-              
-              <h1 className="text-4xl font-bold text-foreground">
-                Página {currentPage}
-              </h1>
-              
-              <p className="text-lg text-muted-foreground max-w-md mx-auto">
-                Este é o conteúdo da página {currentPage} do treinamento de avaliação fenotípica.
-              </p>
             </div>
           </div>
 
-          <div className="flex justify-center">
+          {/* Assessment Instruction */}
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-foreground mb-2">
+              Avalie a imagem acima
+            </h2>
+            <p className="text-muted-foreground">
+              Escolha uma das opções abaixo para continuar
+            </p>
+          </div>
+
+          {/* Decision Buttons */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <Button
-              onClick={handleNext}
+              onClick={() => handleDecision("DEFERIDO")}
               size="lg"
-              className="bg-gradient-primary hover:opacity-90 text-primary-foreground shadow-soft px-8 py-6 h-auto text-lg"
+              className="h-auto py-8 flex flex-col gap-3 bg-green-600 hover:bg-green-700 text-white shadow-soft"
             >
-              {currentPage < totalPages ? "Próxima Página" : "Ver Resultados"}
-              <ArrowRight className="ml-2 h-5 w-5" />
+              <CheckCircle className="w-10 h-10" />
+              <span className="text-2xl font-bold">DEFERIDO</span>
+              <span className="text-sm opacity-90">Aprovar avaliação</span>
+            </Button>
+
+            <Button
+              onClick={() => handleDecision("INDEFERIDO")}
+              size="lg"
+              className="h-auto py-8 flex flex-col gap-3 bg-red-600 hover:bg-red-700 text-white shadow-soft"
+            >
+              <XCircle className="w-10 h-10" />
+              <span className="text-2xl font-bold">INDEFERIDO</span>
+              <span className="text-sm opacity-90">Rejeitar avaliação</span>
             </Button>
           </div>
         </div>
