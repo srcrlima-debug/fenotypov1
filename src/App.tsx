@@ -13,6 +13,7 @@ import Login from "./pages/Login";
 import Registro from "./pages/Registro";
 import Admin from "./pages/Admin";
 import AdminDashboard from "./pages/AdminDashboard";
+import AdminLiveControl from "./pages/AdminLiveControl";
 import Training from "./pages/Training";
 import SessionTraining from "./pages/SessionTraining";
 import Results from "./pages/Results";
@@ -40,13 +41,21 @@ const App = () => (
                   </AdminRoute>
                 } 
               />
-              <Route 
-                path="/admin/dashboard/:sessionId" 
+              <Route
+                path="/admin/dashboard/:sessionId"
                 element={
                   <AdminRoute>
                     <AdminDashboard />
                   </AdminRoute>
-                } 
+                }
+              />
+              <Route
+                path="/admin/live/:sessionId"
+                element={
+                  <AdminRoute>
+                    <AdminLiveControl />
+                  </AdminRoute>
+                }
               />
               <Route 
                 path="/treino/:sessionId" 
