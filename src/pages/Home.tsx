@@ -1,10 +1,11 @@
 import { Button } from "@/components/ui/button";
 import { useNavigate, Link } from "react-router-dom";
-import { BookOpen, ArrowRight, LogOut, Shield } from "lucide-react";
+import { ArrowRight, LogOut, Shield } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdmin } from "@/hooks/useAdmin";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import logoHorizontal from "@/assets/logo-fenotypo-horiz.png";
 
 const Home = () => {
   const navigate = useNavigate();
@@ -58,8 +59,8 @@ const Home = () => {
           </div>
         )}
 
-        <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-primary mb-4 shadow-soft">
-          <BookOpen className="w-10 h-10 text-primary-foreground" />
+        <div className="mb-8">
+          <img src={logoHorizontal} alt="Fenotypo" className="h-24 mx-auto" />
         </div>
         
         <div className="space-y-4">
