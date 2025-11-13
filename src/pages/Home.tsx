@@ -1,13 +1,15 @@
 import { Button } from "@/components/ui/button";
 import { useNavigate, Link } from "react-router-dom";
-import { BookOpen, ArrowRight, LogOut } from "lucide-react";
+import { BookOpen, ArrowRight, LogOut, Shield } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAdmin } from "@/hooks/useAdmin";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 const Home = () => {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
+  const { isAdmin } = useAdmin();
   const { toast } = useToast();
 
   const handleStart = () => {
@@ -34,7 +36,17 @@ const Home = () => {
     <div className="min-h-screen bg-background flex items-center justify-center p-6">
       <div className="max-w-2xl w-full text-center space-y-8 animate-fade-in">
         {user && (
-          <div className="absolute top-6 right-6">
+          <div className="absolute top-6 right-6 flex gap-2">
+            {isAdmin && (
+              <Button
+                onClick={() => navigate('/admin')}
+                variant="outline"
+                size="sm"
+              >
+                <Shield className="mr-2 h-4 w-4" />
+                Admin
+              </Button>
+            )}
             <Button
               onClick={handleLogout}
               variant="outline"

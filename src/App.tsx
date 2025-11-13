@@ -7,10 +7,13 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AssessmentProvider } from "./contexts/AssessmentContext";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { AdminRoute } from "./components/AdminRoute";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Registro from "./pages/Registro";
+import Admin from "./pages/Admin";
 import Training from "./pages/Training";
+import SessionTraining from "./pages/SessionTraining";
 import Results from "./pages/Results";
 import NotFound from "./pages/NotFound";
 
@@ -28,6 +31,22 @@ const App = () => (
               <Route path="/" element={<Home />} />
               <Route path="/login" element={<Login />} />
               <Route path="/registro" element={<Registro />} />
+              <Route 
+                path="/admin" 
+                element={
+                  <AdminRoute>
+                    <Admin />
+                  </AdminRoute>
+                } 
+              />
+              <Route 
+                path="/treino/:sessionId" 
+                element={
+                  <ProtectedRoute>
+                    <SessionTraining />
+                  </ProtectedRoute>
+                } 
+              />
               <Route 
                 path="/training/:page" 
                 element={
