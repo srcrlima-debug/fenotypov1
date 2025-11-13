@@ -60,7 +60,7 @@ const Home = () => {
         )}
 
         <div className="mb-8">
-          <img src={logoVertical} alt="Fenotypo" className="h-32 mx-auto" />
+          <img src={logoVertical} alt="Fenotypo" className="h-56 mx-auto" />
         </div>
         
         <div className="space-y-4">
