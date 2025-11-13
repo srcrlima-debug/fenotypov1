@@ -2,9 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { BookOpen, CheckCircle, XCircle, Clock } from "lucide-react";
+import { BookOpen, CheckCircle, XCircle, ImageOff } from "lucide-react";
 import { useAssessment } from "@/contexts/AssessmentContext";
 import { CountdownCircleTimer } from "react-countdown-circle-timer";
+import { getImageByPage } from "@/data/images";
 
 const Training = () => {
   const { page } = useParams<{ page: string }>();
@@ -15,6 +16,8 @@ const Training = () => {
   const progress = (currentPage / totalPages) * 100;
   const startTimeRef = useRef<number>(Date.now());
   const [timerKey, setTimerKey] = useState(0);
+  const [imageError, setImageError] = useState(false);
+  const currentImage = getImageByPage(currentPage);
 
   // Disable browser back button
   useEffect(() => {
@@ -37,6 +40,7 @@ const Training = () => {
     }
     startTimeRef.current = Date.now();
     setTimerKey((prev) => prev + 1);
+    setImageError(false);
   }, [currentPage, navigate]);
 
   const handleDecision = (decision: "DEFERIDO" | "INDEFERIDO" | "NÃO_RESPONDIDO") => {
@@ -110,15 +114,30 @@ const Training = () => {
 
           {/* Image Display Area */}
           <div className="bg-card rounded-xl border border-border shadow-soft overflow-hidden">
-            <div className="aspect-video bg-muted flex items-center justify-center">
-              <div className="text-center space-y-3">
-                <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-primary text-primary-foreground text-3xl font-bold shadow-soft">
-                  {currentPage}
+            <div className="aspect-video bg-muted flex items-center justify-center relative">
+              {currentImage && !imageError ? (
+                <img
+                  src={currentImage.imageUrl}
+                  alt={currentImage.nome}
+                  loading="lazy"
+                  onError={() => setImageError(true)}
+                  className="w-full h-full object-contain"
+                />
+              ) : (
+                <div className="text-center space-y-3">
+                  <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-muted-foreground/10 text-muted-foreground">
+                    <ImageOff className="w-10 h-10" />
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground font-medium">
+                      Foto #{currentPage}
+                    </p>
+                    <p className="text-sm text-muted-foreground/70">
+                      {imageError ? "Erro ao carregar imagem" : "Aguardando upload"}
+                    </p>
+                  </div>
                 </div>
-                <p className="text-muted-foreground font-medium">
-                  Foto para avaliação fenotípica #{currentPage}
-                </p>
-              </div>
+              )}
             </div>
           </div>
 
