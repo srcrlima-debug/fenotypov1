@@ -1,17 +1,51 @@
 import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
-import { BookOpen, ArrowRight } from "lucide-react";
+import { useNavigate, Link } from "react-router-dom";
+import { BookOpen, ArrowRight, LogOut } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 const Home = () => {
   const navigate = useNavigate();
+  const { user, loading } = useAuth();
+  const { toast } = useToast();
 
   const handleStart = () => {
     navigate("/training/1");
   };
 
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      toast({
+        title: 'Erro ao sair',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: 'Logout realizado',
+        description: 'Até logo!',
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-6">
       <div className="max-w-2xl w-full text-center space-y-8 animate-fade-in">
+        {user && (
+          <div className="absolute top-6 right-6">
+            <Button
+              onClick={handleLogout}
+              variant="outline"
+              size="sm"
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              Sair
+            </Button>
+          </div>
+        )}
+
         <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-primary mb-4 shadow-soft">
           <BookOpen className="w-10 h-10 text-primary-foreground" />
         </div>
@@ -25,15 +59,35 @@ const Home = () => {
           </p>
         </div>
 
-        <div className="pt-4">
-          <Button
-            onClick={handleStart}
-            size="lg"
-            className="bg-gradient-primary hover:opacity-90 text-primary-foreground shadow-soft text-lg px-8 py-6 h-auto"
-          >
-            Iniciar Treinamento
-            <ArrowRight className="ml-2 h-5 w-5" />
-          </Button>
+        <div className="pt-4 space-y-4">
+          {!loading && !user ? (
+            <div className="space-y-3">
+              <p className="text-muted-foreground">Faça login para iniciar o treinamento</p>
+              <div className="flex gap-3 justify-center">
+                <Link to="/login">
+                  <Button size="lg" variant="outline">
+                    Login
+                  </Button>
+                </Link>
+                <Link to="/registro">
+                  <Button size="lg" className="bg-gradient-primary hover:opacity-90 text-primary-foreground shadow-soft">
+                    Criar Conta
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <Button
+              onClick={handleStart}
+              size="lg"
+              className="bg-gradient-primary hover:opacity-90 text-primary-foreground shadow-soft text-lg px-8 py-6 h-auto"
+              disabled={loading}
+            >
+              Iniciar Treinamento
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
+          )}
         </div>
 
         <div className="pt-8 flex items-center justify-center gap-8 text-sm text-muted-foreground">
