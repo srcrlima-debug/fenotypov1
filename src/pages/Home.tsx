@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useAdmin } from "@/hooks/useAdmin";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import logoHorizontal from "@/assets/logo-fenotypo-horiz.png";
+import logoVertical from "@/assets/logo-fenotypo-vert.png";
 
 const Home = () => {
   const navigate = useNavigate();
@@ -60,7 +60,7 @@ const Home = () => {
         )}
 
         <div className="mb-8">
-          <img src={logoHorizontal} alt="Fenotypo" className="h-24 mx-auto" />
+          <img src={logoVertical} alt="Fenotypo" className="h-32 mx-auto" />
         </div>
         
         <div className="space-y-4">
