@@ -120,7 +120,7 @@ export default function SessionTraining() {
 
         {sessionData.session_status === 'active' && (
           <div className="flex flex-col items-center space-y-8">
-            <CountdownCircleTimer key={timerKey} isPlaying duration={sessionData.photo_duration} colors={["#10b981", "#f59e0b", "#ef4444"]} colorsTime={[40, 20, 0]} size={120} strokeWidth={8} onComplete={() => canRespond && handleDecision("NÃO_RESPONDIDO")}>
+            <CountdownCircleTimer key={timerKey} isPlaying duration={sessionData.photo_duration} colors={["#10b981", "#f59e0b", "#ef4444"]} colorsTime={[40, 20, 0]} size={120} strokeWidth={8} onComplete={() => { if (canRespond) handleDecision("NÃO_RESPONDIDO"); }}>
               {({ remainingTime }) => <div className="text-center"><div className="text-3xl font-bold">{remainingTime}</div><div className="text-sm text-muted-foreground">segundos</div></div>}
             </CountdownCircleTimer>
             <div className="w-full bg-card rounded-xl shadow-xl overflow-hidden">{currentImage && <img src={currentImage.imageUrl} alt={currentImage.nome} className="w-full h-auto" />}</div>
