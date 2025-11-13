@@ -1,23 +1,19 @@
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight } from "lucide-react";
-import { useTraining } from "@/contexts/TrainingContext";
-import logo from "@/assets/fenotypo-logo.png";
+import { BookOpen, ArrowRight } from "lucide-react";
 
 const Home = () => {
   const navigate = useNavigate();
-  const { clearEvaluations } = useTraining();
 
   const handleStart = () => {
-    clearEvaluations();
     navigate("/training/1");
   };
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-6">
       <div className="max-w-2xl w-full text-center space-y-8 animate-fade-in">
-        <div className="mb-4">
-          <img src={logo} alt="Fenotypo" className="h-16 mx-auto" />
+        <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-primary mb-4 shadow-soft">
+          <BookOpen className="w-10 h-10 text-primary-foreground" />
         </div>
         
         <div className="space-y-4">
