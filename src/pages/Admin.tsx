@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Copy, Plus, Calendar, Users, Link as LinkIcon, BarChart3 } from 'lucide-react';
+import { Copy, Plus, Calendar, Users, Link as LinkIcon, BarChart3, Play } from 'lucide-react';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 
@@ -193,6 +193,15 @@ const Admin = () => {
                       <div className="flex gap-2">
                         <Button
                           variant="default"
+                          size="sm"
+                          onClick={() => navigate(`/admin/live/${session.id}`)}
+                          className="gap-2"
+                        >
+                          <Play className="h-4 w-4" />
+                          Controlar Ao Vivo
+                        </Button>
+                        <Button
+                          variant="outline"
                           size="sm"
                           onClick={() => navigate(`/admin/dashboard/${session.id}`)}
                         >

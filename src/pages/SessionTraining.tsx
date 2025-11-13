@@ -1,274 +1,136 @@
-import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
-import { CountdownCircleTimer } from 'react-countdown-circle-timer';
-import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
-import { useToast } from '@/hooks/use-toast';
-import { getImageByPage } from '@/data/images';
-import { ImageOff, Clock } from 'lucide-react';
+import { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { CountdownCircleTimer } from "react-countdown-circle-timer";
+import { getImageByPage } from "@/data/images";
+import { Card } from "@/components/ui/card";
+import { Users, Clock } from "lucide-react";
 
 interface SessionData {
   id: string;
   nome: string;
   data: string;
+  current_photo: number;
+  session_status: string;
+  photo_start_time: string | null;
+  photo_duration: number;
 }
 
-const SessionTraining = () => {
-  const { sessionId } = useParams<{ sessionId: string }>();
+export default function SessionTraining() {
+  const { sessionId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
-  
-  const [session, setSession] = useState<SessionData | null>(null);
+
+  const [sessionData, setSessionData] = useState<SessionData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [startTime, setStartTime] = useState<number>(Date.now());
-  const [hasParticipated, setHasParticipated] = useState(false);
+  const [startTime, setStartTime] = useState(Date.now());
+  const [canRespond, setCanRespond] = useState(true);
   const [timerKey, setTimerKey] = useState(0);
 
-  const totalPages = 30;
-  const progress = (currentPage / totalPages) * 100;
-  const currentImage = getImageByPage(currentPage);
-
   useEffect(() => {
-    const validateSession = async () => {
+    const checkSessionAndUser = async () => {
       if (!sessionId || !user) {
-        navigate('/');
+        navigate("/");
         return;
       }
 
-      // Check if session exists
-      const { data: sessionData, error: sessionError } = await supabase
-        .from('sessions')
-        .select('*')
-        .eq('id', sessionId)
+      const { data: session, error: sessionError } = await supabase
+        .from("sessions")
+        .select("*")
+        .eq("id", sessionId)
         .single();
 
-      if (sessionError || !sessionData) {
-        toast({
-          title: 'Sessão não encontrada',
-          description: 'Esta sessão não existe ou foi removida',
-          variant: 'destructive',
-        });
-        navigate('/');
+      if (sessionError || !session) {
+        navigate("/");
         return;
       }
 
-      setSession(sessionData);
-
-      // Check if user already participated
-      const { data: participationData } = await supabase
-        .from('avaliacoes')
-        .select('id')
-        .eq('session_id', sessionId)
-        .eq('user_id', user.id)
-        .limit(1);
-
-      if (participationData && participationData.length > 0) {
-        setHasParticipated(true);
-        toast({
-          title: 'Avaliação já realizada',
-          description: 'Você já participou desta sessão',
-          variant: 'destructive',
-        });
-        navigate('/');
-        return;
-      }
-
+      setSessionData(session);
       setLoading(false);
     };
 
-    validateSession();
-  }, [sessionId, user, navigate, toast]);
+    checkSessionAndUser();
+  }, [sessionId, user, navigate]);
 
   useEffect(() => {
-    // Disable browser back button
-    window.history.pushState(null, '', window.location.href);
-    const handlePopState = () => {
-      window.history.pushState(null, '', window.location.href);
-    };
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
+    if (!sessionId) return;
+
+    const channel = supabase
+      .channel('session-updates')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'sessions', filter: `id=eq.${sessionId}` },
+        (payload) => {
+          const newSession = payload.new as SessionData;
+          setSessionData(newSession);
+          setStartTime(Date.now());
+          setTimerKey(prev => prev + 1);
+          setCanRespond(newSession.session_status === 'active');
+        }
+      ).subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [sessionId]);
+
+  useEffect(() => {
+    window.history.pushState(null, "", window.location.href);
+    const handlePopState = () => window.history.pushState(null, "", window.location.href);
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
   }, []);
 
-  useEffect(() => {
-    // Reset timer when page changes
-    setStartTime(Date.now());
-    setTimerKey(prev => prev + 1);
-  }, [currentPage]);
+  const saveAvaliacao = async (resposta: string): Promise<boolean> => {
+    if (!user || !sessionData) return false;
 
-  const saveAvaliacao = async (resposta: string, retryCount = 0): Promise<boolean> => {
-    if (!user || !sessionId) return false;
+    const { data: profile } = await supabase.from("profiles").select("genero, faixa_etaria, estado").eq("user_id", user.id).single();
+    const { error } = await supabase.from("avaliacoes").insert({
+      session_id: sessionId, user_id: user.id, foto_id: sessionData.current_photo, resposta,
+      tempo_gasto: Date.now() - startTime, genero: profile?.genero, faixa_etaria: profile?.faixa_etaria, regiao: profile?.estado,
+    });
 
-    const tempoGasto = Math.floor((Date.now() - startTime) / 1000);
-
-    try {
-      // Buscar dados do perfil do usuário
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('genero, faixa_etaria, estado')
-        .eq('user_id', user.id)
-        .single();
-
-      if (profileError) {
-        console.error('Erro ao buscar perfil:', profileError);
-      }
-
-      const { error } = await supabase
-        .from('avaliacoes')
-        .insert({
-          session_id: sessionId,
-          user_id: user.id,
-          foto_id: currentPage,
-          resposta,
-          tempo_gasto: tempoGasto,
-          genero: profileData?.genero || null,
-          faixa_etaria: profileData?.faixa_etaria || null,
-          regiao: profileData?.estado || null,
-        });
-
-      if (error) {
-        throw error;
-      }
-
-      return true;
-    } catch (error: any) {
-      console.error('Erro ao salvar avaliação:', error);
-      
-      // Retry automático até 3 tentativas
-      if (retryCount < 3) {
-        await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
-        return saveAvaliacao(resposta, retryCount + 1);
-      }
-
-      toast({
-        title: 'Erro ao salvar avaliação',
-        description: 'Não foi possível salvar sua resposta. Por favor, tente novamente.',
-        variant: 'destructive',
-      });
-      
-      return false;
-    }
+    if (error) { toast({ title: "Erro", description: "Não foi possível salvar", variant: "destructive" }); return false; }
+    return true;
   };
 
   const handleDecision = async (decision: string) => {
-    const success = await saveAvaliacao(decision);
-
-    if (success) {
-      if (currentPage < totalPages) {
-        setCurrentPage(currentPage + 1);
-      } else {
-        toast({
-          title: 'Treinamento Concluído!',
-          description: 'Obrigado por participar',
-        });
-        navigate('/');
-      }
-    }
+    if (!canRespond) return;
+    if (await saveAvaliacao(decision)) { setCanRespond(false); toast({ title: "Resposta registrada" }); }
   };
 
-  const handleTimeComplete = () => {
-    handleDecision('NÃO_RESPONDIDO');
-  };
+  if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin" /></div>;
+  if (!sessionData) return null;
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-muted-foreground">Carregando sessão...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (hasParticipated) {
-    return null;
-  }
+  const currentImage = getImageByPage(sessionData.current_photo);
+  const progress = (sessionData.current_photo / 30) * 100;
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
-      <div className="bg-card border-b border-border p-4">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="text-lg font-semibold text-foreground">{session?.nome}</h2>
-            <span className="text-sm text-muted-foreground">
-              Página {currentPage} de {totalPages}
-            </span>
-          </div>
-          <Progress value={progress} className="h-2" />
+    <div className="min-h-screen bg-gradient-to-b from-primary/5 to-background flex flex-col items-center justify-center p-4">
+      <div className="w-full max-w-4xl space-y-8">
+        <div className="text-center space-y-2">
+          <h1 className="text-3xl font-bold">{sessionData.nome}</h1>
+          <p className="text-muted-foreground">Foto {sessionData.current_photo} de 30</p>
+          <div className="w-full bg-secondary rounded-full h-2"><div className="h-full bg-primary transition-all" style={{ width: `${progress}%` }} /></div>
         </div>
-      </div>
 
-      {/* Main Content */}
-      <div className="flex-1 flex items-center justify-center p-6">
-        <div className="max-w-4xl w-full space-y-8">
-          {/* Timer */}
-          <div className="flex justify-center">
-            <CountdownCircleTimer
-              key={timerKey}
-              isPlaying
-              duration={60}
-              colors={['#10b981', '#f59e0b', '#ef4444']}
-              colorsTime={[60, 30, 0]}
-              size={120}
-              strokeWidth={8}
-              onComplete={handleTimeComplete}
-            >
-              {({ remainingTime }) => (
-                <div className="text-center">
-                  <Clock className="h-6 w-6 mx-auto mb-1 text-foreground" />
-                  <div className="text-2xl font-bold text-foreground">{remainingTime}s</div>
-                </div>
-              )}
+        {sessionData.session_status === 'waiting' && <Card className="p-8 text-center"><Users className="w-16 h-16 mx-auto mb-4 text-muted-foreground" /><h2 className="text-2xl font-bold mb-2">Aguardando Início</h2><p className="text-muted-foreground">O administrador ainda não iniciou a sessão</p></Card>}
+        {sessionData.session_status === 'showing_results' && <Card className="p-8 text-center"><Clock className="w-16 h-16 mx-auto mb-4 text-muted-foreground" /><h2 className="text-2xl font-bold mb-2">Resultados</h2><p className="text-muted-foreground">Aguarde a próxima foto...</p></Card>}
+        {sessionData.session_status === 'completed' && <Card className="p-8 text-center"><h2 className="text-2xl font-bold mb-2">Sessão Finalizada</h2><Button onClick={() => navigate("/")} className="mt-4">Voltar</Button></Card>}
+
+        {sessionData.session_status === 'active' && (
+          <div className="flex flex-col items-center space-y-8">
+            <CountdownCircleTimer key={timerKey} isPlaying duration={sessionData.photo_duration} colors={["#10b981", "#f59e0b", "#ef4444"]} colorsTime={[40, 20, 0]} size={120} strokeWidth={8} onComplete={() => canRespond && handleDecision("NÃO_RESPONDIDO")}>
+              {({ remainingTime }) => <div className="text-center"><div className="text-3xl font-bold">{remainingTime}</div><div className="text-sm text-muted-foreground">segundos</div></div>}
             </CountdownCircleTimer>
-          </div>
-
-          {/* Image */}
-          <div className="bg-card rounded-lg shadow-soft p-4 border border-border">
-            {currentImage ? (
-              <img
-                src={currentImage.imageUrl}
-                alt={currentImage.nome}
-                className="w-full h-auto max-h-[500px] object-contain rounded"
-                loading="lazy"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                  e.currentTarget.nextElementSibling?.classList.remove('hidden');
-                }}
-              />
-            ) : null}
-            <div className="hidden flex-col items-center justify-center py-16 text-muted-foreground">
-              <ImageOff className="h-16 w-16 mb-4" />
-              <p>Imagem não disponível</p>
+            <div className="w-full bg-card rounded-xl shadow-xl overflow-hidden">{currentImage && <img src={currentImage.imageUrl} alt={currentImage.nome} className="w-full h-auto" />}</div>
+            <div className="flex gap-4 w-full max-w-md">
+              <Button onClick={() => handleDecision("DEFERIDO")} disabled={!canRespond} className="flex-1 h-16 text-lg bg-green-500 hover:bg-green-600">DEFERIDO</Button>
+              <Button onClick={() => handleDecision("INDEFERIDO")} disabled={!canRespond} className="flex-1 h-16 text-lg bg-red-500 hover:bg-red-600">INDEFERIDO</Button>
             </div>
           </div>
-
-          {/* Decision Buttons */}
-          <div className="grid grid-cols-2 gap-4">
-            <Button
-              onClick={() => handleDecision('DEFERIDO')}
-              size="lg"
-              className="bg-accent hover:bg-accent/90 text-accent-foreground h-16 text-lg font-semibold"
-            >
-              DEFERIDO
-            </Button>
-            <Button
-              onClick={() => handleDecision('INDEFERIDO')}
-              size="lg"
-              variant="destructive"
-              className="h-16 text-lg font-semibold"
-            >
-              INDEFERIDO
-            </Button>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );
-};
-
-export default SessionTraining;
+}
