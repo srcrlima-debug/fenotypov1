@@ -12,6 +12,7 @@ import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Registro from "./pages/Registro";
 import Admin from "./pages/Admin";
+import AdminDashboard from "./pages/AdminDashboard";
 import Training from "./pages/Training";
 import SessionTraining from "./pages/SessionTraining";
 import Results from "./pages/Results";
@@ -36,6 +37,14 @@ const App = () => (
                 element={
                   <AdminRoute>
                     <Admin />
+                  </AdminRoute>
+                } 
+              />
+              <Route 
+                path="/admin/dashboard/:sessionId" 
+                element={
+                  <AdminRoute>
+                    <AdminDashboard />
                   </AdminRoute>
                 } 
               />
