@@ -99,41 +99,70 @@ const SessionTraining = () => {
     setTimerKey(prev => prev + 1);
   }, [currentPage]);
 
-  const saveAvaliacao = async (resposta: string) => {
-    if (!user || !sessionId) return;
+  const saveAvaliacao = async (resposta: string, retryCount = 0): Promise<boolean> => {
+    if (!user || !sessionId) return false;
 
     const tempoGasto = Math.floor((Date.now() - startTime) / 1000);
 
-    const { error } = await supabase
-      .from('avaliacoes')
-      .insert({
-        session_id: sessionId,
-        user_id: user.id,
-        foto_id: currentPage,
-        resposta,
-        tempo_gasto: tempoGasto,
-      });
+    try {
+      // Buscar dados do perfil do usuário
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('genero, faixa_etaria, estado')
+        .eq('user_id', user.id)
+        .single();
 
-    if (error) {
+      if (profileError) {
+        console.error('Erro ao buscar perfil:', profileError);
+      }
+
+      const { error } = await supabase
+        .from('avaliacoes')
+        .insert({
+          session_id: sessionId,
+          user_id: user.id,
+          foto_id: currentPage,
+          resposta,
+          tempo_gasto: tempoGasto,
+        });
+
+      if (error) {
+        throw error;
+      }
+
+      return true;
+    } catch (error: any) {
+      console.error('Erro ao salvar avaliação:', error);
+      
+      // Retry automático até 3 tentativas
+      if (retryCount < 3) {
+        await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+        return saveAvaliacao(resposta, retryCount + 1);
+      }
+
       toast({
         title: 'Erro ao salvar avaliação',
-        description: error.message,
+        description: 'Não foi possível salvar sua resposta. Por favor, tente novamente.',
         variant: 'destructive',
       });
+      
+      return false;
     }
   };
 
   const handleDecision = async (decision: string) => {
-    await saveAvaliacao(decision);
+    const success = await saveAvaliacao(decision);
 
-    if (currentPage < totalPages) {
-      setCurrentPage(currentPage + 1);
-    } else {
-      toast({
-        title: 'Treinamento Concluído!',
-        description: 'Obrigado por participar',
-      });
-      navigate('/');
+    if (success) {
+      if (currentPage < totalPages) {
+        setCurrentPage(currentPage + 1);
+      } else {
+        toast({
+          title: 'Treinamento Concluído!',
+          description: 'Obrigado por participar',
+        });
+        navigate('/');
+      }
     }
   };
 

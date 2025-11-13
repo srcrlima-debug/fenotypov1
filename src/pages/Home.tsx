@@ -60,7 +60,7 @@ const Home = () => {
         )}
 
         <div className="mb-6 animate-scale-in">
-          <img src={logoVertical} alt="Fenotypo" className="h-56 mx-auto" />
+          <img src={logoVertical} alt="Fenotypo" className="h-72 mx-auto" />
         </div>
         
         <div className="space-y-4 px-4">
