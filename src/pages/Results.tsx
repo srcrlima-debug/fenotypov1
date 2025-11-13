@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { CheckCircle2, Home, RotateCcw, CheckCircle, XCircle } from "lucide-react";
+import { CheckCircle2, Home, RotateCcw, CheckCircle, XCircle, Clock, Timer } from "lucide-react";
 import { useAssessment } from "@/contexts/AssessmentContext";
 import { Card } from "@/components/ui/card";
 
@@ -9,6 +9,11 @@ const Results = () => {
   const navigate = useNavigate();
   const { assessments, getStats, resetAssessments } = useAssessment();
   const stats = getStats();
+
+  const formatTime = (ms: number) => {
+    const seconds = Math.floor(ms / 1000);
+    return `${seconds}s`;
+  };
 
   // Disable browser back button
   useEffect(() => {
@@ -50,7 +55,7 @@ const Results = () => {
         </div>
 
         <div className="bg-white/10 backdrop-blur-sm rounded-xl p-8 border border-white/20">
-          <div className="grid grid-cols-2 gap-8 text-primary-foreground mb-6">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 text-primary-foreground mb-6">
             <div className="space-y-2">
               <div className="flex items-center gap-2 justify-center">
                 <CheckCircle className="w-8 h-8" />
@@ -64,6 +69,20 @@ const Results = () => {
                 <div className="text-4xl font-bold">{stats.indeferido}</div>
               </div>
               <div className="text-sm opacity-80">Indeferidos</div>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 justify-center">
+                <Clock className="w-8 h-8" />
+                <div className="text-4xl font-bold">{formatTime(stats.averageTime)}</div>
+              </div>
+              <div className="text-sm opacity-80">Tempo Médio</div>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 justify-center">
+                <Timer className="w-8 h-8" />
+                <div className="text-4xl font-bold">{formatTime(stats.totalTime)}</div>
+              </div>
+              <div className="text-sm opacity-80">Tempo Total</div>
             </div>
           </div>
         </div>
@@ -81,16 +100,25 @@ const Results = () => {
                   className={`flex items-center justify-between p-3 rounded-lg ${
                     assessment.decision === "DEFERIDO"
                       ? "bg-green-600/20 border border-green-500/30"
-                      : "bg-red-600/20 border border-red-500/30"
+                      : assessment.decision === "INDEFERIDO"
+                      ? "bg-red-600/20 border border-red-500/30"
+                      : "bg-gray-600/20 border border-gray-500/30"
                   }`}
                 >
-                  <span className="text-primary-foreground font-medium">
-                    Página {assessment.page}
-                  </span>
+                  <div className="flex flex-col">
+                    <span className="text-primary-foreground font-medium">
+                      Página {assessment.page}
+                    </span>
+                    <span className="text-xs text-primary-foreground/70">
+                      {formatTime(assessment.timeSpent)}
+                    </span>
+                  </div>
                   {assessment.decision === "DEFERIDO" ? (
                     <CheckCircle className="w-5 h-5 text-green-300" />
-                  ) : (
+                  ) : assessment.decision === "INDEFERIDO" ? (
                     <XCircle className="w-5 h-5 text-red-300" />
+                  ) : (
+                    <Clock className="w-5 h-5 text-gray-300" />
                   )}
                 </div>
               ))}

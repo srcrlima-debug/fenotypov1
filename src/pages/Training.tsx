@@ -1,9 +1,10 @@
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { BookOpen, CheckCircle, XCircle } from "lucide-react";
+import { BookOpen, CheckCircle, XCircle, Clock } from "lucide-react";
 import { useAssessment } from "@/contexts/AssessmentContext";
+import { CountdownCircleTimer } from "react-countdown-circle-timer";
 
 const Training = () => {
   const { page } = useParams<{ page: string }>();
@@ -12,6 +13,8 @@ const Training = () => {
   const currentPage = parseInt(page || "1");
   const totalPages = 30;
   const progress = (currentPage / totalPages) * 100;
+  const startTimeRef = useRef<number>(Date.now());
+  const [timerKey, setTimerKey] = useState(0);
 
   // Disable browser back button
   useEffect(() => {
@@ -27,20 +30,26 @@ const Training = () => {
     };
   }, []);
 
-  // Redirect invalid pages
+  // Redirect invalid pages and reset timer
   useEffect(() => {
     if (currentPage < 1 || currentPage > totalPages) {
       navigate("/");
     }
+    startTimeRef.current = Date.now();
+    setTimerKey((prev) => prev + 1);
   }, [currentPage, navigate]);
 
-  const handleDecision = (decision: "DEFERIDO" | "INDEFERIDO") => {
-    addAssessment(currentPage, decision);
+  const handleDecision = (decision: "DEFERIDO" | "INDEFERIDO" | "NÃO_RESPONDIDO") => {
+    addAssessment(currentPage, decision, startTimeRef.current);
     if (currentPage < totalPages) {
       navigate(`/training/${currentPage + 1}`);
     } else {
       navigate("/results");
     }
+  };
+
+  const handleTimeComplete = () => {
+    handleDecision("NÃO_RESPONDIDO");
   };
 
   return (
@@ -72,6 +81,33 @@ const Training = () => {
       {/* Main Content */}
       <div className="flex-1 flex items-center justify-center p-6">
         <div className="max-w-4xl w-full space-y-8 animate-fade-in">
+          {/* Timer Display */}
+          <div className="flex justify-center">
+            <div className="relative">
+              <CountdownCircleTimer
+                key={timerKey}
+                isPlaying
+                duration={60}
+                colors={["#10b981", "#f59e0b", "#ef4444"]}
+                colorsTime={[60, 30, 0]}
+                size={120}
+                strokeWidth={8}
+                onComplete={handleTimeComplete}
+              >
+                {({ remainingTime }) => (
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-foreground">
+                      {remainingTime}
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      segundos
+                    </div>
+                  </div>
+                )}
+              </CountdownCircleTimer>
+            </div>
+          </div>
+
           {/* Image Display Area */}
           <div className="bg-card rounded-xl border border-border shadow-soft overflow-hidden">
             <div className="aspect-video bg-muted flex items-center justify-center">
