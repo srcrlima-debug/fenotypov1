@@ -124,6 +124,9 @@ const SessionTraining = () => {
           foto_id: currentPage,
           resposta,
           tempo_gasto: tempoGasto,
+          genero: profileData?.genero || null,
+          faixa_etaria: profileData?.faixa_etaria || null,
+          regiao: profileData?.estado || null,
         });
 
       if (error) {
