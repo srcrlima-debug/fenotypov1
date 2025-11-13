@@ -6,8 +6,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Copy, Plus, Calendar, Users, Link as LinkIcon } from 'lucide-react';
+import { Copy, Plus, Calendar, Users, Link as LinkIcon, BarChart3 } from 'lucide-react';
 import { format } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
 
 interface Session {
   id: string;
@@ -23,6 +24,7 @@ const Admin = () => {
   const [sessions, setSessions] = useState<Session[]>([]);
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchSessions();
@@ -188,14 +190,24 @@ const Admin = () => {
                           </span>
                         </div>
                       </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => copyLink(session.id)}
-                      >
-                        <Copy className="h-4 w-4 mr-2" />
-                        Copiar Link
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => navigate(`/admin/dashboard/${session.id}`)}
+                        >
+                          <BarChart3 className="h-4 w-4 mr-2" />
+                          Dashboard
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => copyLink(session.id)}
+                        >
+                          <Copy className="h-4 w-4 mr-2" />
+                          Copiar Link
+                        </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
