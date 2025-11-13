@@ -13,8 +13,33 @@ import {
   Clock, 
   TrendingUp,
   Filter,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Award,
+  XCircle,
+  Timer,
+  Target
 } from 'lucide-react';
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+} from '@/components/ui/chart';
+import {
+  PieChart,
+  Pie,
+  Cell,
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Legend,
+  ResponsiveContainer,
+} from 'recharts';
 import {
   Table,
   TableBody,
@@ -49,6 +74,19 @@ interface PhotoStats {
   avgTime: number;
 }
 
+interface DemographicData {
+  genero: { [key: string]: { deferido: number; indeferido: number; total: number } };
+  faixaEtaria: { [key: string]: { deferido: number; indeferido: number; total: number } };
+  regiao: { [key: string]: { deferido: number; indeferido: number; total: number } };
+}
+
+interface KPIs {
+  mostDeferida: { fotoId: number; percent: number };
+  mostIndeferida: { fotoId: number; percent: number };
+  longestTime: { fotoId: number; time: number };
+  consenso: number;
+}
+
 const AdminDashboard = () => {
   const { sessionId } = useParams<{ sessionId: string }>();
   const navigate = useNavigate();
@@ -57,6 +95,12 @@ const AdminDashboard = () => {
   const [session, setSession] = useState<SessionData | null>(null);
   const [stats, setStats] = useState<EvaluationStats | null>(null);
   const [photoStats, setPhotoStats] = useState<PhotoStats[]>([]);
+  const [demographicData, setDemographicData] = useState<DemographicData>({
+    genero: {},
+    faixaEtaria: {},
+    regiao: {},
+  });
+  const [kpis, setKPIs] = useState<KPIs | null>(null);
   const [loading, setLoading] = useState(true);
   const [dateFilter, setDateFilter] = useState({ start: '', end: '' });
 
@@ -164,6 +208,72 @@ const AdminDashboard = () => {
       }
 
       setPhotoStats(photoStatsArray);
+
+      // Calculate demographic data
+      const generoStats: { [key: string]: { deferido: number; indeferido: number; total: number } } = {};
+      const faixaEtariaStats: { [key: string]: { deferido: number; indeferido: number; total: number } } = {};
+      const regiaoStats: { [key: string]: { deferido: number; indeferido: number; total: number } } = {};
+
+      evaluations?.forEach(evaluation => {
+        const { genero, faixa_etaria, regiao, resposta } = evaluation;
+
+        // Genero
+        if (genero) {
+          if (!generoStats[genero]) generoStats[genero] = { deferido: 0, indeferido: 0, total: 0 };
+          generoStats[genero].total++;
+          if (resposta === 'DEFERIDO') generoStats[genero].deferido++;
+          else if (resposta === 'INDEFERIDO') generoStats[genero].indeferido++;
+        }
+
+        // Faixa Etária
+        if (faixa_etaria) {
+          if (!faixaEtariaStats[faixa_etaria]) faixaEtariaStats[faixa_etaria] = { deferido: 0, indeferido: 0, total: 0 };
+          faixaEtariaStats[faixa_etaria].total++;
+          if (resposta === 'DEFERIDO') faixaEtariaStats[faixa_etaria].deferido++;
+          else if (resposta === 'INDEFERIDO') faixaEtariaStats[faixa_etaria].indeferido++;
+        }
+
+        // Região
+        if (regiao) {
+          if (!regiaoStats[regiao]) regiaoStats[regiao] = { deferido: 0, indeferido: 0, total: 0 };
+          regiaoStats[regiao].total++;
+          if (resposta === 'DEFERIDO') regiaoStats[regiao].deferido++;
+          else if (resposta === 'INDEFERIDO') regiaoStats[regiao].indeferido++;
+        }
+      });
+
+      setDemographicData({
+        genero: generoStats,
+        faixaEtaria: faixaEtariaStats,
+        regiao: regiaoStats,
+      });
+
+      // Calculate KPIs
+      let mostDeferida = { fotoId: 1, percent: 0 };
+      let mostIndeferida = { fotoId: 1, percent: 0 };
+      let longestTime = { fotoId: 1, time: 0 };
+
+      photoStatsArray.forEach(photo => {
+        if (photo.percentDeferido > mostDeferida.percent) {
+          mostDeferida = { fotoId: photo.fotoId, percent: photo.percentDeferido };
+        }
+        if (photo.percentIndeferido > mostIndeferida.percent) {
+          mostIndeferida = { fotoId: photo.fotoId, percent: photo.percentIndeferido };
+        }
+        if (photo.avgTime > longestTime.time) {
+          longestTime = { fotoId: photo.fotoId, time: photo.avgTime };
+        }
+      });
+
+      // Calculate consensus (average agreement rate across all photos)
+      const consensoTotal = photoStatsArray.reduce((sum, photo) => {
+        const maxPercent = Math.max(photo.percentDeferido, photo.percentIndeferido, photo.percentNaoRespondido);
+        return sum + maxPercent;
+      }, 0);
+      const consenso = consensoTotal / 30;
+
+      setKPIs({ mostDeferida, mostIndeferida, longestTime, consenso });
+
     } catch (error: any) {
       toast({
         title: 'Erro ao carregar dados',
@@ -303,6 +413,210 @@ const AdminDashboard = () => {
                 </div>
                 <Clock className="h-8 w-8 text-primary" />
               </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* KPI Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Foto Mais Deferida</p>
+                  <p className="text-3xl font-bold text-foreground">#{kpis?.mostDeferida.fotoId}</p>
+                  <p className="text-sm text-accent">{kpis?.mostDeferida.percent.toFixed(1)}%</p>
+                </div>
+                <Award className="h-8 w-8 text-accent" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Foto Mais Indeferida</p>
+                  <p className="text-3xl font-bold text-foreground">#{kpis?.mostIndeferida.fotoId}</p>
+                  <p className="text-sm text-destructive">{kpis?.mostIndeferida.percent.toFixed(1)}%</p>
+                </div>
+                <XCircle className="h-8 w-8 text-destructive" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Maior Tempo Médio</p>
+                  <p className="text-3xl font-bold text-foreground">#{kpis?.longestTime.fotoId}</p>
+                  <p className="text-sm text-primary">{formatTime(kpis?.longestTime.time || 0)}</p>
+                </div>
+                <Timer className="h-8 w-8 text-primary" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Consenso Geral</p>
+                  <p className="text-3xl font-bold text-foreground">{kpis?.consenso.toFixed(1)}%</p>
+                  <p className="text-xs text-muted-foreground">Acordo médio</p>
+                </div>
+                <Target className="h-8 w-8 text-primary" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Charts Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Gender Distribution */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Distribuição por Gênero</CardTitle>
+              <CardDescription>Participação e respostas por gênero</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ChartContainer
+                config={{
+                  total: { label: 'Total', color: 'hsl(var(--primary))' },
+                  deferido: { label: 'Deferido', color: 'hsl(var(--accent))' },
+                  indeferido: { label: 'Indeferido', color: 'hsl(var(--destructive))' },
+                }}
+                className="h-[300px]"
+              >
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={Object.entries(demographicData.genero).map(([key, value]) => ({
+                        name: key,
+                        value: value.total,
+                      }))}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                      outerRadius={80}
+                      fill="hsl(var(--primary))"
+                      dataKey="value"
+                    >
+                      {Object.keys(demographicData.genero).map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={`hsl(${30 + index * 40}, 45%, ${45 + index * 10}%)`} />
+                      ))}
+                    </Pie>
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            </CardContent>
+          </Card>
+
+          {/* Age Distribution */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Distribuição por Faixa Etária</CardTitle>
+              <CardDescription>Comparação de respostas por idade</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ChartContainer
+                config={{
+                  deferido: { label: 'Deferido', color: 'hsl(var(--accent))' },
+                  indeferido: { label: 'Indeferido', color: 'hsl(var(--destructive))' },
+                }}
+                className="h-[300px]"
+              >
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={Object.entries(demographicData.faixaEtaria).map(([key, value]) => ({
+                      name: key,
+                      deferido: value.deferido,
+                      indeferido: value.indeferido,
+                    }))}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="name" stroke="hsl(var(--foreground))" />
+                    <YAxis stroke="hsl(var(--foreground))" />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Legend />
+                    <Bar dataKey="deferido" fill="hsl(var(--accent))" />
+                    <Bar dataKey="indeferido" fill="hsl(var(--destructive))" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            </CardContent>
+          </Card>
+
+          {/* Region Distribution */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Distribuição por Região</CardTitle>
+              <CardDescription>Participação e padrões por estado</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ChartContainer
+                config={{
+                  deferido: { label: 'Deferido', color: 'hsl(var(--accent))' },
+                  indeferido: { label: 'Indeferido', color: 'hsl(var(--destructive))' },
+                }}
+                className="h-[300px]"
+              >
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={Object.entries(demographicData.regiao)
+                      .sort((a, b) => b[1].total - a[1].total)
+                      .slice(0, 10)
+                      .map(([key, value]) => ({
+                        name: key,
+                        deferido: value.deferido,
+                        indeferido: value.indeferido,
+                      }))}
+                    layout="horizontal"
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis type="number" stroke="hsl(var(--foreground))" />
+                    <YAxis dataKey="name" type="category" stroke="hsl(var(--foreground))" />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Legend />
+                    <Bar dataKey="deferido" fill="hsl(var(--accent))" />
+                    <Bar dataKey="indeferido" fill="hsl(var(--destructive))" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            </CardContent>
+          </Card>
+
+          {/* Response Time by Photo */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Tempo de Resposta por Foto</CardTitle>
+              <CardDescription>Identifica fotos que geraram mais dúvida</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ChartContainer
+                config={{
+                  tempo: { label: 'Tempo Médio (s)', color: 'hsl(var(--primary))' },
+                }}
+                className="h-[300px]"
+              >
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart
+                    data={photoStats.map(photo => ({
+                      foto: photo.fotoId,
+                      tempo: photo.avgTime,
+                    }))}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="foto" stroke="hsl(var(--foreground))" label={{ value: 'Foto', position: 'insideBottom', offset: -5 }} />
+                    <YAxis stroke="hsl(var(--foreground))" label={{ value: 'Segundos', angle: -90, position: 'insideLeft' }} />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Line type="monotone" dataKey="tempo" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ fill: 'hsl(var(--primary))' }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </ChartContainer>
             </CardContent>
           </Card>
         </div>
