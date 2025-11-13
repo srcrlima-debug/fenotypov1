@@ -6,7 +6,7 @@ import { useAdmin } from "@/hooks/useAdmin";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Play, SkipForward, BarChart3, Users, Clock, CheckCircle, XCircle, AlertCircle } from "lucide-react";
+import { Play, SkipForward, BarChart3, Users, Clock, CheckCircle, XCircle, AlertCircle, RotateCcw } from "lucide-react";
 import { getImageByPage } from "@/data/images";
 import { Progress } from "@/components/ui/progress";
 
@@ -277,6 +277,28 @@ export default function AdminLiveControl() {
     }
   };
 
+  const handleRestartPhoto = async () => {
+    if (!session) return;
+
+    const { error } = await supabase.rpc("restart_current_photo", {
+      session_id_param: sessionId,
+    });
+
+    if (error) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível reiniciar a foto",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toast({
+      title: "Foto Reiniciada",
+      description: `Foto ${session.current_photo} foi reiniciada. Todas as respostas foram apagadas e o timer foi resetado.`,
+    });
+  };
+
   if (authLoading || adminLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -328,10 +350,16 @@ export default function AdminLiveControl() {
                 </Button>
               )}
               {session.session_status === 'showing_results' && session.current_photo < 30 && (
-                <Button onClick={handleNextPhoto} size="lg" className="gap-2">
-                  <SkipForward className="w-5 h-5" />
-                  Próxima Foto
-                </Button>
+                <div className="flex gap-2">
+                  <Button onClick={handleNextPhoto} size="lg" className="gap-2">
+                    <SkipForward className="w-5 h-5" />
+                    Próxima Foto
+                  </Button>
+                  <Button onClick={handleRestartPhoto} size="lg" variant="outline" className="gap-2">
+                    <RotateCcw className="w-5 h-5" />
+                    Reiniciar Foto
+                  </Button>
+                </div>
               )}
               {session.session_status === 'active' && (
                 <div className="flex items-center gap-4">
@@ -342,6 +370,10 @@ export default function AdminLiveControl() {
                   <Button onClick={handleShowResults} variant="outline" className="gap-2">
                     <BarChart3 className="w-5 h-5" />
                     Mostrar Resultados Agora
+                  </Button>
+                  <Button onClick={handleRestartPhoto} size="default" variant="destructive" className="gap-2">
+                    <RotateCcw className="w-5 h-5" />
+                    Reiniciar Foto
                   </Button>
                 </div>
               )}
