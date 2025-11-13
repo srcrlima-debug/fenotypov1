@@ -1,17 +1,26 @@
 import { createContext, useContext, useState, ReactNode } from "react";
 
-type Assessment = "DEFERIDO" | "INDEFERIDO";
+type Assessment = "DEFERIDO" | "INDEFERIDO" | "NÃO_RESPONDIDO";
 
 interface AssessmentData {
   page: number;
   decision: Assessment;
+  startTime: number;
+  endTime: number;
+  timeSpent: number;
 }
 
 interface AssessmentContextType {
   assessments: AssessmentData[];
-  addAssessment: (page: number, decision: Assessment) => void;
+  addAssessment: (page: number, decision: Assessment, startTime: number) => void;
   resetAssessments: () => void;
-  getStats: () => { deferido: number; indeferido: number };
+  getStats: () => { 
+    deferido: number; 
+    indeferido: number; 
+    naoRespondido: number;
+    averageTime: number;
+    totalTime: number;
+  };
 }
 
 const AssessmentContext = createContext<AssessmentContextType | undefined>(undefined);
@@ -19,10 +28,13 @@ const AssessmentContext = createContext<AssessmentContextType | undefined>(undef
 export const AssessmentProvider = ({ children }: { children: ReactNode }) => {
   const [assessments, setAssessments] = useState<AssessmentData[]>([]);
 
-  const addAssessment = (page: number, decision: Assessment) => {
+  const addAssessment = (page: number, decision: Assessment, startTime: number) => {
+    const endTime = Date.now();
+    const timeSpent = endTime - startTime;
+    
     setAssessments((prev) => {
       const filtered = prev.filter((a) => a.page !== page);
-      return [...filtered, { page, decision }].sort((a, b) => a.page - b.page);
+      return [...filtered, { page, decision, startTime, endTime, timeSpent }].sort((a, b) => a.page - b.page);
     });
   };
 
@@ -31,9 +43,15 @@ export const AssessmentProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const getStats = () => {
+    const totalTime = assessments.reduce((sum, a) => sum + a.timeSpent, 0);
+    const averageTime = assessments.length > 0 ? totalTime / assessments.length : 0;
+    
     return {
       deferido: assessments.filter((a) => a.decision === "DEFERIDO").length,
       indeferido: assessments.filter((a) => a.decision === "INDEFERIDO").length,
+      naoRespondido: assessments.filter((a) => a.decision === "NÃO_RESPONDIDO").length,
+      averageTime,
+      totalTime,
     };
   };
 
