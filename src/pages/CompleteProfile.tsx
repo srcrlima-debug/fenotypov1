@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -45,8 +45,13 @@ const CompleteProfile = () => {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const { toast } = useToast();
+
+  // Get redirect URL from query params
+  const searchParams = new URLSearchParams(location.search);
+  const redirectTo = searchParams.get('redirect') || '/';
 
   // Validate field on change
   const validateField = (fieldName: keyof typeof formData, value: string) => {
@@ -114,7 +119,7 @@ const CompleteProfile = () => {
         // Se todos os campos estão preenchidos, redirecionar
         if (profile.genero && profile.faixa_etaria && profile.estado && 
             profile.pertencimento_racial && profile.regiao && profile.experiencia_bancas) {
-          navigate('/', { replace: true });
+          navigate(redirectTo, { replace: true });
           return;
         }
       }
@@ -157,7 +162,7 @@ const CompleteProfile = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, navigate, toast]);
+  }, [user, navigate, toast, redirectTo]);
 
   // Debounce para evitar múltiplos envios
   const [lastSubmitTime, setLastSubmitTime] = useState<number>(0);
@@ -219,7 +224,7 @@ const CompleteProfile = () => {
       
       // Aguardar um pouco antes de redirecionar para garantir que o usuário veja a mensagem
       setTimeout(() => {
-        navigate('/', { replace: true });
+        navigate(redirectTo, { replace: true });
       }, 500);
     } catch (error) {
       if (error instanceof z.ZodError) {

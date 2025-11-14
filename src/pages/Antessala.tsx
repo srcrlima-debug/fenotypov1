@@ -129,7 +129,7 @@ export default function Antessala() {
           description: "Complete seu perfil antes de participar da sessão",
           variant: "destructive",
         });
-        navigate('/complete-profile');
+        navigate(`/complete-profile?redirect=/antessala/${sessionId}`);
         return;
       }
 
