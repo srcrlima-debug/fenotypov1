@@ -22,7 +22,7 @@ export const ProfessorModal = ({ open, onOpenChange }: ProfessorModalProps) => {
               <img 
                 src={profPhoto} 
                 alt="Prof. Dr. Cristhian Lima" 
-                className="rounded-xl shadow-xl w-full max-w-md object-cover transition-all duration-700 hover:scale-105 hover:shadow-2xl animate-fade-in"
+                className="rounded-xl shadow-xl w-full max-w-md object-cover animate-float-gentle"
               />
               {/* Social Icons Overlay - Always visible with subtle floating animation */}
               <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 rounded-b-xl" style={{ perspective: '1000px' }}>
