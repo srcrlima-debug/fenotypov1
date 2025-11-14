@@ -16,12 +16,27 @@ export const profileSchema = z.object({
     .string()
     .trim()
     .min(1, { message: "Gênero é obrigatório" })
-    .max(50, { message: "Gênero muito longo" }),
+    .max(100, { message: "Gênero muito longo" }),
   estado: z
     .string()
     .trim()
     .min(2, { message: "Estado é obrigatório" })
     .max(2, { message: "Estado deve ter 2 caracteres" }),
+  pertencimento_racial: z
+    .string()
+    .trim()
+    .min(1, { message: "Pertencimento racial é obrigatório" })
+    .max(50, { message: "Pertencimento racial muito longo" }),
+  regiao: z
+    .string()
+    .trim()
+    .min(1, { message: "Região é obrigatória" })
+    .max(50, { message: "Região muito longa" }),
+  experiencia_bancas: z
+    .string()
+    .trim()
+    .min(1, { message: "Experiência é obrigatória" })
+    .max(100, { message: "Experiência muito longa" }),
 });
 
 // Schema de validação para criação de sessão
