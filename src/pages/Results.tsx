@@ -1,13 +1,13 @@
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { CheckCircle2, Home, RotateCcw, CheckCircle, XCircle, Clock, Timer } from "lucide-react";
+import { CheckCircle2, Home, CheckCircle, XCircle, Clock, Timer, AlertCircle } from "lucide-react";
 import { useAssessment } from "@/contexts/AssessmentContext";
 import { Card } from "@/components/ui/card";
 
 const Results = () => {
   const navigate = useNavigate();
-  const { assessments, getStats, resetAssessments } = useAssessment();
+  const { assessments, getStats } = useAssessment();
   const stats = getStats();
 
   const formatTime = (ms: number) => {
@@ -28,11 +28,6 @@ const Results = () => {
       window.removeEventListener("popstate", preventBack);
     };
   }, []);
-
-  const handleRestart = () => {
-    resetAssessments();
-    navigate("/training/1");
-  };
 
   const handleHome = () => {
     navigate("/");
@@ -126,23 +121,28 @@ const Results = () => {
           </Card>
         )}
 
-        <div className="pt-4 flex flex-col sm:flex-row gap-4 justify-center">
+        <div className="bg-blue-500/20 backdrop-blur-sm rounded-xl p-6 border-2 border-blue-500/40 mb-6">
+          <div className="flex items-start gap-3 text-primary-foreground">
+            <AlertCircle className="h-6 w-6 flex-shrink-0 mt-0.5" />
+            <div className="text-left">
+              <h4 className="font-semibold mb-2">Acesso Controlado</h4>
+              <p className="text-sm opacity-90">
+                O treinamento só pode ser realizado mediante convite por link enviado pelo administrador. 
+                Para participar de uma nova sessão, aguarde o convite do Prof. Cristhian Lima.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="pt-4 flex justify-center">
           <Button
             onClick={handleHome}
             size="lg"
             variant="secondary"
-            className="px-8 py-6 h-auto text-lg"
+            className="px-12 py-6 h-auto text-lg font-semibold"
           >
             <Home className="mr-2 h-5 w-5" />
-            Página Inicial
-          </Button>
-          <Button
-            onClick={handleRestart}
-            size="lg"
-            className="bg-white text-primary hover:bg-white/90 shadow-soft px-8 py-6 h-auto text-lg"
-          >
-            <RotateCcw className="mr-2 h-5 w-5" />
-            Refazer Treinamento
+            Voltar à Página Inicial
           </Button>
         </div>
       </div>

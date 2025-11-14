@@ -6,18 +6,37 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Copy, Plus, Calendar, Users, Link as LinkIcon, BarChart3, Play } from 'lucide-react';
+import { Copy, Plus, Calendar, Users, Link as LinkIcon, BarChart3, Play, Edit, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { sessionSchema } from '@/lib/validators';
 import { z } from 'zod';
 import { Header } from '@/components/Header';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface Session {
   id: string;
   nome: string;
   data: string;
   created_at: string;
+  session_status?: string;
 }
 
 const Admin = () => {
@@ -25,6 +44,13 @@ const Admin = () => {
   const [data, setData] = useState('');
   const [loading, setLoading] = useState(false);
   const [sessions, setSessions] = useState<Session[]>([]);
+  const [deleteSessionId, setDeleteSessionId] = useState<string | null>(null);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deletingSession, setDeletingSession] = useState(false);
+  const [editSession, setEditSession] = useState<Session | null>(null);
+  const [editNome, setEditNome] = useState('');
+  const [editData, setEditData] = useState('');
+  const [editingSession, setEditingSession] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -124,6 +150,115 @@ const Admin = () => {
     });
   };
 
+  const handleEditClick = (session: Session) => {
+    setEditSession(session);
+    setEditNome(session.nome);
+    setEditData(session.data);
+  };
+
+  const handleEditSave = async () => {
+    if (!editSession) return;
+    
+    try {
+      setEditingSession(true);
+      
+      const validation = sessionSchema.safeParse({
+        nome: editNome,
+        data: editData,
+      });
+
+      if (!validation.success) {
+        toast({
+          title: 'Erro de validação',
+          description: validation.error.errors[0].message,
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      const { error } = await supabase
+        .from('sessions')
+        .update({
+          nome: editNome,
+          data: editData,
+        })
+        .eq('id', editSession.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Sessão atualizada',
+        description: 'As informações da sessão foram atualizadas com sucesso',
+      });
+
+      setEditSession(null);
+      setEditNome('');
+      setEditData('');
+      fetchSessions();
+    } catch (error) {
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível atualizar a sessão',
+        variant: 'destructive',
+      });
+    } finally {
+      setEditingSession(false);
+    }
+  };
+
+  const handleDeleteClick = (sessionId: string) => {
+    setDeleteSessionId(sessionId);
+    setDeletePassword('');
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteSessionId || !user) return;
+
+    try {
+      setDeletingSession(true);
+
+      // Verify password
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user.email!,
+        password: deletePassword,
+      });
+
+      if (signInError) {
+        toast({
+          title: 'Senha incorreta',
+          description: 'A senha fornecida está incorreta',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Delete session
+      const { error: deleteError } = await supabase
+        .from('sessions')
+        .delete()
+        .eq('id', deleteSessionId);
+
+      if (deleteError) throw deleteError;
+
+      toast({
+        title: 'Sessão excluída',
+        description: 'A sessão foi excluída com sucesso',
+      });
+
+      setDeleteSessionId(null);
+      setDeletePassword('');
+      fetchSessions();
+    } catch (error) {
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível excluir a sessão',
+        variant: 'destructive',
+      });
+    } finally {
+      setDeletingSession(false);
+    }
+  };
+
   return (
     <>
       <Header />
@@ -209,7 +344,7 @@ const Admin = () => {
                           </span>
                         </div>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 flex-wrap">
                         <Button
                           variant="default"
                           size="sm"
@@ -243,6 +378,22 @@ const Admin = () => {
                           <Copy className="h-4 w-4 mr-2" />
                           Copiar Link
                         </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEditClick(session)}
+                        >
+                          <Edit className="h-4 w-4 mr-2" />
+                          Editar
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDeleteClick(session.id)}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Excluir
+                        </Button>
                       </div>
                     </div>
                   </CardContent>
@@ -253,6 +404,95 @@ const Admin = () => {
         </div>
       </div>
     </div>
+
+      {/* Edit Session Dialog */}
+      <Dialog open={!!editSession} onOpenChange={(open) => !open && setEditSession(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Sessão</DialogTitle>
+            <DialogDescription>
+              Atualize as informações da sessão
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-nome">Nome da Atividade</Label>
+              <Input
+                id="edit-nome"
+                value={editNome}
+                onChange={(e) => setEditNome(e.target.value)}
+                placeholder="Ex: Treinamento de Identificação Fenotípica"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-data">Data</Label>
+              <Input
+                id="edit-data"
+                type="date"
+                value={editData}
+                onChange={(e) => setEditData(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setEditSession(null)}
+              disabled={editingSession}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleEditSave}
+              disabled={editingSession}
+            >
+              {editingSession ? 'Salvando...' : 'Salvar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Session Dialog with Password Confirmation */}
+      <AlertDialog open={!!deleteSessionId} onOpenChange={(open) => !open && setDeleteSessionId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. Para confirmar a exclusão desta sessão, 
+              digite sua senha de administrador abaixo.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-4">
+            <Label htmlFor="delete-password">Senha do Administrador</Label>
+            <Input
+              id="delete-password"
+              type="password"
+              value={deletePassword}
+              onChange={(e) => setDeletePassword(e.target.value)}
+              placeholder="Digite sua senha"
+              className="mt-2"
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                setDeleteSessionId(null);
+                setDeletePassword('');
+              }}
+              disabled={deletingSession}
+            >
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              disabled={deletingSession || !deletePassword}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deletingSession ? 'Excluindo...' : 'Confirmar Exclusão'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };
