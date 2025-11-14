@@ -19,7 +19,7 @@ const Home = () => {
   return (
     <>
       <Header />
-      <div className="min-h-[calc(100vh-4rem)] flex flex-col items-center justify-center p-6 bg-[#f5f1eb] dark:bg-gradient-to-b dark:from-gray-900 dark:to-gray-800">
+      <div className="min-h-[calc(100vh-4rem)] flex flex-col items-center justify-center p-6 bg-[#f5f1eb] dark:bg-gradient-to-b dark:from-[#3d2817] dark:to-[#2a1810]">
         <div className="max-w-3xl w-full text-center space-y-8 animate-fade-in">
           
           {/* Logo */}
