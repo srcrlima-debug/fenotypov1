@@ -31,9 +31,10 @@ export const ProfessorModal = ({ open, onOpenChange }: ProfessorModalProps) => {
                     href="https://profcristhianlima.lovable.app" 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="p-3 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full hover:scale-110 transition-all duration-500 animate-float-gentle"
+                    className="p-3 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full hover:scale-125 hover:rotate-12 transition-all duration-500 animate-float-gentle"
                     style={{ 
                       animationDelay: '0s',
+                      animationDuration: '4s',
                       boxShadow: '0 10px 25px rgba(59, 130, 246, 0.5), 0 0 30px rgba(59, 130, 246, 0.3), inset 0 2px 4px rgba(255, 255, 255, 0.3), inset 0 -2px 4px rgba(0, 0, 0, 0.2)',
                       transform: 'translateZ(30px) rotateX(5deg)',
                       transformStyle: 'preserve-3d'
@@ -46,9 +47,10 @@ export const ProfessorModal = ({ open, onOpenChange }: ProfessorModalProps) => {
                     href="https://www.instagram.com/srcrlima/" 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="p-3 bg-gradient-to-br from-pink-500 via-purple-500 to-orange-400 rounded-full hover:scale-110 transition-all duration-500 animate-float-gentle"
+                    className="p-3 bg-gradient-to-br from-pink-500 via-purple-500 to-orange-400 rounded-full hover:scale-125 hover:rotate-12 transition-all duration-500 animate-float-gentle"
                     style={{ 
-                      animationDelay: '0.5s',
+                      animationDelay: '1s',
+                      animationDuration: '4s',
                       boxShadow: '0 10px 25px rgba(236, 72, 153, 0.5), 0 0 30px rgba(236, 72, 153, 0.3), inset 0 2px 4px rgba(255, 255, 255, 0.3), inset 0 -2px 4px rgba(0, 0, 0, 0.2)',
                       transform: 'translateZ(30px) rotateX(5deg)',
                       transformStyle: 'preserve-3d'
@@ -61,9 +63,10 @@ export const ProfessorModal = ({ open, onOpenChange }: ProfessorModalProps) => {
                     href="https://www.youtube.com/@sociologandocursos" 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="p-3 bg-gradient-to-br from-red-500 to-red-700 rounded-full hover:scale-110 transition-all duration-500 animate-float-gentle"
+                    className="p-3 bg-gradient-to-br from-red-500 to-red-700 rounded-full hover:scale-125 hover:rotate-12 transition-all duration-500 animate-float-gentle"
                     style={{ 
-                      animationDelay: '1s',
+                      animationDelay: '2s',
+                      animationDuration: '4s',
                       boxShadow: '0 10px 25px rgba(239, 68, 68, 0.5), 0 0 30px rgba(239, 68, 68, 0.3), inset 0 2px 4px rgba(255, 255, 255, 0.3), inset 0 -2px 4px rgba(0, 0, 0, 0.2)',
                       transform: 'translateZ(30px) rotateX(5deg)',
                       transformStyle: 'preserve-3d'
@@ -76,9 +79,10 @@ export const ProfessorModal = ({ open, onOpenChange }: ProfessorModalProps) => {
                     href="http://lattes.cnpq.br/1542213940535701" 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="p-3 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-full hover:scale-110 transition-all duration-500 animate-float-gentle"
+                    className="p-3 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-full hover:scale-125 hover:rotate-12 transition-all duration-500 animate-float-gentle"
                     style={{ 
-                      animationDelay: '1.5s',
+                      animationDelay: '3s',
+                      animationDuration: '4s',
                       boxShadow: '0 10px 25px rgba(250, 204, 21, 0.5), 0 0 30px rgba(250, 204, 21, 0.3), inset 0 2px 4px rgba(255, 255, 255, 0.3), inset 0 -2px 4px rgba(0, 0, 0, 0.2)',
                       transform: 'translateZ(30px) rotateX(5deg)',
                       transformStyle: 'preserve-3d'
