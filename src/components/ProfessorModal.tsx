@@ -18,50 +18,70 @@ export const ProfessorModal = ({ open, onOpenChange }: ProfessorModalProps) => {
         <div className="grid md:grid-cols-2 gap-8 items-start">
           {/* Photo */}
           <div className="flex justify-center">
-            <div className="relative group">
+            <div className="relative">
               <img 
                 src={profPhoto} 
                 alt="Prof. Dr. Cristhian Lima" 
-                className="rounded-xl shadow-xl w-full max-w-md object-cover transition-transform duration-500 group-hover:scale-105"
+                className="rounded-xl shadow-xl w-full max-w-md object-cover"
               />
-              {/* Social Icons Overlay */}
-              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 rounded-b-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+              {/* Social Icons Overlay - Always visible with subtle animation */}
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 rounded-b-xl">
                 <div className="flex justify-center gap-4">
                   <a 
                     href="https://profcristhianlima.lovable.app" 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="p-2 bg-white/20 backdrop-blur-sm rounded-full hover:bg-white/30 hover:scale-110 transition-all duration-300"
+                    className="p-3 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full hover:scale-125 transition-all duration-300 shadow-lg animate-bounce-slow"
+                    style={{ 
+                      animationDelay: '0s',
+                      boxShadow: '0 8px 16px rgba(59, 130, 246, 0.4), 0 0 20px rgba(59, 130, 246, 0.2)',
+                      transform: 'translateZ(20px)'
+                    }}
                     aria-label="Site pessoal"
                   >
-                    <Globe className="w-5 h-5 text-white" />
+                    <Globe className="w-6 h-6 text-white" />
                   </a>
                   <a 
                     href="https://www.instagram.com/srcrlima/" 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="p-2 bg-white/20 backdrop-blur-sm rounded-full hover:bg-white/30 hover:scale-110 transition-all duration-300"
+                    className="p-3 bg-gradient-to-br from-pink-500 via-purple-500 to-orange-400 rounded-full hover:scale-125 transition-all duration-300 shadow-lg animate-bounce-slow"
+                    style={{ 
+                      animationDelay: '0.2s',
+                      boxShadow: '0 8px 16px rgba(236, 72, 153, 0.4), 0 0 20px rgba(236, 72, 153, 0.2)',
+                      transform: 'translateZ(20px)'
+                    }}
                     aria-label="Instagram"
                   >
-                    <Instagram className="w-5 h-5 text-white" />
+                    <Instagram className="w-6 h-6 text-white" />
                   </a>
                   <a 
                     href="https://www.youtube.com/@sociologandocursos" 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="p-2 bg-white/20 backdrop-blur-sm rounded-full hover:bg-white/30 hover:scale-110 transition-all duration-300"
+                    className="p-3 bg-gradient-to-br from-red-500 to-red-700 rounded-full hover:scale-125 transition-all duration-300 shadow-lg animate-bounce-slow"
+                    style={{ 
+                      animationDelay: '0.4s',
+                      boxShadow: '0 8px 16px rgba(239, 68, 68, 0.4), 0 0 20px rgba(239, 68, 68, 0.2)',
+                      transform: 'translateZ(20px)'
+                    }}
                     aria-label="YouTube"
                   >
-                    <Youtube className="w-5 h-5 text-white" />
+                    <Youtube className="w-6 h-6 text-white" />
                   </a>
                   <a 
                     href="http://lattes.cnpq.br/1542213940535701" 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="p-2 bg-white/20 backdrop-blur-sm rounded-full hover:bg-white/30 hover:scale-110 transition-all duration-300"
+                    className="p-3 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-full hover:scale-125 transition-all duration-300 shadow-lg animate-bounce-slow"
+                    style={{ 
+                      animationDelay: '0.6s',
+                      boxShadow: '0 8px 16px rgba(250, 204, 21, 0.4), 0 0 20px rgba(250, 204, 21, 0.2)',
+                      transform: 'translateZ(20px)'
+                    }}
                     aria-label="Currículo Lattes"
                   >
-                    <FileText className="w-5 h-5 text-white" />
+                    <FileText className="w-6 h-6 text-white" />
                   </a>
                 </div>
               </div>
@@ -80,12 +100,6 @@ export const ProfessorModal = ({ open, onOpenChange }: ProfessorModalProps) => {
             
             <div className="space-y-2 pt-4">
               <p className="text-sm font-semibold">📍 Professor efetivo do IF Goiano, Campus Urutaí</p>
-              <div className="flex flex-wrap gap-3 text-sm">
-                <a href="https://profcristhianlima.lovable.app" target="_blank" rel="noopener noreferrer" className="hover:text-[#a0755f] transition-colors">🌐 Site</a>
-                <a href="https://instagram.com/srcrlima" target="_blank" rel="noopener noreferrer" className="hover:text-[#a0755f] transition-colors">📱 Instagram</a>
-                <a href="https://youtube.com/@sociologandocursos" target="_blank" rel="noopener noreferrer" className="hover:text-[#a0755f] transition-colors">🎥 YouTube</a>
-                <a href="http://lattes.cnpq.br/1542213940535701" target="_blank" rel="noopener noreferrer" className="hover:text-[#a0755f] transition-colors">📄 Lattes</a>
-              </div>
             </div>
             
             <p className="text-lg font-semibold italic pt-4 text-[#a0755f]">
