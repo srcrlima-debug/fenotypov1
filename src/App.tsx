@@ -13,6 +13,8 @@ import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Registro from "./pages/Registro";
 import CompleteProfile from "./pages/CompleteProfile";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import ComoFunciona from "./pages/ComoFunciona";
 import Antessala from "./pages/Antessala";
 import Admin from "./pages/Admin";
@@ -40,6 +42,8 @@ const App = () => (
                 <Route path="/login" element={<Login />} />
                 <Route path="/registro" element={<Registro />} />
                 <Route path="/complete-profile" element={<CompleteProfile />} />
+                <Route path="/esqueci-senha" element={<ForgotPassword />} />
+                <Route path="/redefinir-senha" element={<ResetPassword />} />
                 <Route path="/como-funciona" element={<ComoFunciona />} />
                 <Route 
                   path="/antessala/:sessionId" 
