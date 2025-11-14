@@ -52,6 +52,7 @@ export default function AdminLiveControl() {
     avg_time: 0,
   });
   const [timeRemaining, setTimeRemaining] = useState(60);
+  const [onlineParticipants, setOnlineParticipants] = useState(0);
 
   useEffect(() => {
     if (!authLoading && !adminLoading) {
@@ -61,6 +62,23 @@ export default function AdminLiveControl() {
       }
     }
   }, [user, isAdmin, authLoading, adminLoading, navigate]);
+
+  // Track online participants using Realtime Presence
+  useEffect(() => {
+    if (!sessionId) return;
+
+    const presenceChannel = supabase.channel(`session-${sessionId}-presence`)
+      .on('presence', { event: 'sync' }, () => {
+        const state = presenceChannel.presenceState();
+        const count = Object.keys(state).length;
+        setOnlineParticipants(count);
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(presenceChannel);
+    };
+  }, [sessionId]);
 
   useEffect(() => {
     if (!sessionId) return;
@@ -106,6 +124,28 @@ export default function AdminLiveControl() {
       supabase.removeChannel(avaliationsChannel);
     };
   }, [sessionId]);
+
+  // Auto-advance when all participants have voted
+  useEffect(() => {
+    if (!session || session.session_status !== 'active') return;
+    if (onlineParticipants === 0) return;
+    
+    // If everyone has voted, auto-advance
+    if (stats.responses_current_photo === onlineParticipants && stats.responses_current_photo > 0) {
+      toast({
+        title: "Todos votaram!",
+        description: "Avançando automaticamente para a próxima foto...",
+      });
+      
+      setTimeout(() => {
+        if (session.current_photo >= 30) {
+          handleCompleteSession();
+        } else {
+          handleShowResults();
+        }
+      }, 1500);
+    }
+  }, [stats.responses_current_photo, onlineParticipants, session]);
 
   useEffect(() => {
     if (!session || session.session_status !== 'active' || !session.photo_start_time) return;
@@ -235,12 +275,32 @@ export default function AdminLiveControl() {
     });
   };
 
-  const handleNextPhoto = async () => {
-    if (!session || session.current_photo >= 30) {
+  const handleCompleteSession = async () => {
+    const { error } = await supabase
+      .from("sessions")
+      .update({ session_status: 'completed' })
+      .eq("id", sessionId);
+
+    if (error) {
       toast({
-        title: "Sessão Concluída",
-        description: "Todas as fotos foram avaliadas",
+        title: "Erro",
+        description: "Não foi possível finalizar a sessão",
+        variant: "destructive",
       });
+      return;
+    }
+
+    toast({
+      title: "Sessão Finalizada",
+      description: "Todas as 30 fotos foram avaliadas!",
+    });
+  };
+
+  const handleNextPhoto = async () => {
+    if (!session) return;
+
+    if (session.current_photo >= 30) {
+      await handleCompleteSession();
       return;
     }
 
@@ -401,16 +461,31 @@ export default function AdminLiveControl() {
                 <Users className="w-5 h-5" />
                 Participação em Tempo Real
               </h3>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div className="text-center">
-                  <div className="text-3xl font-bold text-foreground">{stats.total_participants}</div>
-                  <div className="text-sm text-muted-foreground">Total Participantes</div>
+                  <div className="text-3xl font-bold text-primary">{onlineParticipants}</div>
+                  <div className="text-sm text-muted-foreground">Online Agora</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-3xl font-bold text-primary">{stats.responses_current_photo}</div>
-                  <div className="text-sm text-muted-foreground">Respostas Recebidas</div>
+                  <div className="text-3xl font-bold text-green-600">{stats.responses_current_photo}</div>
+                  <div className="text-sm text-muted-foreground">Já Votaram</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-muted-foreground">{onlineParticipants - stats.responses_current_photo}</div>
+                  <div className="text-sm text-muted-foreground">Aguardando</div>
                 </div>
               </div>
+              {onlineParticipants > 0 && (
+                <div className="mt-4">
+                  <Progress 
+                    value={(stats.responses_current_photo / onlineParticipants) * 100} 
+                    className="h-2"
+                  />
+                  <p className="text-xs text-center mt-2 text-muted-foreground">
+                    {Math.round((stats.responses_current_photo / onlineParticipants) * 100)}% dos participantes votaram
+                  </p>
+                </div>
+              )}
             </Card>
 
             <Card className="p-6">
