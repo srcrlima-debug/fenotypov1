@@ -110,7 +110,7 @@ export const ProfessorModal = ({ open, onOpenChange }: ProfessorModalProps) => {
               <p className="text-sm font-semibold">📍 Professor efetivo do IF Goiano, Campus Urutaí</p>
             </div>
             
-            <p className="text-lg font-semibold italic pt-4 text-[#a0755f]">
+            <p className="text-2xl font-bold italic pt-4 text-[#a0755f]">
               "O Corpo sabe, o que o livro não diz."
             </p>
           </div>
