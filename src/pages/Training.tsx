@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { BookOpen, CheckCircle, XCircle, ImageOff } from "lucide-react";
 import { useAssessment } from "@/contexts/AssessmentContext";
 import { CountdownCircleTimer } from "react-countdown-circle-timer";
@@ -17,6 +18,7 @@ const Training = () => {
   const startTimeRef = useRef<number>(Date.now());
   const [timerKey, setTimerKey] = useState(0);
   const [imageError, setImageError] = useState(false);
+  const [zoomOpen, setZoomOpen] = useState(false);
   const currentImage = getImageByPage(currentPage);
 
   // Disable browser back button
@@ -113,7 +115,7 @@ const Training = () => {
           </div>
 
           {/* Image Display Area */}
-          <div className="bg-card rounded-xl border border-border shadow-soft overflow-hidden">
+          <div className="bg-card rounded-xl border border-border shadow-soft overflow-hidden cursor-pointer hover:opacity-90 transition-opacity" onClick={() => !imageError && currentImage && setZoomOpen(true)}>
             <div className="aspect-video bg-muted flex items-center justify-center relative">
               {currentImage && !imageError ? (
                 <img
@@ -140,6 +142,14 @@ const Training = () => {
               )}
             </div>
           </div>
+
+          <Dialog open={zoomOpen} onOpenChange={setZoomOpen}>
+            <DialogContent className="max-w-[95vw] max-h-[95vh] p-0">
+              {currentImage && (
+                <img src={currentImage.imageUrl} alt={currentImage.nome} className="w-full h-full object-contain" />
+              )}
+            </DialogContent>
+          </Dialog>
 
           {/* Assessment Instruction */}
           <div className="text-center">

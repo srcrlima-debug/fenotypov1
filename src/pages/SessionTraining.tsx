@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { CountdownCircleTimer } from "react-countdown-circle-timer";
 import { getImageByPage } from "@/data/images";
 import { Card } from "@/components/ui/card";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Users, Clock } from "lucide-react";
 
 interface SessionData {
@@ -30,6 +31,7 @@ export default function SessionTraining() {
   const [startTime, setStartTime] = useState(Date.now());
   const [canRespond, setCanRespond] = useState(true);
   const [timerKey, setTimerKey] = useState(0);
+  const [zoomOpen, setZoomOpen] = useState(false);
 
   useEffect(() => {
     const checkSessionAndUser = async () => {
@@ -123,11 +125,21 @@ export default function SessionTraining() {
             <CountdownCircleTimer key={timerKey} isPlaying duration={sessionData.photo_duration} colors={["#10b981", "#f59e0b", "#ef4444"]} colorsTime={[40, 20, 0]} size={120} strokeWidth={8} onComplete={() => { if (canRespond) handleDecision("NÃO_RESPONDIDO"); }}>
               {({ remainingTime }) => <div className="text-center"><div className="text-3xl font-bold">{remainingTime}</div><div className="text-sm text-muted-foreground">segundos</div></div>}
             </CountdownCircleTimer>
-            <div className="w-full bg-card rounded-xl shadow-xl overflow-hidden">{currentImage && <img src={currentImage.imageUrl} alt={currentImage.nome} className="w-full h-auto" />}</div>
+            <div className="w-full bg-card rounded-xl shadow-xl overflow-hidden cursor-pointer hover:opacity-90 transition-opacity" onClick={() => setZoomOpen(true)}>
+              {currentImage && <img src={currentImage.imageUrl} alt={currentImage.nome} className="w-full h-auto" />}
+            </div>
             <div className="flex gap-4 w-full max-w-md">
               <Button onClick={() => handleDecision("DEFERIDO")} disabled={!canRespond} className="flex-1 h-16 text-lg bg-green-500 hover:bg-green-600">DEFERIDO</Button>
               <Button onClick={() => handleDecision("INDEFERIDO")} disabled={!canRespond} className="flex-1 h-16 text-lg bg-red-500 hover:bg-red-600">INDEFERIDO</Button>
             </div>
+
+            <Dialog open={zoomOpen} onOpenChange={setZoomOpen}>
+              <DialogContent className="max-w-[95vw] max-h-[95vh] p-0">
+                {currentImage && (
+                  <img src={currentImage.imageUrl} alt={currentImage.nome} className="w-full h-full object-contain" />
+                )}
+              </DialogContent>
+            </Dialog>
           </div>
         )}
       </div>
