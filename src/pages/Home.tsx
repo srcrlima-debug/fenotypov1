@@ -46,7 +46,7 @@ const Home = () => {
               fenotípica para acesso por meio de ações afirmativas.
             </p>
             
-            <div className="bg-[#a0755f]/10 border-2 border-[#a0755f] rounded-xl p-6 max-w-2xl mx-auto">
+            <div className="card-3d bg-[#a0755f]/10 border-2 border-[#a0755f] rounded-xl p-6 max-w-2xl mx-auto">
               <p className="text-base text-[#5a4a42] font-medium">
                 📧 Os links de acesso ao treinamento serão enviados por e-mail quando o administrador iniciar a sessão.
               </p>
@@ -61,7 +61,7 @@ const Home = () => {
             <Button
               onClick={() => navigate("/como-funciona")}
               size="lg"
-              className="h-20 px-16 text-xl font-bold bg-[#a0755f] hover:bg-[#8a6350] text-white shadow-2xl transition-all hover:scale-105 rounded-xl border-4 border-[#8a6350]"
+              className="button-3d h-20 px-16 text-xl font-bold bg-[#a0755f] hover:bg-[#8a6350] text-white shadow-2xl rounded-xl border-4 border-[#8a6350]"
             >
               📖 Como Funciona
             </Button>

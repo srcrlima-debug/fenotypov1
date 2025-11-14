@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { CheckCircle, Timer, Image, Keyboard, AlertCircle } from "lucide-react";
 import { Header } from "@/components/Header";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
+import { useCardTilt } from "@/hooks/useCardTilt";
 
 const ComoFunciona = () => {
   const navigate = useNavigate();
@@ -12,6 +13,11 @@ const ComoFunciona = () => {
   const { ref: card3Ref, isVisible: card3Visible } = useScrollReveal();
   const { ref: card4Ref, isVisible: card4Visible } = useScrollReveal();
   const { ref: card5Ref, isVisible: card5Visible } = useScrollReveal();
+  
+  const tilt1 = useCardTilt();
+  const tilt2 = useCardTilt();
+  const tilt3 = useCardTilt();
+  const tilt4 = useCardTilt();
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
@@ -27,7 +33,7 @@ const ComoFunciona = () => {
 
         <div className="grid gap-6 mb-8">
           <div ref={card1Ref} className={`scroll-reveal ${card1Visible ? 'revealed' : ''}`}>
-            <Card className="hover-scale">
+            <Card ref={tilt1} className="card-3d-tilt">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Image className="h-5 w-5 text-primary" />
@@ -44,7 +50,7 @@ const ComoFunciona = () => {
           </div>
 
           <div ref={card2Ref} className={`scroll-reveal ${card2Visible ? 'revealed' : ''}`}>
-          <Card className="hover-scale">
+          <Card ref={tilt2} className="card-3d-tilt">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Timer className="h-5 w-5 text-primary" />
@@ -68,7 +74,7 @@ const ComoFunciona = () => {
           </div>
 
           <div ref={card3Ref} className={`scroll-reveal ${card3Visible ? 'revealed' : ''}`}>
-          <Card className="hover-scale">
+          <Card ref={tilt3} className="card-3d-tilt">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <CheckCircle className="h-5 w-5 text-primary" />
@@ -98,7 +104,7 @@ const ComoFunciona = () => {
           </div>
 
           <div ref={card4Ref} className={`scroll-reveal ${card4Visible ? 'revealed' : ''}`}>
-          <Card className="hover-scale">
+          <Card ref={tilt4} className="card-3d-tilt">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Keyboard className="h-5 w-5 text-primary" />
@@ -125,7 +131,7 @@ const ComoFunciona = () => {
         </div>
 
         <div className="flex justify-center gap-4 animate-fade-slide-up">
-          <Button variant="outline" onClick={() => navigate(-1)} size="lg">
+          <Button variant="outline" onClick={() => navigate(-1)} size="lg" className="button-3d">
             Voltar
           </Button>
         </div>
