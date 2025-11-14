@@ -17,11 +17,12 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Header } from "@/components/Header";
+import { LiveStats } from "@/components/LiveStats";
 
 const Training = () => {
   const { page } = useParams<{ page: string }>();
   const navigate = useNavigate();
-  const { addAssessment } = useAssessment();
+  const { addAssessment, assessments } = useAssessment();
   const currentPage = parseInt(page || "1");
   const totalPages = 30;
   const progress = (currentPage / totalPages) * 100;
@@ -110,7 +111,18 @@ const Training = () => {
     <>
       <Header />
       <div className="min-h-[calc(100vh-4rem)] flex flex-col items-center justify-center p-4 bg-gradient-to-b from-background to-muted/20">
-        <div className="w-full max-w-4xl space-y-6 animate-fade-in">
+        <div className="w-full max-w-6xl space-y-6 animate-fade-in">
+          
+          {/* Live Stats - visible after completing at least one assessment */}
+          {assessments.length > 0 && (
+            <LiveStats 
+              assessments={assessments}
+              currentPage={currentPage}
+              totalPages={totalPages}
+            />
+          )}
+
+          <div className="max-w-4xl mx-auto space-y-6">
           <div className="text-center space-y-2">
             <h1 className="text-3xl font-bold">Treinamento de Avaliação</h1>
             <p className="text-muted-foreground">
@@ -218,6 +230,7 @@ const Training = () => {
                 <kbd className="ml-2 px-2 py-1 bg-red-700/50 rounded text-xs hidden sm:inline">I</kbd>
               </Button>
             </div>
+          </div>
           </div>
         </div>
       </div>
