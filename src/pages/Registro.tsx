@@ -16,6 +16,9 @@ const registroSchema = z.object({
   genero: z.string().min(1, { message: 'Selecione um gênero' }),
   faixaEtaria: z.string().min(1, { message: 'Selecione uma faixa etária' }),
   estado: z.string().min(1, { message: 'Selecione um estado' }),
+  pertencimentoRacial: z.string().min(1, { message: 'Selecione o pertencimento racial' }),
+  regiao: z.string().min(1, { message: 'Selecione a região' }),
+  experienciaBancas: z.string().min(1, { message: 'Selecione sua experiência' }),
 }).refine((data) => data.password === data.confirmPassword, {
   message: 'As senhas não coincidem',
   path: ['confirmPassword'],
@@ -34,6 +37,9 @@ const Registro = () => {
     genero: '',
     faixaEtaria: '',
     estado: '',
+    pertencimentoRacial: '',
+    regiao: '',
+    experienciaBancas: '',
   });
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -89,6 +95,9 @@ const Registro = () => {
             genero: validatedData.genero,
             faixa_etaria: validatedData.faixaEtaria,
             estado: validatedData.estado,
+            pertencimento_racial: validatedData.pertencimentoRacial,
+            regiao: validatedData.regiao,
+            experiencia_bancas: validatedData.experienciaBancas,
           });
 
         if (profileError) {
@@ -240,18 +249,24 @@ const Registro = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="genero">Gênero</Label>
+              <Label htmlFor="genero">Identidade de Gênero</Label>
               <Select value={formData.genero} onValueChange={(value) => setFormData({ ...formData, genero: value })}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Masculino">Masculino</SelectItem>
-                  <SelectItem value="Feminino">Feminino</SelectItem>
+                  <SelectItem value="Mulher cisgênero">Mulher cisgênero</SelectItem>
+                  <SelectItem value="Mulher transexual/transgênero">Mulher transexual/transgênero</SelectItem>
+                  <SelectItem value="Não binário">Não binário</SelectItem>
+                  <SelectItem value="Homem cisgênero">Homem cisgênero</SelectItem>
+                  <SelectItem value="Homem transexual/transgênero">Homem transexual/transgênero</SelectItem>
                   <SelectItem value="Outro">Outro</SelectItem>
-                  <SelectItem value="Prefiro não informar">Prefiro não informar</SelectItem>
+                  <SelectItem value="Prefiro não responder">Prefiro não responder</SelectItem>
                 </SelectContent>
               </Select>
+              <p className="text-xs text-muted-foreground">
+                Cisgênero: identifica-se com o sexo designado ao nascer
+              </p>
             </div>
 
             <div className="space-y-2">
@@ -282,6 +297,53 @@ const Registro = () => {
                       {estado}
                     </SelectItem>
                   ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="regiao">Região de Origem</Label>
+              <Select value={formData.regiao} onValueChange={(value) => setFormData({ ...formData, regiao: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Norte">Norte</SelectItem>
+                  <SelectItem value="Nordeste">Nordeste</SelectItem>
+                  <SelectItem value="Centro-Oeste">Centro-Oeste</SelectItem>
+                  <SelectItem value="Sudeste">Sudeste</SelectItem>
+                  <SelectItem value="Sul">Sul</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="pertencimentoRacial">Pertencimento Racial</Label>
+              <Select value={formData.pertencimentoRacial} onValueChange={(value) => setFormData({ ...formData, pertencimentoRacial: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Preto">Preto</SelectItem>
+                  <SelectItem value="Parda">Parda</SelectItem>
+                  <SelectItem value="Indígena">Indígena</SelectItem>
+                  <SelectItem value="Branco">Branco</SelectItem>
+                  <SelectItem value="Amarelo">Amarelo</SelectItem>
+                  <SelectItem value="Outro">Outro</SelectItem>
+                  <SelectItem value="Prefiro não responder">Prefiro não responder</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="experienciaBancas">Experiência com Bancas de Heteroidentificação</Label>
+              <Select value={formData.experienciaBancas} onValueChange={(value) => setFormData({ ...formData, experienciaBancas: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="É minha primeira formação">É minha primeira formação</SelectItem>
+                  <SelectItem value="Já participo de Bancas de heteroidentificação">Já participo de Bancas de heteroidentificação</SelectItem>
                 </SelectContent>
               </Select>
             </div>
