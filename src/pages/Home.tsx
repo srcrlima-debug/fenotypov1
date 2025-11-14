@@ -94,7 +94,7 @@ const Home = () => {
             <img 
               src={fistIcon} 
               alt="Punho cerrado" 
-              className="h-12 w-12 inline-block animate-pulse-zoom animate-neon-glow"
+              className="h-12 w-12 inline-block animate-pulse-zoom"
             />
             Educadores Antirracistas
           </p>

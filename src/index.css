@@ -178,21 +178,8 @@ All colors MUST be HSL.
     }
   }
 
-  @keyframes neon-glow {
-    0%, 100% {
-      filter: drop-shadow(0 0 8px rgba(160, 117, 95, 0.6)) drop-shadow(0 0 16px rgba(160, 117, 95, 0.4));
-    }
-    50% {
-      filter: drop-shadow(0 0 16px rgba(160, 117, 95, 0.9)) drop-shadow(0 0 24px rgba(160, 117, 95, 0.6)) drop-shadow(0 0 32px rgba(160, 117, 95, 0.3));
-    }
-  }
-
   .animate-pulse-zoom {
     animation: pulse-zoom 2s ease-in-out infinite;
-  }
-
-  .animate-neon-glow {
-    animation: neon-glow 2s ease-in-out infinite;
   }
 }
 
