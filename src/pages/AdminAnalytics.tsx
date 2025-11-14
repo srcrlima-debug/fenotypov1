@@ -49,6 +49,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import Papa from 'papaparse';
 import jsPDF from 'jspdf';
+import { ImageZoomDialog, ImageThumbnail } from '@/components/ImageZoomDialog';
 
 interface SessionData {
   id: string;
@@ -130,6 +131,8 @@ const AdminAnalytics = () => {
   const [availableRacas, setAvailableRacas] = useState<string[]>([]);
   const [availableRegioes, setAvailableRegioes] = useState<string[]>([]);
   const [availableExperiencias, setAvailableExperiencias] = useState<string[]>([]);
+  
+  const [zoomImage, setZoomImage] = useState<{ url: string; alt: string } | null>(null);
 
   useEffect(() => {
     if (sessionId) {
@@ -1115,6 +1118,13 @@ const AdminAnalytics = () => {
           </CardContent>
         </Card>
       </div>
+      
+      <ImageZoomDialog
+        imageUrl={zoomImage?.url || ''}
+        altText={zoomImage?.alt || ''}
+        isOpen={!!zoomImage}
+        onOpenChange={(open) => !open && setZoomImage(null)}
+      />
     </div>
   );
 };
