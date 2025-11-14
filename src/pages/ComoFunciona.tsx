@@ -47,9 +47,9 @@ const ComoFunciona = () => {
                 Cada imagem tem um cronômetro. Quando o tempo acabar, a resposta será automaticamente
                 registrada como "Não Respondido".
               </p>
-              <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 flex items-start gap-2">
-                <AlertCircle className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" />
-                <p className="text-sm text-amber-700 dark:text-amber-300">
+              <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 flex items-start gap-2">
+                <AlertCircle className="h-5 w-5 text-red-500 mt-0.5 flex-shrink-0" />
+                <p className="text-sm text-red-700">
                   <strong>Atenção:</strong> Nos últimos 10 segundos, o cronômetro ficará vermelho
                   para alertá-lo sobre o tempo restante.
                 </p>
