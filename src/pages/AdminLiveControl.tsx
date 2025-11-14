@@ -432,6 +432,116 @@ export default function AdminLiveControl() {
       description: "Gerando relatório com análises",
     });
 
+    // Helper function to generate pie chart
+    const generatePieChart = (data: {label: string, value: number, color: string}[]): string => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 400;
+      canvas.height = 300;
+      const ctx = canvas.getContext('2d')!;
+      
+      const centerX = 150;
+      const centerY = 130;
+      const radius = 100;
+      let currentAngle = -Math.PI / 2;
+      const total = data.reduce((sum, d) => sum + d.value, 0);
+      
+      // Draw pie slices
+      data.forEach(item => {
+        const sliceAngle = (item.value / total) * 2 * Math.PI;
+        
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY);
+        ctx.arc(centerX, centerY, radius, currentAngle, currentAngle + sliceAngle);
+        ctx.closePath();
+        ctx.fillStyle = item.color;
+        ctx.fill();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        
+        currentAngle += sliceAngle;
+      });
+      
+      // Draw legend
+      let legendY = 20;
+      data.forEach(item => {
+        ctx.fillStyle = item.color;
+        ctx.fillRect(270, legendY, 20, 20);
+        ctx.fillStyle = '#000000';
+        ctx.font = '14px Arial';
+        const percent = ((item.value / total) * 100).toFixed(1);
+        ctx.fillText(`${item.label}: ${item.value} (${percent}%)`, 295, legendY + 15);
+        legendY += 30;
+      });
+      
+      return canvas.toDataURL('image/png');
+    };
+
+    // Helper function to generate bar chart
+    const generateBarChart = (data: {label: string, deferido: number, indeferido: number, naoRespondido: number}[]): string => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 600;
+      canvas.height = 300;
+      const ctx = canvas.getContext('2d')!;
+      
+      const chartHeight = 200;
+      const chartWidth = 550;
+      const startX = 40;
+      const startY = 230;
+      const barWidth = Math.min(50, chartWidth / (data.length * 3 + 1));
+      const gap = 10;
+      
+      // Find max value for scaling
+      const maxValue = Math.max(...data.map(d => Math.max(d.deferido, d.indeferido, d.naoRespondido)));
+      const scale = chartHeight / (maxValue + 5);
+      
+      // Draw bars
+      data.forEach((item, index) => {
+        const x = startX + index * (barWidth * 3 + gap * 4);
+        
+        // Deferido (green)
+        ctx.fillStyle = 'rgba(34, 197, 94, 0.8)';
+        const defH = item.deferido * scale;
+        ctx.fillRect(x, startY - defH, barWidth, defH);
+        
+        // Indeferido (red)
+        ctx.fillStyle = 'rgba(239, 68, 68, 0.8)';
+        const indH = item.indeferido * scale;
+        ctx.fillRect(x + barWidth + gap, startY - indH, barWidth, indH);
+        
+        // Não Respondido (gray)
+        ctx.fillStyle = 'rgba(156, 163, 175, 0.8)';
+        const nrH = item.naoRespondido * scale;
+        ctx.fillRect(x + (barWidth + gap) * 2, startY - nrH, barWidth, nrH);
+        
+        // Label
+        ctx.fillStyle = '#000000';
+        ctx.font = '10px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(item.label.substring(0, 10), x + (barWidth * 3 + gap * 2) / 2, startY + 15);
+      });
+      
+      // Draw legend
+      ctx.fillStyle = 'rgba(34, 197, 94, 0.8)';
+      ctx.fillRect(startX, 260, 15, 15);
+      ctx.fillStyle = '#000000';
+      ctx.font = '12px Arial';
+      ctx.textAlign = 'left';
+      ctx.fillText('Deferido', startX + 20, 272);
+      
+      ctx.fillStyle = 'rgba(239, 68, 68, 0.8)';
+      ctx.fillRect(startX + 100, 260, 15, 15);
+      ctx.fillStyle = '#000000';
+      ctx.fillText('Indeferido', startX + 120, 272);
+      
+      ctx.fillStyle = 'rgba(156, 163, 175, 0.8)';
+      ctx.fillRect(startX + 200, 260, 15, 15);
+      ctx.fillStyle = '#000000';
+      ctx.fillText('Não Respondido', startX + 220, 272);
+      
+      return canvas.toDataURL('image/png');
+    };
+
     // Get all evaluations for this session
     const { data: avaliacoes } = await supabase
       .from("avaliacoes")
@@ -455,52 +565,67 @@ export default function AdminLiveControl() {
     yPos += 15;
 
     // Overall Statistics
-    pdf.setFontSize(16);
-    pdf.text("Resultados Gerais", 20, yPos);
-    yPos += 10;
-
     const totalDeferido = avaliacoes.filter(a => a.resposta === "DEFERIDO").length;
     const totalIndeferido = avaliacoes.filter(a => a.resposta === "INDEFERIDO").length;
     const totalNaoRespondido = avaliacoes.filter(a => a.resposta === "NÃO_RESPONDIDO").length;
     const avgTime = avaliacoes.reduce((sum, a) => sum + a.tempo_gasto, 0) / avaliacoes.length / 1000;
 
+    // Generate and add pie chart
+    const pieChartImg = generatePieChart([
+      { label: 'Deferido', value: totalDeferido, color: 'rgba(34, 197, 94, 0.8)' },
+      { label: 'Indeferido', value: totalIndeferido, color: 'rgba(239, 68, 68, 0.8)' },
+      { label: 'Não Respondido', value: totalNaoRespondido, color: 'rgba(156, 163, 175, 0.8)' }
+    ]);
+    
+    pdf.setFontSize(16);
+    pdf.text("Resultados Gerais", 20, yPos);
+    yPos += 10;
+    pdf.addImage(pieChartImg, 'PNG', 20, yPos, 100, 75);
+    yPos += 85;
+
     pdf.setFontSize(12);
-    pdf.text(`Deferido: ${totalDeferido} (${((totalDeferido/avaliacoes.length)*100).toFixed(1)}%)`, 20, yPos);
-    yPos += 8;
-    pdf.text(`Indeferido: ${totalIndeferido} (${((totalIndeferido/avaliacoes.length)*100).toFixed(1)}%)`, 20, yPos);
-    yPos += 8;
-    pdf.text(`Não Respondido: ${totalNaoRespondido} (${((totalNaoRespondido/avaliacoes.length)*100).toFixed(1)}%)`, 20, yPos);
-    yPos += 8;
     pdf.text(`Tempo Médio: ${avgTime.toFixed(2)}s`, 20, yPos);
     yPos += 15;
 
     // Demographics - Gender
-    pdf.setFontSize(16);
-    pdf.text("Análise por Gênero", 20, yPos);
-    yPos += 10;
-
     const byGender: Record<string, any> = {};
     avaliacoes.forEach(a => {
       if (!byGender[a.genero || "Não informado"]) {
-        byGender[a.genero || "Não informado"] = { deferido: 0, indeferido: 0, nao_respondido: 0, total: 0 };
+        byGender[a.genero || "Não informado"] = { deferido: 0, indeferido: 0, nao_respondido: 0 };
       }
       byGender[a.genero || "Não informado"][a.resposta === "DEFERIDO" ? "deferido" : a.resposta === "INDEFERIDO" ? "indeferido" : "nao_respondido"]++;
-      byGender[a.genero || "Não informado"].total++;
     });
 
-    pdf.setFontSize(11);
-    Object.entries(byGender).forEach(([gender, data]: [string, any]) => {
-      if (yPos > 270) {
-        pdf.addPage();
-        yPos = 20;
-      }
-      pdf.text(`${gender}: D=${data.deferido} I=${data.indeferido} NR=${data.nao_respondido} (${data.total} total)`, 25, yPos);
-      yPos += 7;
-    });
-    yPos += 8;
+    if (yPos > 200) {
+      pdf.addPage();
+      yPos = 20;
+    }
+
+    pdf.setFontSize(16);
+    pdf.text("Análise por Gênero", 20, yPos);
+    yPos += 10;
+    
+    const genderChartData = Object.entries(byGender).map(([label, data]: [string, any]) => ({
+      label,
+      deferido: data.deferido,
+      indeferido: data.indeferido,
+      naoRespondido: data.nao_respondido
+    }));
+    
+    const genderChartImg = generateBarChart(genderChartData);
+    pdf.addImage(genderChartImg, 'PNG', 15, yPos, 180, 90);
+    yPos += 100;
 
     // Demographics - Age
-    if (yPos > 250) {
+    const byAge: Record<string, any> = {};
+    avaliacoes.forEach(a => {
+      if (!byAge[a.faixa_etaria || "Não informado"]) {
+        byAge[a.faixa_etaria || "Não informado"] = { deferido: 0, indeferido: 0, nao_respondido: 0 };
+      }
+      byAge[a.faixa_etaria || "Não informado"][a.resposta === "DEFERIDO" ? "deferido" : a.resposta === "INDEFERIDO" ? "indeferido" : "nao_respondido"]++;
+    });
+
+    if (yPos > 170) {
       pdf.addPage();
       yPos = 20;
     }
@@ -509,28 +634,27 @@ export default function AdminLiveControl() {
     pdf.text("Análise por Faixa Etária", 20, yPos);
     yPos += 10;
 
-    const byAge: Record<string, any> = {};
-    avaliacoes.forEach(a => {
-      if (!byAge[a.faixa_etaria || "Não informado"]) {
-        byAge[a.faixa_etaria || "Não informado"] = { deferido: 0, indeferido: 0, nao_respondido: 0, total: 0 };
-      }
-      byAge[a.faixa_etaria || "Não informado"][a.resposta === "DEFERIDO" ? "deferido" : a.resposta === "INDEFERIDO" ? "indeferido" : "nao_respondido"]++;
-      byAge[a.faixa_etaria || "Não informado"].total++;
-    });
-
-    pdf.setFontSize(11);
-    Object.entries(byAge).forEach(([age, data]: [string, any]) => {
-      if (yPos > 270) {
-        pdf.addPage();
-        yPos = 20;
-      }
-      pdf.text(`${age}: D=${data.deferido} I=${data.indeferido} NR=${data.nao_respondido} (${data.total} total)`, 25, yPos);
-      yPos += 7;
-    });
-    yPos += 8;
+    const ageChartData = Object.entries(byAge).map(([label, data]: [string, any]) => ({
+      label,
+      deferido: data.deferido,
+      indeferido: data.indeferido,
+      naoRespondido: data.nao_respondido
+    }));
+    
+    const ageChartImg = generateBarChart(ageChartData);
+    pdf.addImage(ageChartImg, 'PNG', 15, yPos, 180, 90);
+    yPos += 100;
 
     // Demographics - Region
-    if (yPos > 250) {
+    const byRegion: Record<string, any> = {};
+    avaliacoes.forEach(a => {
+      if (!byRegion[a.regiao || "Não informado"]) {
+        byRegion[a.regiao || "Não informado"] = { deferido: 0, indeferido: 0, nao_respondido: 0 };
+      }
+      byRegion[a.regiao || "Não informado"][a.resposta === "DEFERIDO" ? "deferido" : a.resposta === "INDEFERIDO" ? "indeferido" : "nao_respondido"]++;
+    });
+
+    if (yPos > 170) {
       pdf.addPage();
       yPos = 20;
     }
@@ -539,31 +663,22 @@ export default function AdminLiveControl() {
     pdf.text("Análise por Região", 20, yPos);
     yPos += 10;
 
-    const byRegion: Record<string, any> = {};
-    avaliacoes.forEach(a => {
-      if (!byRegion[a.regiao || "Não informado"]) {
-        byRegion[a.regiao || "Não informado"] = { deferido: 0, indeferido: 0, nao_respondido: 0, total: 0 };
-      }
-      byRegion[a.regiao || "Não informado"][a.resposta === "DEFERIDO" ? "deferido" : a.resposta === "INDEFERIDO" ? "indeferido" : "nao_respondido"]++;
-      byRegion[a.regiao || "Não informado"].total++;
-    });
-
-    pdf.setFontSize(11);
-    Object.entries(byRegion).forEach(([region, data]: [string, any]) => {
-      if (yPos > 270) {
-        pdf.addPage();
-        yPos = 20;
-      }
-      pdf.text(`${region}: D=${data.deferido} I=${data.indeferido} NR=${data.nao_respondido} (${data.total} total)`, 25, yPos);
-      yPos += 7;
-    });
+    const regionChartData = Object.entries(byRegion).map(([label, data]: [string, any]) => ({
+      label,
+      deferido: data.deferido,
+      indeferido: data.indeferido,
+      naoRespondido: data.nao_respondido
+    }));
+    
+    const regionChartImg = generateBarChart(regionChartData);
+    pdf.addImage(regionChartImg, 'PNG', 15, yPos, 180, 90);
 
     // Save PDF
     pdf.save(`${session.nome}_relatorio_${format(new Date(), "yyyy-MM-dd")}.pdf`);
 
     toast({
       title: "PDF Gerado!",
-      description: "Relatório baixado com sucesso",
+      description: "Relatório com gráficos baixado com sucesso",
     });
   };
 
