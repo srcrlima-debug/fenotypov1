@@ -82,10 +82,17 @@ const Login = () => {
   const handleGoogleLogin = async () => {
     try {
       setLoading(true);
+      
+      // Construir URL de redirecionamento incluindo o destino final
+      let redirectUrl = `${window.location.origin}/complete-profile`;
+      if (from !== '/') {
+        redirectUrl += `?redirect=${encodeURIComponent(from)}`;
+      }
+      
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/complete-profile`,
+          redirectTo: redirectUrl,
         },
       });
 
@@ -203,7 +210,10 @@ const Login = () => {
 
           <p className="text-center mt-6 text-sm text-muted-foreground">
             Não tem uma conta?{' '}
-            <Link to="/registro" className="text-primary hover:underline">
+            <Link 
+              to={from !== '/' ? `/registro?redirect=${encodeURIComponent(from)}` : '/registro'} 
+              className="text-primary hover:underline"
+            >
               Criar conta
             </Link>
           </p>
