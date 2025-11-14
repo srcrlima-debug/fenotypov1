@@ -10,6 +10,7 @@ import { Play, SkipForward, BarChart3, Users, Clock, CheckCircle, XCircle, Alert
 import { getImageByPage } from "@/data/images";
 import { Progress } from "@/components/ui/progress";
 import { format } from "date-fns";
+import { Header } from '@/components/Header';
 
 interface SessionData {
   id: string;
@@ -748,15 +749,17 @@ export default function AdminLiveControl() {
   const progress = (session.current_photo / 30) * 100;
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">{session.nome}</h1>
-            <p className="text-muted-foreground">Controle Ao Vivo - Foto {session.current_photo}/30</p>
-          </div>
-          <div className="flex gap-2">
+    <>
+      <Header />
+      <div className="min-h-screen bg-background p-6">
+        <div className="max-w-7xl mx-auto space-y-6">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-foreground">{session.nome}</h1>
+              <p className="text-muted-foreground">Controle Ao Vivo - Foto {session.current_photo}/30</p>
+            </div>
+            <div className="flex gap-2">
             <Button 
               variant="outline" 
               onClick={handleExportCSV} 
@@ -977,5 +980,6 @@ export default function AdminLiveControl() {
         )}
       </div>
     </div>
+    </>
   );
 }

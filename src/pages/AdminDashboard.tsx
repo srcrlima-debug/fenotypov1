@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import Papa from 'papaparse';
+import { Header } from '@/components/Header';
 import {
   ChartContainer,
   ChartTooltip,
@@ -499,14 +500,16 @@ const AdminDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="space-y-1">
-            <Button
-              variant="ghost"
-              size="sm"
+    <>
+      <Header />
+      <div className="min-h-screen bg-background p-6">
+        <div className="max-w-7xl mx-auto space-y-6">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <Button
+                variant="ghost"
+                size="sm"
               onClick={() => navigate('/admin')}
               className="mb-2"
             >
@@ -1154,6 +1157,7 @@ const AdminDashboard = () => {
         onOpenChange={(open) => !open && setZoomImage(null)}
       />
     </div>
+    </>
   );
 };
 
