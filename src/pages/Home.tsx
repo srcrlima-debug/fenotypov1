@@ -2,11 +2,13 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/Header";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
+import { useAuth } from "@/contexts/AuthContext";
 import logoVertical from "@/assets/logo-fenotypo-vert-2.png";
 import fistIcon from "@/assets/fist-icon.png";
 
 const Home = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { ref: descRef, isVisible: descVisible } = useScrollReveal();
   const { ref: ctaRef, isVisible: ctaVisible } = useScrollReveal();
   const { ref: featuresRef, isVisible: featuresVisible } = useScrollReveal();
@@ -57,6 +59,44 @@ const Home = () => {
               📖 Como Funciona
             </Button>
           </div>
+
+          {/* Login/Register Buttons for Non-Authenticated Users */}
+          {!user && (
+            <div 
+              className={`pt-4 flex gap-4 justify-center scroll-reveal ${ctaVisible ? 'revealed' : ''}`}
+            >
+              <Button
+                onClick={() => navigate("/login")}
+                size="lg"
+                className="h-14 px-12 text-lg font-semibold bg-[#5a4a42] hover:bg-[#4a3a32] text-white shadow-xl rounded-lg"
+              >
+                🔐 Entrar
+              </Button>
+              <Button
+                onClick={() => navigate("/registro")}
+                size="lg"
+                variant="outline"
+                className="h-14 px-12 text-lg font-semibold border-2 border-[#a0755f] text-[#5a4a42] hover:bg-[#a0755f]/10 shadow-xl rounded-lg"
+              >
+                📝 Registrar
+              </Button>
+            </div>
+          )}
+
+          {/* Dashboard Link for Authenticated Users */}
+          {user && (
+            <div 
+              className={`pt-4 scroll-reveal ${ctaVisible ? 'revealed' : ''}`}
+            >
+              <Button
+                onClick={() => navigate("/admin")}
+                size="lg"
+                className="h-14 px-12 text-lg font-semibold bg-[#5a4a42] hover:bg-[#4a3a32] text-white shadow-xl rounded-lg"
+              >
+                📊 Acessar Dashboard
+              </Button>
+            </div>
+          )}
 
           {/* Features */}
           <div 
