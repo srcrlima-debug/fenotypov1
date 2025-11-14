@@ -118,16 +118,19 @@ const CompleteProfile = () => {
 
       const { error } = await supabase
         .from('profiles')
-        .upsert({
-          user_id: user?.id,
-          email: user?.email || '',
-          genero: validatedData.genero,
-          faixa_etaria: validatedData.faixaEtaria,
-          estado: validatedData.estado,
-          pertencimento_racial: validatedData.pertencimentoRacial,
-          regiao: validatedData.regiao,
-          experiencia_bancas: validatedData.experienciaBancas,
-        });
+        .upsert(
+          {
+            user_id: user?.id,
+            email: user?.email || '',
+            genero: validatedData.genero,
+            faixa_etaria: validatedData.faixaEtaria,
+            estado: validatedData.estado,
+            pertencimento_racial: validatedData.pertencimentoRacial,
+            regiao: validatedData.regiao,
+            experiencia_bancas: validatedData.experienciaBancas,
+          },
+          { onConflict: 'user_id' }
+        );
 
       if (error) {
         toast({
