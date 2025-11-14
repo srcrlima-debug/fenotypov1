@@ -9,6 +9,8 @@ import { useToast } from '@/hooks/use-toast';
 import { Copy, Plus, Calendar, Users, Link as LinkIcon, BarChart3, Play } from 'lucide-react';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
+import { sessionSchema } from '@/lib/validators';
+import { z } from 'zod';
 
 interface Session {
   id: string;
@@ -50,51 +52,65 @@ const Admin = () => {
   const handleCreateSession = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!nome || !data) {
-      toast({
-        title: 'Campos obrigatórios',
-        description: 'Preencha todos os campos',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setLoading(true);
-
-    const { data: newSession, error } = await supabase
-      .from('sessions')
-      .insert({
-        nome,
+    try {
+      const validatedData = sessionSchema.parse({ 
+        nome, 
         data,
-        created_by: user?.id,
-      })
-      .select()
-      .single();
+        photo_duration: 60 
+      });
 
-    setLoading(false);
+      setLoading(true);
 
-    if (error) {
-      toast({
-        title: 'Erro ao criar sessão',
-        description: error.message,
-        variant: 'destructive',
-      });
-    } else {
-      toast({
-        title: 'Sessão criada!',
-        description: 'Link gerado com sucesso',
-      });
-      setNome('');
-      setData('');
-      fetchSessions();
-      
-      // Copy link to clipboard
-      const link = `${window.location.origin}/treino/${newSession.id}`;
-      navigator.clipboard.writeText(link);
-      toast({
-        title: 'Link copiado!',
-        description: 'Link compartilhável copiado para a área de transferência',
-      });
+      const { data: newSession, error } = await supabase
+        .from('sessions')
+        .insert({
+          nome: validatedData.nome,
+          data: validatedData.data,
+          created_by: user?.id,
+        })
+        .select()
+        .single();
+
+      setLoading(false);
+
+      if (error) {
+        toast({
+          title: 'Erro ao criar sessão',
+          description: error.message,
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Sessão criada!',
+          description: 'Link gerado com sucesso',
+        });
+        setNome('');
+        setData('');
+        fetchSessions();
+        
+        // Copy link to clipboard
+        const link = `${window.location.origin}/treino/${newSession.id}`;
+        navigator.clipboard.writeText(link);
+        toast({
+          title: 'Link copiado!',
+          description: 'Link compartilhável copiado para a área de transferência',
+        });
+      }
+    } catch (error) {
+      setLoading(false);
+      if (error instanceof z.ZodError) {
+        toast({
+          title: 'Erro de validação',
+          description: error.errors[0].message,
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Erro',
+          description: 'Ocorreu um erro ao criar a sessão',
+          variant: 'destructive',
+        });
+      }
     }
   };
 
