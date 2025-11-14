@@ -98,23 +98,94 @@ const CompleteProfile = () => {
         .eq('user_id', user.id)
         .maybeSingle();
 
-      if (profile && profile.genero && profile.faixa_etaria && profile.estado && 
-          profile.pertencimento_racial && profile.regiao && profile.experiencia_bancas) {
-        navigate('/', { replace: true });
-      } else {
-        setLoading(false);
+      if (profile) {
+        // Pré-preencher formulário com dados existentes
+        const existingData = {
+          genero: profile.genero || '',
+          faixaEtaria: profile.faixa_etaria || '',
+          estado: profile.estado || '',
+          pertencimentoRacial: profile.pertencimento_racial || '',
+          regiao: profile.regiao || '',
+          experienciaBancas: profile.experiencia_bancas || '',
+        };
+        
+        setFormData(existingData);
+
+        // Se todos os campos estão preenchidos, redirecionar
+        if (profile.genero && profile.faixa_etaria && profile.estado && 
+            profile.pertencimento_racial && profile.regiao && profile.experiencia_bancas) {
+          navigate('/', { replace: true });
+          return;
+        }
       }
+      
+      setLoading(false);
     };
 
     checkProfile();
-  }, [user, navigate]);
+
+    // Configurar realtime para sincronizar alterações
+    const channel = supabase
+      .channel('profile-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: `user_id=eq.${user?.id}`,
+        },
+        (payload) => {
+          const updatedProfile = payload.new as any;
+          setFormData({
+            genero: updatedProfile.genero || '',
+            faixaEtaria: updatedProfile.faixa_etaria || '',
+            estado: updatedProfile.estado || '',
+            pertencimentoRacial: updatedProfile.pertencimento_racial || '',
+            regiao: updatedProfile.regiao || '',
+            experienciaBancas: updatedProfile.experiencia_bancas || '',
+          });
+          
+          toast({
+            title: 'Perfil atualizado',
+            description: 'Seu perfil foi atualizado em tempo real',
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, navigate, toast]);
+
+  // Debounce para evitar múltiplos envios
+  const [lastSubmitTime, setLastSubmitTime] = useState<number>(0);
+  const DEBOUNCE_TIME = 2000; // 2 segundos
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Verificar debounce
+    const now = Date.now();
+    if (now - lastSubmitTime < DEBOUNCE_TIME) {
+      toast({
+        title: 'Aguarde',
+        description: 'Por favor, aguarde alguns segundos antes de enviar novamente',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Verificar se já está enviando
+    if (submitting) {
+      return;
+    }
+    
     try {
       const validatedData = profileSchema.parse(formData);
       setSubmitting(true);
+      setLastSubmitTime(now);
 
       const { error } = await supabase
         .from('profiles')
@@ -145,7 +216,11 @@ const CompleteProfile = () => {
         title: 'Perfil completo!',
         description: 'Agora você pode começar o treinamento',
       });
-      navigate('/', { replace: true });
+      
+      // Aguardar um pouco antes de redirecionar para garantir que o usuário veja a mensagem
+      setTimeout(() => {
+        navigate('/', { replace: true });
+      }, 500);
     } catch (error) {
       if (error instanceof z.ZodError) {
         toast({
@@ -306,9 +381,16 @@ const CompleteProfile = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="experienciaBancas">Experiência com Bancas de Heteroidentificação</Label>
-              <Select value={formData.experienciaBancas} onValueChange={(value) => setFormData({ ...formData, experienciaBancas: value })}>
-                <SelectTrigger>
+              <Label htmlFor="experienciaBancas" className="flex items-center gap-2">
+                Experiência com Bancas de Heteroidentificação
+                {isFieldValid('experienciaBancas') && <CheckCircle className="h-4 w-4 text-green-500" />}
+                {isFieldInvalid('experienciaBancas') && <AlertCircle className="h-4 w-4 text-destructive" />}
+              </Label>
+              <Select value={formData.experienciaBancas} onValueChange={(value) => handleFieldChange('experienciaBancas', value)}>
+                <SelectTrigger className={cn(
+                  isFieldValid('experienciaBancas') && "border-green-500",
+                  isFieldInvalid('experienciaBancas') && "border-destructive"
+                )}>
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
                 <SelectContent>
@@ -316,15 +398,29 @@ const CompleteProfile = () => {
                   <SelectItem value="Já participo de Bancas de heteroidentificação">Já participo de Bancas de heteroidentificação</SelectItem>
                 </SelectContent>
               </Select>
+              {isFieldInvalid('experienciaBancas') && (
+                <p className="text-xs text-destructive">{errors.experienciaBancas}</p>
+              )}
             </div>
 
             <Button 
               type="submit" 
-              className="w-full" 
+              className="w-full relative" 
               disabled={submitting}
             >
-              {submitting ? 'Salvando...' : 'Continuar'}
+              {submitting && (
+                <div className="absolute left-4">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                </div>
+              )}
+              {submitting ? 'Salvando perfil...' : 'Continuar'}
             </Button>
+            
+            {submitting && (
+              <p className="text-xs text-center text-muted-foreground">
+                Por favor, aguarde enquanto salvamos suas informações
+              </p>
+            )}
           </form>
         </div>
       </div>
