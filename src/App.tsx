@@ -17,6 +17,7 @@ import ComoFunciona from "./pages/ComoFunciona";
 import Admin from "./pages/Admin";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminLiveControl from "./pages/AdminLiveControl";
+import AdminAnalytics from "./pages/AdminAnalytics";
 import Training from "./pages/Training";
 import SessionTraining from "./pages/SessionTraining";
 import Results from "./pages/Results";
@@ -63,8 +64,16 @@ const App = () => (
                     </AdminRoute>
                   }
                 />
+                <Route
+                  path="/admin/analytics/:sessionId"
+                  element={
+                    <AdminRoute>
+                      <AdminAnalytics />
+                    </AdminRoute>
+                  }
+                />
                 <Route 
-                  path="/treino/:sessionId" 
+                  path="/treino/:sessionId"
                   element={
                     <ProtectedRoute>
                       <SessionTraining />
