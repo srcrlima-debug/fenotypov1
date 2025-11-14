@@ -61,6 +61,7 @@ export default function AdminLiveControl() {
   const [adminVote, setAdminVote] = useState<string | null>(null);
   const [savingAdminVote, setSavingAdminVote] = useState(false);
   const [canEarlyAdvance, setCanEarlyAdvance] = useState(false);
+  const [resultsShownForPhoto, setResultsShownForPhoto] = useState<number | null>(null);
 
   useEffect(() => {
     if (!authLoading && !adminLoading) {
@@ -170,34 +171,29 @@ export default function AdminLiveControl() {
     };
   }, [sessionId]);
 
-  // Auto-advance when all participants have voted
+  // Enable early-advance button when everyone has voted and time remains
   useEffect(() => {
-    if (!session || session.session_status !== 'active') return;
-    if (onlineParticipants === 0) return;
-    
-    console.log("Auto-advance check:", {
+    if (!session || session.session_status !== 'active') {
+      setCanEarlyAdvance(false);
+      return;
+    }
+    if (onlineParticipants <= 0) {
+      setCanEarlyAdvance(false);
+      return;
+    }
+
+    const allVoted = stats.responses_current_photo > 0 &&
+      stats.responses_current_photo === onlineParticipants;
+    const can = allVoted && timeRemaining > 0;
+
+    setCanEarlyAdvance(can);
+    console.log('Early-advance eligibility:', {
       responses: stats.responses_current_photo,
       online: onlineParticipants,
-      should_advance: stats.responses_current_photo === onlineParticipants && stats.responses_current_photo > 0
+      timeRemaining,
+      can,
     });
-    
-    // If everyone has voted, auto-advance
-    if (stats.responses_current_photo === onlineParticipants && stats.responses_current_photo > 0) {
-      console.log("All participants voted! Auto-advancing...");
-      toast({
-        title: "Todos votaram!",
-        description: "Avançando automaticamente para a próxima foto...",
-      });
-      
-      setTimeout(() => {
-        if (session.current_photo >= 30) {
-          handleCompleteSession();
-        } else {
-          handleNextPhoto();
-        }
-      }, 1500);
-    }
-  }, [stats.responses_current_photo, onlineParticipants, session]);
+  }, [stats.responses_current_photo, onlineParticipants, session, timeRemaining]);
 
   useEffect(() => {
     if (!session || session.session_status !== 'active' || !session.photo_start_time) return;
@@ -210,13 +206,14 @@ export default function AdminLiveControl() {
       
       setTimeRemaining(remaining);
 
-      if (remaining === 0) {
+      if (remaining === 0 && resultsShownForPhoto !== session.current_photo) {
+        setResultsShownForPhoto(session.current_photo);
         handleShowResults();
       }
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [session]);
+  }, [session, resultsShownForPhoto]);
 
   const fetchSession = async () => {
     const { data, error } = await supabase
@@ -1029,6 +1026,12 @@ export default function AdminLiveControl() {
                     <div className="text-3xl font-bold text-primary">{timeRemaining}s</div>
                     <div className="text-sm text-muted-foreground">Tempo Restante</div>
                   </div>
+                  {canEarlyAdvance && (
+                    <Button onClick={handleNextPhoto} size="lg" className="gap-2">
+                      <SkipForward className="w-5 h-5" />
+                      Liberar próxima foto
+                    </Button>
+                  )}
                   <Button onClick={handleShowResults} variant="outline" className="gap-2">
                     <BarChart3 className="w-5 h-5" />
                     Mostrar Resultados Agora
