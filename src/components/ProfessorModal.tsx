@@ -1,6 +1,6 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import profPhoto from "@/assets/prof-cristhian-lima.jpg";
-import { Globe, Instagram, Youtube, FileText } from "lucide-react";
+import { Globe, Instagram, Youtube, FileText, BookOpen } from "lucide-react";
 
 interface ProfessorModalProps {
   open: boolean;
@@ -107,7 +107,10 @@ export const ProfessorModal = ({ open, onOpenChange }: ProfessorModalProps) => {
             </p>
             
             <div className="space-y-2 pt-4">
-              <p className="text-sm font-semibold">📍 Professor efetivo do IF Goiano, Campus Urutaí</p>
+              <p className="text-2xl font-bold text-[#a0755f] flex items-center gap-2">
+                <BookOpen className="w-6 h-6" />
+                Professor efetivo do IF Goiano, Campus Urutaí
+              </p>
             </div>
             
             <p className="text-2xl font-bold italic pt-4 text-[#a0755f]">
