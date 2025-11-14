@@ -14,6 +14,7 @@ import Login from "./pages/Login";
 import Registro from "./pages/Registro";
 import CompleteProfile from "./pages/CompleteProfile";
 import ComoFunciona from "./pages/ComoFunciona";
+import Antessala from "./pages/Antessala";
 import Admin from "./pages/Admin";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminLiveControl from "./pages/AdminLiveControl";
@@ -40,6 +41,14 @@ const App = () => (
                 <Route path="/registro" element={<Registro />} />
                 <Route path="/complete-profile" element={<CompleteProfile />} />
                 <Route path="/como-funciona" element={<ComoFunciona />} />
+                <Route 
+                  path="/antessala/:sessionId" 
+                  element={
+                    <ProtectedRoute>
+                      <Antessala />
+                    </ProtectedRoute>
+                  } 
+                />
                 <Route 
                   path="/admin" 
                   element={

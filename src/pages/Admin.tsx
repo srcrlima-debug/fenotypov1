@@ -89,7 +89,7 @@ const Admin = () => {
         fetchSessions();
         
         // Copy link to clipboard
-        const link = `${window.location.origin}/treino/${newSession.id}`;
+        const link = `${window.location.origin}/antessala/${newSession.id}`;
         navigator.clipboard.writeText(link);
         toast({
           title: 'Link copiado!',
@@ -115,7 +115,7 @@ const Admin = () => {
   };
 
   const copyLink = (sessionId: string) => {
-    const link = `${window.location.origin}/treino/${sessionId}`;
+    const link = `${window.location.origin}/antessala/${sessionId}`;
     navigator.clipboard.writeText(link);
     toast({
       title: 'Link copiado!',

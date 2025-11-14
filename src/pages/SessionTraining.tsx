@@ -447,8 +447,16 @@ export default function SessionTraining() {
             </div>
 
             {!canRespond && (
-              <div className="text-center text-sm text-muted-foreground bg-muted/50 rounded-lg p-3">
-                Resposta registrada. Aguardando próxima foto...
+              <div className="text-center bg-blue-500/10 border-2 border-blue-500 rounded-lg p-4 space-y-2 animate-pulse">
+                <div className="flex items-center justify-center gap-2">
+                  <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+                  <span className="text-base font-semibold text-blue-700">
+                    Resposta registrada!
+                  </span>
+                </div>
+                <p className="text-sm text-blue-600">
+                  Aguardando o administrador liberar a próxima foto...
+                </p>
               </div>
             )}
           </Card>

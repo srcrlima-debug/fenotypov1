@@ -32,10 +32,10 @@ export const Header = () => {
         </Link>
 
         <nav className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" asChild className="hidden sm:inline-flex">
+          <Button variant="ghost" size="sm" asChild>
             <Link to="/">
               <Home className="mr-2 h-4 w-4" />
-              Início
+              <span className="hidden sm:inline">Início</span>
             </Link>
           </Button>
 
