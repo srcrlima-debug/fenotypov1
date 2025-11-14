@@ -3,9 +3,9 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect } from "react";
 import { Header } from "@/components/Header";
-import { Handshake } from "lucide-react";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import logoVertical from "@/assets/logo-fenotypo-vert-2.png";
+import fistIcon from "@/assets/fist-icon.png";
 
 const Home = () => {
   const navigate = useNavigate();
@@ -90,7 +90,13 @@ const Home = () => {
         {/* Footer */}
         <footer className="mt-16 pb-8 text-center">
           <p className="text-sm text-muted-foreground flex items-center justify-center gap-2">
-            Feito em 2025 <Handshake className="h-4 w-4" /> Educadores Antirracistas
+            Feito em 2025 
+            <img 
+              src={fistIcon} 
+              alt="Punho cerrado" 
+              className="h-5 w-5 inline-block animate-pulse-zoom"
+            />
+            Educadores Antirracistas
           </p>
         </footer>
       </div>
