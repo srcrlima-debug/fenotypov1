@@ -12,6 +12,7 @@ import ErrorBoundary from "./pages/ErrorBoundary";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Registro from "./pages/Registro";
+import CompleteProfile from "./pages/CompleteProfile";
 import ComoFunciona from "./pages/ComoFunciona";
 import Admin from "./pages/Admin";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -36,6 +37,7 @@ const App = () => (
                 <Route path="/" element={<Home />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/registro" element={<Registro />} />
+                <Route path="/complete-profile" element={<CompleteProfile />} />
                 <Route path="/como-funciona" element={<ComoFunciona />} />
                 <Route 
                   path="/admin" 
