@@ -1,7 +1,5 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/contexts/AuthContext";
-import { useEffect } from "react";
 import { Header } from "@/components/Header";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import logoVertical from "@/assets/logo-fenotypo-vert-2.png";
@@ -9,16 +7,9 @@ import fistIcon from "@/assets/fist-icon.png";
 
 const Home = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
   const { ref: descRef, isVisible: descVisible } = useScrollReveal();
   const { ref: ctaRef, isVisible: ctaVisible } = useScrollReveal();
   const { ref: featuresRef, isVisible: featuresVisible } = useScrollReveal();
-
-  useEffect(() => {
-    if (!user) {
-      navigate("/login");
-    }
-  }, [user, navigate]);
 
   return (
     <>
