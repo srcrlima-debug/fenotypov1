@@ -59,44 +59,6 @@ All colors MUST be HSL.
 
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
-
-  .dark {
-    --background: 25 25% 12%;
-    --foreground: 40 25% 96%;
-
-    --card: 25 20% 16%;
-    --card-foreground: 40 25% 96%;
-
-    --popover: 25 20% 16%;
-    --popover-foreground: 40 25% 96%;
-
-    --primary: 30 50% 50%;
-    --primary-foreground: 25 25% 12%;
-
-    --secondary: 25 15% 25%;
-    --secondary-foreground: 40 25% 96%;
-
-    --muted: 25 15% 25%;
-    --muted-foreground: 35 15% 65%;
-
-    --accent: 20 45% 55%;
-    --accent-foreground: 25 25% 12%;
-
-    --destructive: 0 62.8% 50%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 25 20% 24%;
-    --input: 25 20% 24%;
-    --ring: 30 50% 50%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
-  }
 }
 
 @layer base {
