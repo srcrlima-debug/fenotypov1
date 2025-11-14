@@ -7,6 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
+import { CheckCircle, AlertCircle } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const profileSchema = z.object({
   genero: z.string().min(1, { message: 'Selecione um gênero' }),
@@ -33,9 +35,55 @@ const CompleteProfile = () => {
   });
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [touched, setTouched] = useState({
+    genero: false,
+    faixaEtaria: false,
+    estado: false,
+    pertencimentoRacial: false,
+    regiao: false,
+    experienciaBancas: false,
+  });
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
+
+  // Validate field on change
+  const validateField = (fieldName: keyof typeof formData, value: string) => {
+    try {
+      const schemaMap = {
+        genero: profileSchema.shape.genero,
+        faixaEtaria: profileSchema.shape.faixaEtaria,
+        estado: profileSchema.shape.estado,
+        pertencimentoRacial: profileSchema.shape.pertencimentoRacial,
+        regiao: profileSchema.shape.regiao,
+        experienciaBancas: profileSchema.shape.experienciaBancas,
+      };
+      
+      schemaMap[fieldName].parse(value);
+      setErrors(prev => ({ ...prev, [fieldName]: '' }));
+      return true;
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        setErrors(prev => ({ ...prev, [fieldName]: error.errors[0].message }));
+      }
+      return false;
+    }
+  };
+
+  const handleFieldChange = (fieldName: keyof typeof formData, value: string) => {
+    setFormData(prev => ({ ...prev, [fieldName]: value }));
+    setTouched(prev => ({ ...prev, [fieldName]: true }));
+    validateField(fieldName, value);
+  };
+
+  const isFieldValid = (fieldName: string) => {
+    return touched[fieldName as keyof typeof touched] && formData[fieldName as keyof typeof formData] && !errors[fieldName];
+  };
+
+  const isFieldInvalid = (fieldName: string) => {
+    return touched[fieldName as keyof typeof touched] && errors[fieldName];
+  };
 
   useEffect(() => {
     const checkProfile = async () => {
@@ -129,9 +177,16 @@ const CompleteProfile = () => {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="genero">Identidade de Gênero</Label>
-              <Select value={formData.genero} onValueChange={(value) => setFormData({ ...formData, genero: value })}>
-                <SelectTrigger>
+              <Label htmlFor="genero" className="flex items-center gap-2">
+                Identidade de Gênero
+                {isFieldValid('genero') && <CheckCircle className="h-4 w-4 text-green-500" />}
+                {isFieldInvalid('genero') && <AlertCircle className="h-4 w-4 text-destructive" />}
+              </Label>
+              <Select value={formData.genero} onValueChange={(value) => handleFieldChange('genero', value)}>
+                <SelectTrigger className={cn(
+                  isFieldValid('genero') && "border-green-500",
+                  isFieldInvalid('genero') && "border-destructive"
+                )}>
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
                 <SelectContent>
@@ -144,6 +199,9 @@ const CompleteProfile = () => {
                   <SelectItem value="Prefiro não responder">Prefiro não responder</SelectItem>
                 </SelectContent>
               </Select>
+              {isFieldInvalid('genero') && (
+                <p className="text-xs text-destructive">{errors.genero}</p>
+              )}
               <p className="text-xs text-muted-foreground">
                 Cisgênero: identifica-se com o sexo designado ao nascer<br/>
                 Transexual/transgênero: identidade diferente da designada ao nascer<br/>
@@ -152,9 +210,16 @@ const CompleteProfile = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="faixaEtaria">Faixa Etária</Label>
-              <Select value={formData.faixaEtaria} onValueChange={(value) => setFormData({ ...formData, faixaEtaria: value })}>
-                <SelectTrigger>
+              <Label htmlFor="faixaEtaria" className="flex items-center gap-2">
+                Faixa Etária
+                {isFieldValid('faixaEtaria') && <CheckCircle className="h-4 w-4 text-green-500" />}
+                {isFieldInvalid('faixaEtaria') && <AlertCircle className="h-4 w-4 text-destructive" />}
+              </Label>
+              <Select value={formData.faixaEtaria} onValueChange={(value) => handleFieldChange('faixaEtaria', value)}>
+                <SelectTrigger className={cn(
+                  isFieldValid('faixaEtaria') && "border-green-500",
+                  isFieldInvalid('faixaEtaria') && "border-destructive"
+                )}>
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
                 <SelectContent>
@@ -165,12 +230,22 @@ const CompleteProfile = () => {
                   <SelectItem value="56+">56+</SelectItem>
                 </SelectContent>
               </Select>
+              {isFieldInvalid('faixaEtaria') && (
+                <p className="text-xs text-destructive">{errors.faixaEtaria}</p>
+              )}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="estado">Estado</Label>
-              <Select value={formData.estado} onValueChange={(value) => setFormData({ ...formData, estado: value })}>
-                <SelectTrigger>
+              <Label htmlFor="estado" className="flex items-center gap-2">
+                Estado
+                {isFieldValid('estado') && <CheckCircle className="h-4 w-4 text-green-500" />}
+                {isFieldInvalid('estado') && <AlertCircle className="h-4 w-4 text-destructive" />}
+              </Label>
+              <Select value={formData.estado} onValueChange={(value) => handleFieldChange('estado', value)}>
+                <SelectTrigger className={cn(
+                  isFieldValid('estado') && "border-green-500",
+                  isFieldInvalid('estado') && "border-destructive"
+                )}>
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
                 <SelectContent>
@@ -181,12 +256,22 @@ const CompleteProfile = () => {
                   ))}
                 </SelectContent>
               </Select>
+              {isFieldInvalid('estado') && (
+                <p className="text-xs text-destructive">{errors.estado}</p>
+              )}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="regiao">Região de Origem</Label>
-              <Select value={formData.regiao} onValueChange={(value) => setFormData({ ...formData, regiao: value })}>
-                <SelectTrigger>
+              <Label htmlFor="regiao" className="flex items-center gap-2">
+                Região de Origem
+                {isFieldValid('regiao') && <CheckCircle className="h-4 w-4 text-green-500" />}
+                {isFieldInvalid('regiao') && <AlertCircle className="h-4 w-4 text-destructive" />}
+              </Label>
+              <Select value={formData.regiao} onValueChange={(value) => handleFieldChange('regiao', value)}>
+                <SelectTrigger className={cn(
+                  isFieldValid('regiao') && "border-green-500",
+                  isFieldInvalid('regiao') && "border-destructive"
+                )}>
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
                 <SelectContent>

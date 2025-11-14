@@ -22,7 +22,10 @@ const Login = () => {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  const from = (location.state as any)?.from || '/';
+  // Get redirect URL from query params or location state
+  const searchParams = new URLSearchParams(location.search);
+  const redirectParam = searchParams.get('redirect');
+  const from = redirectParam || (location.state as any)?.from || '/';
 
   useEffect(() => {
     if (user) {
