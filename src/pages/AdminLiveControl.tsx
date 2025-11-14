@@ -202,13 +202,15 @@ export default function AdminLiveControl() {
     }
 
     setSession(data);
-    fetchStats();
+    // Passar os dados da sessão para fetchStats
+    fetchStats(data);
   };
 
-  const fetchStats = async () => {
-    if (!session) return;
+  const fetchStats = async (sessionData?: SessionData) => {
+    const currentSession = sessionData || session;
+    if (!currentSession) return;
 
-    console.log("Fetching stats for session:", sessionId, "photo:", session.current_photo);
+    console.log("Fetching stats for session:", sessionId, "photo:", currentSession.current_photo);
 
     // Get all participants
     const { data: participants } = await supabase
@@ -220,7 +222,7 @@ export default function AdminLiveControl() {
       .from("avaliacoes")
       .select("*")
       .eq("session_id", sessionId)
-      .eq("foto_id", session.current_photo);
+      .eq("foto_id", currentSession.current_photo);
 
     if (avaliacoesError) {
       console.error("Error fetching avaliacoes:", avaliacoesError);
@@ -280,7 +282,7 @@ export default function AdminLiveControl() {
       ? responses.reduce((sum, r) => sum + r.tempo_gasto, 0) / responses.length / 1000
       : 0;
 
-    setStats({
+    const newStats = {
       total_participants,
       responses_current_photo: responses.length,
       deferido,
@@ -290,9 +292,10 @@ export default function AdminLiveControl() {
       by_age,
       by_region,
       avg_time,
-    });
+    };
 
-    console.log("Stats updated:", stats);
+    setStats(newStats);
+    console.log("Stats updated:", newStats);
   };
 
   const handleStartSession = async () => {
