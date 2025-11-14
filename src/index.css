@@ -178,8 +178,27 @@ All colors MUST be HSL.
     }
   }
 
+  @keyframes bounce-slow {
+    0%, 100% {
+      transform: translateY(0) scale(1) rotate(0deg);
+    }
+    25% {
+      transform: translateY(-15px) scale(1.1) rotate(-5deg);
+    }
+    50% {
+      transform: translateY(0) scale(1.15) rotate(0deg);
+    }
+    75% {
+      transform: translateY(-8px) scale(1.08) rotate(5deg);
+    }
+  }
+
   .animate-pulse-zoom {
     animation: pulse-zoom 2s ease-in-out infinite;
+  }
+
+  .animate-bounce-slow {
+    animation: bounce-slow 2s ease-in-out infinite;
   }
 }
 

@@ -63,23 +63,28 @@ const Home = () => {
           {/* Login/Register Buttons for Non-Authenticated Users */}
           {!user && (
             <div 
-              className={`pt-4 flex gap-4 justify-center scroll-reveal ${ctaVisible ? 'revealed' : ''}`}
+              className={`pt-4 flex flex-col items-center gap-4 scroll-reveal ${ctaVisible ? 'revealed' : ''}`}
             >
-              <Button
-                onClick={() => navigate("/login")}
-                size="lg"
-                className="h-14 px-12 text-lg font-semibold bg-[#5a4a42] hover:bg-[#4a3a32] text-white shadow-xl rounded-lg"
-              >
-                🔐 Entrar
-              </Button>
               <Button
                 onClick={() => navigate("/registro")}
                 size="lg"
-                variant="outline"
-                className="h-14 px-12 text-lg font-semibold border-2 border-[#a0755f] text-[#5a4a42] hover:bg-[#a0755f]/10 shadow-xl rounded-lg"
+                className="h-14 px-12 text-lg font-semibold bg-[#a0755f] hover:bg-[#8a6350] text-white shadow-xl rounded-lg"
               >
-                📝 Registrar
+                📝 Cadastre-se
               </Button>
+              <div className="flex flex-col items-center gap-2">
+                <Button
+                  onClick={() => navigate("/login")}
+                  size="lg"
+                  variant="outline"
+                  className="h-14 px-12 text-lg font-semibold border-2 border-[#5a4a42] text-[#5a4a42] hover:bg-[#5a4a42]/10 shadow-xl rounded-lg"
+                >
+                  🔐 Entrar
+                </Button>
+                <p className="text-sm text-muted-foreground">
+                  (se já cadastrado)
+                </p>
+              </div>
             </div>
           )}
 
@@ -120,12 +125,13 @@ const Home = () => {
 
         {/* Footer */}
         <footer className="mt-16 pb-8 text-center">
-          <p className="text-base font-bold text-muted-foreground flex items-center justify-center gap-2">
+          <p className="text-base font-bold text-muted-foreground flex items-center justify-center gap-3">
             Feito em 2025 
             <img 
               src={fistIcon} 
               alt="Punho cerrado" 
-              className="h-12 w-12 inline-block animate-pulse-zoom"
+              className="h-16 w-16 inline-block animate-bounce-slow"
+              style={{ animationDuration: '1.5s' }}
             />
             Educadores Antirracistas
           </p>
