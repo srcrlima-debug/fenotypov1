@@ -210,7 +210,7 @@ export default function SessionTraining() {
       .from("profiles")
       .select("genero, faixa_etaria, estado, regiao")
       .eq("user_id", user.id)
-      .single();
+      .maybeSingle();
 
     if (profileError) {
       console.error("Error fetching profile:", profileError);
@@ -225,10 +225,11 @@ export default function SessionTraining() {
     if (!profile) {
       console.error("Profile not found for user:", user.id);
       toast({
-        title: "Erro",
-        description: "Perfil não encontrado. Complete seu perfil primeiro.",
+        title: "Perfil incompleto",
+        description: "Complete seu perfil antes de participar da sessão.",
         variant: "destructive",
       });
+      navigate("/complete-profile");
       return false;
     }
 

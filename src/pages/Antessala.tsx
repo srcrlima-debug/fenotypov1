@@ -213,7 +213,7 @@ export default function Antessala() {
         <div className="text-center mb-12 animate-fade-slide-up">
           <div className="mb-6">
             <h1 className="text-4xl font-bold mb-4 text-[#5a4a42]">
-              Bem-vindo(a), {userName || "Educador(a)"}! 👋
+              Bem-vindo(a), {userName}! 👋
             </h1>
             <p className="text-xl text-[#a0755f] font-semibold mb-2">
               {sessionData?.nome}

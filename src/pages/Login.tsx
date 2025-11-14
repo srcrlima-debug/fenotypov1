@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -18,14 +18,17 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const { toast } = useToast();
 
+  const from = (location.state as any)?.from || '/';
+
   useEffect(() => {
     if (user) {
-      navigate('/', { replace: true });
+      navigate(from, { replace: true });
     }
-  }, [user, navigate]);
+  }, [user, navigate, from]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,7 +61,7 @@ const Login = () => {
           title: 'Login realizado!',
           description: 'Bem-vindo de volta',
         });
-        navigate('/', { replace: true });
+        navigate(from, { replace: true });
       }
     } catch (error) {
       if (error instanceof z.ZodError) {
