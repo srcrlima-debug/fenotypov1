@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect } from "react";
 import { Header } from "@/components/Header";
+import { Handshake } from "lucide-react";
 import logoVertical from "@/assets/logo-fenotypo-vert-2.png";
 
 const Home = () => {
@@ -26,7 +27,7 @@ const Home = () => {
             <img 
               src={logoVertical} 
               alt="Fenotypo" 
-              className="h-48 mx-auto transition-all"
+              className="h-48 mx-auto animate-float-gentle"
             />
           </div>
           
@@ -72,6 +73,13 @@ const Home = () => {
             </div>
           </div>
         </div>
+
+        {/* Footer */}
+        <footer className="mt-16 pb-8 text-center">
+          <p className="text-sm text-muted-foreground flex items-center justify-center gap-2">
+            Feito em 2025 <Handshake className="h-4 w-4" /> Educadores Antirracistas
+          </p>
+        </footer>
       </div>
     </>
   );
