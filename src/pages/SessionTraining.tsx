@@ -42,6 +42,45 @@ export default function SessionTraining() {
   const [canRespond, setCanRespond] = useState(true);
   const [timerKey, setTimerKey] = useState(0);
   const [zoomOpen, setZoomOpen] = useState(false);
+  const [participantCount, setParticipantCount] = useState(0);
+
+  // Function to play notification sound when session starts
+  const playStartSound = () => {
+    const audioContext = new AudioContext();
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    // Create a pleasant notification sound (two beeps)
+    oscillator.frequency.value = 800;
+    oscillator.type = 'sine';
+    
+    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+    
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.3);
+    
+    // Second beep
+    setTimeout(() => {
+      const oscillator2 = audioContext.createOscillator();
+      const gainNode2 = audioContext.createGain();
+      
+      oscillator2.connect(gainNode2);
+      gainNode2.connect(audioContext.destination);
+      
+      oscillator2.frequency.value = 1000;
+      oscillator2.type = 'sine';
+      
+      gainNode2.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode2.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+      
+      oscillator2.start(audioContext.currentTime);
+      oscillator2.stop(audioContext.currentTime + 0.3);
+    }, 150);
+  };
 
   useEffect(() => {
     const checkSessionAndUser = async () => {
@@ -107,6 +146,15 @@ export default function SessionTraining() {
           return;
         }
         
+        // Play sound when session starts
+        if (sessionData?.session_status === 'waiting' && newSession.session_status === 'active') {
+          playStartSound();
+          toast({
+            title: "O teste começou!",
+            description: "Prepare-se para avaliar as imagens.",
+          });
+        }
+        
         setSessionData(newSession);
         setStartTime(Date.now());
         setTimerKey(prev => prev + 1);
@@ -114,7 +162,37 @@ export default function SessionTraining() {
       }).subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [sessionId, navigate, toast]);
+  }, [sessionId, navigate, toast, sessionData?.session_status]);
+
+  // Track participants using Realtime Presence
+  useEffect(() => {
+    if (!sessionId || !user) return;
+
+    const presenceChannel = supabase.channel(`session-${sessionId}-presence`)
+      .on('presence', { event: 'sync' }, () => {
+        const state = presenceChannel.presenceState();
+        const count = Object.keys(state).length;
+        setParticipantCount(count);
+      })
+      .on('presence', { event: 'join' }, ({ newPresences }) => {
+        console.log('Participant joined:', newPresences);
+      })
+      .on('presence', { event: 'leave' }, ({ leftPresences }) => {
+        console.log('Participant left:', leftPresences);
+      })
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          await presenceChannel.track({
+            user_id: user.id,
+            online_at: new Date().toISOString(),
+          });
+        }
+      });
+
+    return () => {
+      supabase.removeChannel(presenceChannel);
+    };
+  }, [sessionId, user]);
 
   useEffect(() => {
     window.history.pushState(null, "", window.location.href);
@@ -199,13 +277,21 @@ export default function SessionTraining() {
               </p>
             </div>
 
-            <div className="bg-primary/10 border border-primary/20 rounded-lg p-6 text-center">
+            <div className="bg-primary/10 border border-primary/20 rounded-lg p-6 text-center space-y-3">
               <p className="text-lg font-medium">
                 O Prof. Cristhian em breve começará a realizar o teste.
               </p>
-              <p className="text-sm text-muted-foreground mt-2">
+              <p className="text-sm text-muted-foreground">
                 Aguarde na sala de espera. O teste iniciará automaticamente.
               </p>
+              
+              <div className="flex items-center justify-center gap-2 mt-4 pt-4 border-t border-primary/20">
+                <Users className="h-5 w-5 text-primary" />
+                <span className="text-2xl font-bold text-primary">{participantCount}</span>
+                <span className="text-sm text-muted-foreground">
+                  {participantCount === 1 ? 'participante aguardando' : 'participantes aguardando'}
+                </span>
+              </div>
             </div>
 
             <div className="bg-muted/50 rounded-lg p-6 space-y-4 text-left">
@@ -239,8 +325,8 @@ export default function SessionTraining() {
               </div>
             </div>
 
-            <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground animate-pulse">
-              <Users className="h-4 w-4" />
+            <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+              <Clock className="h-4 w-4 animate-pulse" />
               <span>Aguardando Prof. Cristhian iniciar o teste...</span>
             </div>
           </Card>
