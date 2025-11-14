@@ -57,6 +57,7 @@ export default function AdminLiveControl() {
   const [onlineParticipants, setOnlineParticipants] = useState(0);
   const [exportingCSV, setExportingCSV] = useState(false);
   const [exportingPDF, setExportingPDF] = useState(false);
+  const [newVotePulse, setNewVotePulse] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !adminLoading) {
@@ -90,6 +91,25 @@ export default function AdminLiveControl() {
       supabase.removeChannel(presenceChannel);
     };
   }, [sessionId]);
+
+  // Function to play notification sound when new vote arrives
+  const playVoteSound = () => {
+    const audioContext = new AudioContext();
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    oscillator.frequency.value = 600;
+    oscillator.type = 'sine';
+    
+    gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+    
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.2);
+  };
 
   useEffect(() => {
     if (!sessionId) return;
@@ -130,6 +150,11 @@ export default function AdminLiveControl() {
         },
         (payload) => {
           console.log("New avaliacao inserted:", payload);
+          // Trigger pulse animation
+          setNewVotePulse(true);
+          setTimeout(() => setNewVotePulse(false), 4500);
+          // Play notification sound
+          playVoteSound();
           // Refazer busca de stats para garantir dados atualizados
           fetchSession();
         }
@@ -404,6 +429,39 @@ export default function AdminLiveControl() {
     toast({
       title: "Foto Reiniciada",
       description: `Foto ${session.current_photo} foi reiniciada. Todas as respostas foram apagadas e o timer foi resetado.`,
+    });
+  };
+
+  const handleBackToStart = async () => {
+    if (!session) return;
+
+    const { error } = await supabase
+      .from("sessions")
+      .update({ 
+        current_photo: 1,
+        photo_start_time: new Date().toISOString(),
+        session_status: 'waiting'
+      })
+      .eq("id", sessionId);
+
+    if (error) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível voltar ao início",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Delete all evaluations for this session
+    await supabase
+      .from("avaliacoes")
+      .delete()
+      .eq("session_id", sessionId);
+
+    toast({
+      title: "Voltou ao Início",
+      description: "Sessão reiniciada na foto 1. Todas as avaliações foram apagadas.",
     });
   };
 
@@ -899,6 +957,10 @@ export default function AdminLiveControl() {
                   <Button onClick={handleRestartPhoto} size="default" variant="destructive" className="gap-2">
                     <RotateCcw className="w-5 h-5" />
                     Reiniciar Foto
+                  </Button>
+                  <Button onClick={handleBackToStart} size="default" variant="outline" className="gap-2">
+                    <RotateCcw className="w-5 h-5" />
+                    Voltar ao Início
                   </Button>
                 </div>
               )}

@@ -270,7 +270,7 @@ export default function SessionTraining() {
       setCanRespond(false);
       toast({
         title: "Resposta registrada",
-        description: "Aguarde a próxima foto",
+        description: "Aguardando próxima foto. Você completou " + sessionData.current_photo + " de 30 análises.",
       });
     }
   };
@@ -459,7 +459,7 @@ export default function SessionTraining() {
                 size="lg"
                 onClick={() => handleDecision("DEFERIDO")}
                 disabled={!canRespond}
-                className="h-16 text-lg font-semibold bg-green-600 hover:bg-green-700 active:scale-95 transition-transform"
+                className="h-16 text-lg font-semibold bg-green-600 hover:bg-green-700 active:scale-95 transition-transform disabled:opacity-50"
               >
                 <CheckCircle className="mr-2 h-6 w-6" />
                 DEFERIDO
@@ -470,7 +470,7 @@ export default function SessionTraining() {
                 variant="destructive"
                 onClick={() => handleDecision("INDEFERIDO")}
                 disabled={!canRespond}
-                className="h-16 text-lg font-semibold active:scale-95 transition-transform"
+                className="h-16 text-lg font-semibold active:scale-95 transition-transform disabled:opacity-50"
               >
                 <XCircle className="mr-2 h-6 w-6" />
                 INDEFERIDO
@@ -479,15 +479,12 @@ export default function SessionTraining() {
             </div>
 
             {!canRespond && (
-              <div className="text-center bg-blue-500/10 border-2 border-blue-500 rounded-lg p-4 space-y-2 animate-pulse">
-                <div className="flex items-center justify-center gap-2">
-                  <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
-                  <span className="text-base font-semibold text-blue-700">
-                    Resposta registrada!
-                  </span>
-                </div>
-                <p className="text-sm text-blue-600">
-                  Aguardando o administrador liberar a próxima foto...
+              <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 text-center">
+                <p className="text-sm font-medium text-primary">
+                  ✓ Voto registrado! Aguardando liberação da próxima imagem...
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Você completou {sessionData.current_photo} de 30 análises
                 </p>
               </div>
             )}
