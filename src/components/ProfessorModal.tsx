@@ -100,7 +100,7 @@ export const ProfessorModal = ({ open, onOpenChange }: ProfessorModalProps) => {
           <div className="space-y-4 text-[#5a4a42]">
             <h2 className="text-2xl font-bold text-[#a0755f]">Prof. Dr. Cristhian Lima</h2>
             <p className="text-base leading-relaxed">
-              Há três décadas caminhando pelos corredores da educação brasileira — das salas de aula da educação básica aos cursos de pós-graduação — o Prof. Cristhian Lima constrói pontes entre a teoria social e as urgências do nosso tempo. Doutor em Ciências Sociais pela UFRRJ, dedica sua pesquisa às cartografias invisíveis: territórios sagrados afro-brasileiros, segregações urbanas, saberes e práticas que resistem pelas brechas e insterstícios.
+              Há três décadas caminhando pelos corredores da educação brasileira — das salas de aula da educação básica aos cursos de pós-graduação — o Prof. Cristhian Lima constrói pontes entre a teoria social e as urgências do nosso tempo. Doutor em Ciências Sociais pela UFRRJ, dedica sua pesquisa às cartografias invisíveis: territórios sagrados afro-brasileiros, segregações urbanas, saberes e práticas que resistem pelas brechas e interstícios.
             </p>
             <p className="text-base leading-relaxed">
               Como ex-coordenador do NEABI no IF Goiano e pesquisador das relações étnico-raciais, desenvolveu um olhar atento aos processos de heteroidentificação — espaços delicados onde política pública encontra histórias pessoais, onde critérios técnicos dialogam com memórias ancestrais. Sua atuação nasce da escuta: compreender os fenótipos que o racismo brasileiro marca, honrar as vidas e corpos que as cotas buscam reparar.
