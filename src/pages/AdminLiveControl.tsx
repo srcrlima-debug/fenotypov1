@@ -75,7 +75,14 @@ export default function AdminLiveControl() {
       .on('presence', { event: 'sync' }, () => {
         const state = presenceChannel.presenceState();
         const count = Object.keys(state).length;
+        console.log("Presence sync - online participants:", count, state);
         setOnlineParticipants(count);
+      })
+      .on('presence', { event: 'join' }, ({ key, newPresences }) => {
+        console.log("Presence join:", key, newPresences);
+      })
+      .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
+        console.log("Presence leave:", key, leftPresences);
       })
       .subscribe();
 
@@ -117,7 +124,8 @@ export default function AdminLiveControl() {
           table: 'avaliacoes',
           filter: `session_id=eq.${sessionId}`,
         },
-        () => {
+        (payload) => {
+          console.log("New avaliacao inserted:", payload);
           fetchStats();
         }
       )
@@ -134,8 +142,15 @@ export default function AdminLiveControl() {
     if (!session || session.session_status !== 'active') return;
     if (onlineParticipants === 0) return;
     
+    console.log("Auto-advance check:", {
+      responses: stats.responses_current_photo,
+      online: onlineParticipants,
+      should_advance: stats.responses_current_photo === onlineParticipants && stats.responses_current_photo > 0
+    });
+    
     // If everyone has voted, auto-advance
     if (stats.responses_current_photo === onlineParticipants && stats.responses_current_photo > 0) {
+      console.log("All participants voted! Auto-advancing...");
       toast({
         title: "Todos votaram!",
         description: "Avançando automaticamente para a próxima foto...",
@@ -145,7 +160,7 @@ export default function AdminLiveControl() {
         if (session.current_photo >= 30) {
           handleCompleteSession();
         } else {
-          handleShowResults();
+          handleNextPhoto();
         }
       }, 1500);
     }
@@ -193,20 +208,26 @@ export default function AdminLiveControl() {
   const fetchStats = async () => {
     if (!session) return;
 
+    console.log("Fetching stats for session:", sessionId, "photo:", session.current_photo);
+
     // Get all participants
     const { data: participants } = await supabase
       .from("profiles")
       .select("user_id");
 
-    // Get responses for current photo
-    const { data: avaliacoes } = await supabase
+    // Get responses for current photo - use data directly from avaliacoes table
+    const { data: avaliacoes, error: avaliacoesError } = await supabase
       .from("avaliacoes")
-      .select(`
-        *,
-        profiles!inner(genero, faixa_etaria, estado)
-      `)
+      .select("*")
       .eq("session_id", sessionId)
       .eq("foto_id", session.current_photo);
+
+    if (avaliacoesError) {
+      console.error("Error fetching avaliacoes:", avaliacoesError);
+      return;
+    }
+
+    console.log("Avaliacoes fetched:", avaliacoes?.length, avaliacoes);
 
     const total_participants = participants?.length || 0;
     const responses = avaliacoes || [];
@@ -215,32 +236,45 @@ export default function AdminLiveControl() {
     const indeferido = responses.filter(r => r.resposta === "INDEFERIDO").length;
     const nao_respondido = responses.filter(r => r.resposta === "NÃO_RESPONDIDO").length;
 
-    // Group by demographics
+    console.log("Counts:", { deferido, indeferido, nao_respondido });
+
+    // Group by demographics - use data directly from avaliacoes
     const by_gender: Record<string, any> = {};
     const by_age: Record<string, any> = {};
     const by_region: Record<string, any> = {};
 
     responses.forEach((r: any) => {
-      const profile = r.profiles;
+      // Convert response to key format
+      const responseKey = r.resposta === "DEFERIDO" ? "deferido" 
+        : r.resposta === "INDEFERIDO" ? "indeferido" 
+        : "nao_respondido";
       
       // Gender
-      if (!by_gender[profile.genero]) {
-        by_gender[profile.genero] = { deferido: 0, indeferido: 0, nao_respondido: 0 };
+      if (r.genero) {
+        if (!by_gender[r.genero]) {
+          by_gender[r.genero] = { deferido: 0, indeferido: 0, nao_respondido: 0 };
+        }
+        by_gender[r.genero][responseKey] += 1;
       }
-      by_gender[profile.genero][r.resposta.toLowerCase().replace("_", "_")] += 1;
 
       // Age
-      if (!by_age[profile.faixa_etaria]) {
-        by_age[profile.faixa_etaria] = { deferido: 0, indeferido: 0, nao_respondido: 0 };
+      if (r.faixa_etaria) {
+        if (!by_age[r.faixa_etaria]) {
+          by_age[r.faixa_etaria] = { deferido: 0, indeferido: 0, nao_respondido: 0 };
+        }
+        by_age[r.faixa_etaria][responseKey] += 1;
       }
-      by_age[profile.faixa_etaria][r.resposta.toLowerCase().replace("_", "_")] += 1;
 
       // Region
-      if (!by_region[profile.estado]) {
-        by_region[profile.estado] = { deferido: 0, indeferido: 0, nao_respondido: 0 };
+      if (r.regiao) {
+        if (!by_region[r.regiao]) {
+          by_region[r.regiao] = { deferido: 0, indeferido: 0, nao_respondido: 0 };
+        }
+        by_region[r.regiao][responseKey] += 1;
       }
-      by_region[profile.estado][r.resposta.toLowerCase().replace("_", "_")] += 1;
     });
+
+    console.log("Demographics:", { by_gender, by_age, by_region });
 
     const avg_time = responses.length > 0
       ? responses.reduce((sum, r) => sum + r.tempo_gasto, 0) / responses.length / 1000
@@ -257,6 +291,8 @@ export default function AdminLiveControl() {
       by_region,
       avg_time,
     });
+
+    console.log("Stats updated:", stats);
   };
 
   const handleStartSession = async () => {

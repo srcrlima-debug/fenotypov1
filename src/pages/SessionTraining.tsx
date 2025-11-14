@@ -204,24 +204,53 @@ export default function SessionTraining() {
   const saveAvaliacao = async (resposta: string): Promise<boolean> => {
     if (!user || !sessionData) return false;
 
-    const { data: profile } = await supabase
+    console.log("Saving avaliacao for user:", user.id);
+
+    const { data: profile, error: profileError } = await supabase
       .from("profiles")
-      .select("genero, faixa_etaria, estado")
+      .select("genero, faixa_etaria, estado, regiao")
       .eq("user_id", user.id)
       .single();
 
-    const { error } = await supabase.from("avaliacoes").insert({
+    if (profileError) {
+      console.error("Error fetching profile:", profileError);
+      toast({
+        title: "Erro",
+        description: "Não foi possível buscar seus dados de perfil",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    if (!profile) {
+      console.error("Profile not found for user:", user.id);
+      toast({
+        title: "Erro",
+        description: "Perfil não encontrado. Complete seu perfil primeiro.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    console.log("Profile data:", profile);
+
+    const avaliacaoData = {
       session_id: sessionId,
       user_id: user.id,
       foto_id: sessionData.current_photo,
       resposta,
       tempo_gasto: Date.now() - startTime,
-      genero: profile?.genero,
-      faixa_etaria: profile?.faixa_etaria,
-      regiao: profile?.estado,
-    });
+      genero: profile.genero,
+      faixa_etaria: profile.faixa_etaria,
+      regiao: profile.regiao || profile.estado,
+    };
+
+    console.log("Inserting avaliacao:", avaliacaoData);
+
+    const { error } = await supabase.from("avaliacoes").insert(avaliacaoData);
 
     if (error) {
+      console.error("Error saving avaliacao:", error);
       toast({
         title: "Erro",
         description: "Não foi possível salvar sua resposta",
@@ -229,6 +258,8 @@ export default function SessionTraining() {
       });
       return false;
     }
+
+    console.log("Avaliacao saved successfully");
     return true;
   };
 
