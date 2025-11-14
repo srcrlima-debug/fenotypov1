@@ -25,6 +25,14 @@ interface AssessmentContextType {
 
 const AssessmentContext = createContext<AssessmentContextType | undefined>(undefined);
 
+export const useAssessment = () => {
+  const context = useContext(AssessmentContext);
+  if (context === undefined) {
+    throw new Error("useAssessment must be used within AssessmentProvider");
+  }
+  return context;
+};
+
 export const AssessmentProvider = ({ children }: { children: ReactNode }) => {
   const [assessments, setAssessments] = useState<AssessmentData[]>([]);
 
@@ -62,12 +70,4 @@ export const AssessmentProvider = ({ children }: { children: ReactNode }) => {
       {children}
     </AssessmentContext.Provider>
   );
-};
-
-export const useAssessment = () => {
-  const context = useContext(AssessmentContext);
-  if (!context) {
-    throw new Error("useAssessment must be used within AssessmentProvider");
-  }
-  return context;
 };
