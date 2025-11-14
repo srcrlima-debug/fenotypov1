@@ -1,121 +1,63 @@
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { useNavigate, Link } from "react-router-dom";
-import { ArrowRight, LogOut, Shield } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useAdmin } from "@/hooks/useAdmin";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
-import logoVertical from "@/assets/logo-fenotypo-vert.png";
+import { useEffect } from "react";
+import { Header } from "@/components/Header";
+import { HelpCircle } from "lucide-react";
 
 const Home = () => {
   const navigate = useNavigate();
-  const { user, loading } = useAuth();
-  const { isAdmin } = useAdmin();
-  const { toast } = useToast();
+  const { user } = useAuth();
 
-  const handleStart = () => {
-    navigate("/training/1");
-  };
-
-  const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      toast({
-        title: 'Erro ao sair',
-        description: error.message,
-        variant: 'destructive',
-      });
-    } else {
-      toast({
-        title: 'Logout realizado',
-        description: 'Até logo!',
-      });
+  useEffect(() => {
+    if (!user) {
+      navigate("/login");
     }
-  };
+  }, [user, navigate]);
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-6">
-      <div className="max-w-3xl w-full text-center space-y-6 animate-fade-in">
-        {user && (
-          <div className="absolute top-6 right-6 flex gap-2">
-            {isAdmin && (
-              <Button
-                onClick={() => navigate('/admin')}
-                variant="outline"
-                size="sm"
-              >
-                <Shield className="mr-2 h-4 w-4" />
-                Admin
-              </Button>
-            )}
-            <Button
-              onClick={handleLogout}
-              variant="outline"
-              size="sm"
-            >
-              <LogOut className="mr-2 h-4 w-4" />
-              Sair
-            </Button>
+    <>
+      <Header />
+      <div className="min-h-[calc(100vh-4rem)] flex flex-col items-center justify-center p-4 bg-gradient-to-b from-background to-muted/20">
+        <div className="w-full max-w-md space-y-8 animate-fade-in">
+          <div className="text-center space-y-2">
+            <h1 className="text-4xl font-bold tracking-tight">Bem-vindo!</h1>
+            <p className="text-muted-foreground">
+              Escolha uma opção para começar seu treinamento
+            </p>
           </div>
-        )}
 
-        <div className="mb-6 animate-scale-in">
-          <img src={logoVertical} alt="Fenotypo" className="h-72 mx-auto" />
-        </div>
-        
-        <div className="space-y-4 px-4">
-          <p className="text-lg text-foreground leading-relaxed max-w-2xl mx-auto">
-            <span className="font-semibold">FENOTYPO</span> é uma aplicação web desenvolvida pelo Prof. Dr. Cristhian Lima, doutor em Ciências Sociais, para treinar pessoas que irão atuar em bancas de confirmação fenotípica para acesso por meio de ações afirmativas.
-          </p>
-        </div>
-
-        <div className="pt-6 space-y-4">
-          {!loading && !user ? (
-            <div className="space-y-3">
-              <p className="text-muted-foreground">Faça login para iniciar o treinamento</p>
-              <div className="flex gap-3 justify-center">
-                <Link to="/login">
-                  <Button size="lg" variant="outline">
-                    Login
-                  </Button>
-                </Link>
-                <Link to="/registro">
-                  <Button size="lg" className="bg-gradient-primary hover:opacity-90 text-primary-foreground shadow-soft">
-                    Criar Conta
-                    <ArrowRight className="ml-2 h-5 w-5" />
-                  </Button>
-                </Link>
-              </div>
-            </div>
-          ) : (
+          <div className="space-y-4">
             <Button
-              onClick={handleStart}
               size="lg"
-              className="bg-gradient-primary hover:opacity-90 text-primary-foreground shadow-soft text-lg px-8 py-6 h-auto"
-              disabled={loading}
+              variant="outline"
+              className="w-full h-14 text-lg"
+              onClick={() => navigate("/como-funciona")}
+            >
+              <HelpCircle className="mr-2 h-5 w-5" />
+              Como Funciona
+            </Button>
+
+            <Button
+              size="lg"
+              className="w-full h-14 text-lg"
+              onClick={() => navigate("/training/1")}
             >
               Iniciar Treinamento
-              <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
-          )}
-        </div>
 
-        <div className="pt-6 flex items-center justify-center gap-8 text-sm text-muted-foreground flex-wrap">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-primary" />
-            <span>30 Páginas</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-primary" />
-            <span>Navegação Sequencial</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-primary" />
-            <span>Certificado Final</span>
+            <Button
+              size="lg"
+              variant="outline"
+              className="w-full h-14 text-lg"
+              onClick={() => navigate("/admin")}
+            >
+              Área Administrativa
+            </Button>
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 

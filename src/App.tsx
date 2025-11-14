@@ -11,6 +11,7 @@ import { AdminRoute } from "./components/AdminRoute";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Registro from "./pages/Registro";
+import ComoFunciona from "./pages/ComoFunciona";
 import Admin from "./pages/Admin";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminLiveControl from "./pages/AdminLiveControl";
@@ -33,6 +34,7 @@ const App = () => (
               <Route path="/" element={<Home />} />
               <Route path="/login" element={<Login />} />
               <Route path="/registro" element={<Registro />} />
+              <Route path="/como-funciona" element={<ComoFunciona />} />
               <Route 
                 path="/admin" 
                 element={
