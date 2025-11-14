@@ -54,7 +54,7 @@ const Home = () => {
             <Button
               onClick={() => navigate("/como-funciona")}
               size="lg"
-              className="button-3d h-20 px-16 text-xl font-bold bg-[#a0755f] hover:bg-[#8a6350] text-white shadow-2xl rounded-xl border-4 border-[#8a6350]"
+              className="button-3d h-20 px-16 text-xl font-bold bg-green-600 hover:bg-green-700 text-white shadow-2xl rounded-xl border-4 border-green-700"
             >
               📖 Como Funciona
             </Button>
@@ -76,8 +76,7 @@ const Home = () => {
                 <Button
                   onClick={() => navigate("/login")}
                   size="lg"
-                  variant="outline"
-                  className="h-14 px-12 text-lg font-semibold border-2 border-[#5a4a42] text-[#5a4a42] hover:bg-[#5a4a42]/10 shadow-xl rounded-lg w-full sm:w-auto"
+                  className="h-14 px-12 text-lg font-semibold bg-[#c9a588] hover:bg-[#b8936f] text-white shadow-xl rounded-lg w-full sm:w-auto"
                 >
                   🔐 Entrar
                 </Button>
@@ -125,16 +124,22 @@ const Home = () => {
 
         {/* Footer */}
         <footer className="mt-16 pb-8 text-center">
-          <p className="text-base font-bold text-muted-foreground flex items-center justify-center gap-3">
-            Feito em 2025 
-            <img 
-              src={fistIcon} 
-              alt="Punho cerrado" 
-              className="h-16 w-16 inline-block animate-bounce-slow"
-              style={{ animationDuration: '1.5s' }}
-            />
-            Educadores Antirracistas
-          </p>
+          <div className="flex flex-col items-center gap-3">
+            <div className="flex items-center justify-center gap-2 text-base font-bold text-muted-foreground">
+              <span>Feito pelo Prof. Cristhian Lima</span>
+              <img 
+                src={fistIcon} 
+                alt="Punho cerrado" 
+                className="h-16 w-16 inline-block animate-bounce-slow"
+                style={{ animationDuration: '1.5s' }}
+              />
+              <span>Compromisso Antirracista 2025</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span>©</span>
+              <span>Todos os direitos protegidos</span>
+            </div>
+          </div>
         </footer>
       </div>
     </>
