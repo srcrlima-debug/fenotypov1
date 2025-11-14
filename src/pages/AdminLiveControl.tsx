@@ -6,9 +6,12 @@ import { useAdmin } from "@/hooks/useAdmin";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Play, SkipForward, BarChart3, Users, Clock, CheckCircle, XCircle, AlertCircle, RotateCcw } from "lucide-react";
+import { Play, SkipForward, BarChart3, Users, Clock, CheckCircle, XCircle, AlertCircle, RotateCcw, Download, FileText } from "lucide-react";
 import { getImageByPage } from "@/data/images";
 import { Progress } from "@/components/ui/progress";
+import Papa from "papaparse";
+import jsPDF from "jspdf";
+import { format } from "date-fns";
 
 interface SessionData {
   id: string;
@@ -359,6 +362,211 @@ export default function AdminLiveControl() {
     });
   };
 
+  const handleExportCSV = async () => {
+    if (!session) return;
+
+    toast({
+      title: "Preparando exportação...",
+      description: "Coletando dados da sessão",
+    });
+
+    // Get all evaluations for this session
+    const { data: avaliacoes, error } = await supabase
+      .from("avaliacoes")
+      .select(`
+        foto_id,
+        resposta,
+        tempo_gasto,
+        created_at,
+        genero,
+        faixa_etaria,
+        regiao
+      `)
+      .eq("session_id", sessionId)
+      .order("foto_id", { ascending: true });
+
+    if (error || !avaliacoes) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível coletar os dados",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Format data for CSV
+    const csvData = avaliacoes.map((a) => ({
+      "Foto": a.foto_id,
+      "Resposta": a.resposta,
+      "Tempo (segundos)": (a.tempo_gasto / 1000).toFixed(2),
+      "Gênero": a.genero || "Não informado",
+      "Faixa Etária": a.faixa_etaria || "Não informado",
+      "Região": a.regiao || "Não informado",
+      "Data/Hora": format(new Date(a.created_at), "dd/MM/yyyy HH:mm:ss"),
+    }));
+
+    // Generate CSV
+    const csv = Papa.unparse(csvData);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute("href", url);
+    link.setAttribute("download", `${session.nome}_resultados_${format(new Date(), "yyyy-MM-dd")}.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast({
+      title: "CSV Exportado!",
+      description: "Arquivo baixado com sucesso",
+    });
+  };
+
+  const handleExportPDF = async () => {
+    if (!session) return;
+
+    toast({
+      title: "Preparando PDF...",
+      description: "Gerando relatório com análises",
+    });
+
+    // Get all evaluations for this session
+    const { data: avaliacoes } = await supabase
+      .from("avaliacoes")
+      .select("foto_id, resposta, tempo_gasto, genero, faixa_etaria, regiao")
+      .eq("session_id", sessionId);
+
+    if (!avaliacoes) return;
+
+    const pdf = new jsPDF();
+    let yPos = 20;
+
+    // Title
+    pdf.setFontSize(20);
+    pdf.text(session.nome, 20, yPos);
+    yPos += 10;
+    
+    pdf.setFontSize(12);
+    pdf.text(`Data: ${format(new Date(session.data), "dd/MM/yyyy")}`, 20, yPos);
+    yPos += 10;
+    pdf.text(`Total de Avaliações: ${avaliacoes.length}`, 20, yPos);
+    yPos += 15;
+
+    // Overall Statistics
+    pdf.setFontSize(16);
+    pdf.text("Resultados Gerais", 20, yPos);
+    yPos += 10;
+
+    const totalDeferido = avaliacoes.filter(a => a.resposta === "DEFERIDO").length;
+    const totalIndeferido = avaliacoes.filter(a => a.resposta === "INDEFERIDO").length;
+    const totalNaoRespondido = avaliacoes.filter(a => a.resposta === "NÃO_RESPONDIDO").length;
+    const avgTime = avaliacoes.reduce((sum, a) => sum + a.tempo_gasto, 0) / avaliacoes.length / 1000;
+
+    pdf.setFontSize(12);
+    pdf.text(`Deferido: ${totalDeferido} (${((totalDeferido/avaliacoes.length)*100).toFixed(1)}%)`, 20, yPos);
+    yPos += 8;
+    pdf.text(`Indeferido: ${totalIndeferido} (${((totalIndeferido/avaliacoes.length)*100).toFixed(1)}%)`, 20, yPos);
+    yPos += 8;
+    pdf.text(`Não Respondido: ${totalNaoRespondido} (${((totalNaoRespondido/avaliacoes.length)*100).toFixed(1)}%)`, 20, yPos);
+    yPos += 8;
+    pdf.text(`Tempo Médio: ${avgTime.toFixed(2)}s`, 20, yPos);
+    yPos += 15;
+
+    // Demographics - Gender
+    pdf.setFontSize(16);
+    pdf.text("Análise por Gênero", 20, yPos);
+    yPos += 10;
+
+    const byGender: Record<string, any> = {};
+    avaliacoes.forEach(a => {
+      if (!byGender[a.genero || "Não informado"]) {
+        byGender[a.genero || "Não informado"] = { deferido: 0, indeferido: 0, nao_respondido: 0, total: 0 };
+      }
+      byGender[a.genero || "Não informado"][a.resposta === "DEFERIDO" ? "deferido" : a.resposta === "INDEFERIDO" ? "indeferido" : "nao_respondido"]++;
+      byGender[a.genero || "Não informado"].total++;
+    });
+
+    pdf.setFontSize(11);
+    Object.entries(byGender).forEach(([gender, data]: [string, any]) => {
+      if (yPos > 270) {
+        pdf.addPage();
+        yPos = 20;
+      }
+      pdf.text(`${gender}: D=${data.deferido} I=${data.indeferido} NR=${data.nao_respondido} (${data.total} total)`, 25, yPos);
+      yPos += 7;
+    });
+    yPos += 8;
+
+    // Demographics - Age
+    if (yPos > 250) {
+      pdf.addPage();
+      yPos = 20;
+    }
+    
+    pdf.setFontSize(16);
+    pdf.text("Análise por Faixa Etária", 20, yPos);
+    yPos += 10;
+
+    const byAge: Record<string, any> = {};
+    avaliacoes.forEach(a => {
+      if (!byAge[a.faixa_etaria || "Não informado"]) {
+        byAge[a.faixa_etaria || "Não informado"] = { deferido: 0, indeferido: 0, nao_respondido: 0, total: 0 };
+      }
+      byAge[a.faixa_etaria || "Não informado"][a.resposta === "DEFERIDO" ? "deferido" : a.resposta === "INDEFERIDO" ? "indeferido" : "nao_respondido"]++;
+      byAge[a.faixa_etaria || "Não informado"].total++;
+    });
+
+    pdf.setFontSize(11);
+    Object.entries(byAge).forEach(([age, data]: [string, any]) => {
+      if (yPos > 270) {
+        pdf.addPage();
+        yPos = 20;
+      }
+      pdf.text(`${age}: D=${data.deferido} I=${data.indeferido} NR=${data.nao_respondido} (${data.total} total)`, 25, yPos);
+      yPos += 7;
+    });
+    yPos += 8;
+
+    // Demographics - Region
+    if (yPos > 250) {
+      pdf.addPage();
+      yPos = 20;
+    }
+    
+    pdf.setFontSize(16);
+    pdf.text("Análise por Região", 20, yPos);
+    yPos += 10;
+
+    const byRegion: Record<string, any> = {};
+    avaliacoes.forEach(a => {
+      if (!byRegion[a.regiao || "Não informado"]) {
+        byRegion[a.regiao || "Não informado"] = { deferido: 0, indeferido: 0, nao_respondido: 0, total: 0 };
+      }
+      byRegion[a.regiao || "Não informado"][a.resposta === "DEFERIDO" ? "deferido" : a.resposta === "INDEFERIDO" ? "indeferido" : "nao_respondido"]++;
+      byRegion[a.regiao || "Não informado"].total++;
+    });
+
+    pdf.setFontSize(11);
+    Object.entries(byRegion).forEach(([region, data]: [string, any]) => {
+      if (yPos > 270) {
+        pdf.addPage();
+        yPos = 20;
+      }
+      pdf.text(`${region}: D=${data.deferido} I=${data.indeferido} NR=${data.nao_respondido} (${data.total} total)`, 25, yPos);
+      yPos += 7;
+    });
+
+    // Save PDF
+    pdf.save(`${session.nome}_relatorio_${format(new Date(), "yyyy-MM-dd")}.pdf`);
+
+    toast({
+      title: "PDF Gerado!",
+      description: "Relatório baixado com sucesso",
+    });
+  };
+
   if (authLoading || adminLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -386,9 +594,19 @@ export default function AdminLiveControl() {
             <h1 className="text-3xl font-bold text-foreground">{session.nome}</h1>
             <p className="text-muted-foreground">Controle Ao Vivo - Foto {session.current_photo}/30</p>
           </div>
-          <Button variant="outline" onClick={() => navigate("/admin")}>
-            Voltar
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleExportCSV} className="gap-2">
+              <FileText className="w-4 h-4" />
+              Exportar CSV
+            </Button>
+            <Button variant="outline" onClick={handleExportPDF} className="gap-2">
+              <Download className="w-4 h-4" />
+              Exportar PDF
+            </Button>
+            <Button variant="outline" onClick={() => navigate("/admin")}>
+              Voltar
+            </Button>
+          </div>
         </div>
 
         <Progress value={progress} className="w-full" />
