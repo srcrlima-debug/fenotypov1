@@ -17,10 +17,10 @@ const Home = () => {
     <>
       <Header />
       <div className="min-h-[calc(100vh-4rem)] flex flex-col items-center justify-center p-6 bg-[#f5f1eb] page-transition">
-        <div className="max-w-3xl w-full text-center space-y-8">
+        <div className="max-w-3xl w-full text-center space-y-4">
           
           {/* Logo */}
-          <div className="mb-8 animate-fade-slide-up">
+          <div className="mb-4 animate-fade-slide-up">
             <img 
               src={logoVertical} 
               alt="Fenotypo" 
@@ -31,7 +31,7 @@ const Home = () => {
           {/* Description */}
           <div 
             ref={descRef}
-            className={`space-y-6 px-4 scroll-reveal ${descVisible ? 'revealed' : ''}`}
+            className={`space-y-3 px-4 scroll-reveal ${descVisible ? 'revealed' : ''}`}
           >
             <p className="text-lg text-[#5a4a42] leading-relaxed max-w-2xl mx-auto">
               <span className="font-bold">FENOTYPO</span> é uma aplicação web desenvolvida pelo Prof. Dr. Cristhian Lima, doutor 
@@ -49,7 +49,7 @@ const Home = () => {
           {/* Main CTA Button */}
           <div 
             ref={ctaRef}
-            className={`pt-6 scroll-reveal ${ctaVisible ? 'revealed' : ''}`}
+            className={`pt-3 scroll-reveal ${ctaVisible ? 'revealed' : ''}`}
           >
             <Button
               onClick={() => navigate("/como-funciona")}
@@ -105,7 +105,7 @@ const Home = () => {
           {/* Features */}
           <div 
             ref={featuresRef}
-            className={`pt-8 flex items-center justify-center gap-12 text-[#5a4a42] flex-wrap scroll-reveal ${featuresVisible ? 'revealed' : ''}`}
+            className={`pt-4 flex items-center justify-center gap-12 text-[#5a4a42] flex-wrap scroll-reveal ${featuresVisible ? 'revealed' : ''}`}
           >
             <div className="flex items-center gap-3">
               <div className="w-3 h-3 rounded-full bg-[#a0755f]" />
