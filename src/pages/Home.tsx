@@ -4,11 +4,15 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useEffect } from "react";
 import { Header } from "@/components/Header";
 import { Handshake } from "lucide-react";
+import { useScrollReveal } from "@/hooks/useScrollReveal";
 import logoVertical from "@/assets/logo-fenotypo-vert-2.png";
 
 const Home = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { ref: descRef, isVisible: descVisible } = useScrollReveal();
+  const { ref: ctaRef, isVisible: ctaVisible } = useScrollReveal();
+  const { ref: featuresRef, isVisible: featuresVisible } = useScrollReveal();
 
   useEffect(() => {
     if (!user) {
@@ -19,11 +23,11 @@ const Home = () => {
   return (
     <>
       <Header />
-      <div className="min-h-[calc(100vh-4rem)] flex flex-col items-center justify-center p-6 bg-[#f5f1eb]">
-        <div className="max-w-3xl w-full text-center space-y-8 animate-fade-in">
+      <div className="min-h-[calc(100vh-4rem)] flex flex-col items-center justify-center p-6 bg-[#f5f1eb] page-transition">
+        <div className="max-w-3xl w-full text-center space-y-8">
           
           {/* Logo */}
-          <div className="mb-8">
+          <div className="mb-8 animate-fade-slide-up">
             <img 
               src={logoVertical} 
               alt="Fenotypo" 
@@ -32,7 +36,10 @@ const Home = () => {
           </div>
           
           {/* Description */}
-          <div className="space-y-6 px-4">
+          <div 
+            ref={descRef}
+            className={`space-y-6 px-4 scroll-reveal ${descVisible ? 'revealed' : ''}`}
+          >
             <p className="text-lg text-[#5a4a42] leading-relaxed max-w-2xl mx-auto">
               <span className="font-bold">FENOTYPO</span> é uma aplicação web desenvolvida pelo Prof. Dr. Cristhian Lima, doutor 
               em Ciências Sociais, para treinar pessoas que irão atuar em bancas de confirmação 
@@ -47,7 +54,10 @@ const Home = () => {
           </div>
 
           {/* Main CTA Button */}
-          <div className="pt-6">
+          <div 
+            ref={ctaRef}
+            className={`pt-6 scroll-reveal ${ctaVisible ? 'revealed' : ''}`}
+          >
             <Button
               onClick={() => navigate("/como-funciona")}
               size="lg"
@@ -58,7 +68,10 @@ const Home = () => {
           </div>
 
           {/* Features */}
-          <div className="pt-8 flex items-center justify-center gap-12 text-[#5a4a42] flex-wrap">
+          <div 
+            ref={featuresRef}
+            className={`pt-8 flex items-center justify-center gap-12 text-[#5a4a42] flex-wrap scroll-reveal ${featuresVisible ? 'revealed' : ''}`}
+          >
             <div className="flex items-center gap-3">
               <div className="w-3 h-3 rounded-full bg-[#a0755f]" />
               <span className="text-base">30 Páginas</span>
