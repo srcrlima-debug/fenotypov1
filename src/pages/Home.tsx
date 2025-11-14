@@ -63,28 +63,28 @@ const Home = () => {
           {/* Login/Register Buttons for Non-Authenticated Users */}
           {!user && (
             <div 
-              className={`pt-4 flex flex-col items-center gap-4 scroll-reveal ${ctaVisible ? 'revealed' : ''}`}
+              className={`pt-4 space-y-3 scroll-reveal ${ctaVisible ? 'revealed' : ''}`}
             >
-              <Button
-                onClick={() => navigate("/registro")}
-                size="lg"
-                className="h-14 px-12 text-lg font-semibold bg-[#a0755f] hover:bg-[#8a6350] text-white shadow-xl rounded-lg"
-              >
-                📝 Cadastre-se
-              </Button>
-              <div className="flex flex-col items-center gap-2">
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                <Button
+                  onClick={() => navigate("/registro")}
+                  size="lg"
+                  className="h-14 px-12 text-lg font-semibold bg-[#a0755f] hover:bg-[#8a6350] text-white shadow-xl rounded-lg w-full sm:w-auto"
+                >
+                  📝 Cadastre-se
+                </Button>
                 <Button
                   onClick={() => navigate("/login")}
                   size="lg"
                   variant="outline"
-                  className="h-14 px-12 text-lg font-semibold border-2 border-[#5a4a42] text-[#5a4a42] hover:bg-[#5a4a42]/10 shadow-xl rounded-lg"
+                  className="h-14 px-12 text-lg font-semibold border-2 border-[#5a4a42] text-[#5a4a42] hover:bg-[#5a4a42]/10 shadow-xl rounded-lg w-full sm:w-auto"
                 >
                   🔐 Entrar
                 </Button>
-                <p className="text-sm text-muted-foreground">
-                  (se já cadastrado)
-                </p>
               </div>
+              <p className="text-sm text-center text-muted-foreground">
+                (se já cadastrado, clique em Entrar)
+              </p>
             </div>
           )}
 
