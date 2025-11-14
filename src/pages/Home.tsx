@@ -89,12 +89,12 @@ const Home = () => {
 
         {/* Footer */}
         <footer className="mt-16 pb-8 text-center">
-          <p className="text-sm text-muted-foreground flex items-center justify-center gap-2">
+          <p className="text-base font-bold text-muted-foreground flex items-center justify-center gap-2">
             Feito em 2025 
             <img 
               src={fistIcon} 
               alt="Punho cerrado" 
-              className="h-9 w-9 inline-block animate-pulse-zoom"
+              className="h-12 w-12 inline-block animate-pulse-zoom"
             />
             Educadores Antirracistas
           </p>
