@@ -49,7 +49,6 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import Papa from 'papaparse';
 import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 
 interface SessionData {
   id: string;
