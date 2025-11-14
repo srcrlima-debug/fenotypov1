@@ -117,6 +117,57 @@ All colors MUST be HSL.
   .page-transition {
     animation: fade-slide-up 0.4s ease-out;
   }
+
+  /* 3D Hover Effects */
+  .card-3d {
+    transform-style: preserve-3d;
+    transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+    will-change: transform;
+  }
+
+  .card-3d:hover {
+    transform: translateY(-8px) rotateX(2deg);
+    box-shadow: 0 20px 40px -10px hsl(var(--primary) / 0.3);
+  }
+
+  .card-3d-tilt {
+    transform-style: preserve-3d;
+    transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+  }
+
+  .button-3d {
+    transform: perspective(1000px) translateZ(0);
+    transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .button-3d::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+  }
+
+  .button-3d:hover {
+    transform: perspective(1000px) translateZ(10px) scale(1.05);
+    box-shadow: 0 15px 30px -8px hsl(var(--primary) / 0.4);
+  }
+
+  .button-3d:hover::before {
+    width: 300px;
+    height: 300px;
+  }
+
+  .button-3d:active {
+    transform: perspective(1000px) translateZ(5px) scale(1.02);
+  }
 }
 
 @layer base {
