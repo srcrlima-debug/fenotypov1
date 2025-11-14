@@ -516,6 +516,13 @@ const AdminDashboard = () => {
               Dashboard de Análise de Resultados
             </p>
           </div>
+          <Button
+            variant="default"
+            onClick={() => navigate(`/admin/analytics/${sessionId}`)}
+          >
+            <Users className="h-4 w-4 mr-2" />
+            Análise Demográfica
+          </Button>
         </div>
 
         {/* Filters */}
