@@ -830,6 +830,34 @@ export default function AdminLiveControl() {
               <p className="text-sm text-muted-foreground">
                 Status: <span className="font-medium capitalize">{session.session_status}</span>
               </p>
+              {session.session_status === 'waiting' && (
+                <div className="mt-4 p-4 bg-muted/50 rounded-lg border">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Users className="h-5 w-5 text-primary" />
+                    <h3 className="font-semibold">Participantes na Antessala</h3>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Online agora:</span>
+                      <span className="text-2xl font-bold text-primary">{onlineParticipants}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Total de perfis:</span>
+                      <span className="text-lg font-semibold">{stats.total_participants}</span>
+                    </div>
+                    <Progress 
+                      value={stats.total_participants > 0 ? (onlineParticipants / stats.total_participants) * 100 : 0} 
+                      className="h-2"
+                    />
+                    <p className="text-xs text-muted-foreground text-center">
+                      {stats.total_participants > 0 
+                        ? `${((onlineParticipants / stats.total_participants) * 100).toFixed(1)}% dos participantes online`
+                        : 'Nenhum participante cadastrado'
+                      }
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
             <div className="flex gap-4">
               {session.session_status === 'waiting' && (

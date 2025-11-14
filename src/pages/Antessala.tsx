@@ -102,16 +102,36 @@ export default function Antessala() {
     }
   };
 
-  // Load user profile
+  // Check authentication and profile completion
   useEffect(() => {
-    const loadProfile = async () => {
-      if (!user) return;
+    const checkAuthAndProfile = async () => {
+      if (!user) {
+        toast({
+          title: "Autenticação necessária",
+          description: "Faça login para participar da sessão",
+          variant: "destructive",
+        });
+        navigate(`/login?redirect=/antessala/${sessionId}`);
+        return;
+      }
 
+      // Check if profile is complete
       const { data: profile } = await supabase
         .from("profiles")
-        .select("email")
+        .select("email, genero, faixa_etaria, estado, pertencimento_racial, regiao, experiencia_bancas")
         .eq("user_id", user.id)
         .maybeSingle();
+
+      if (!profile || !profile.genero || !profile.faixa_etaria || !profile.estado || 
+          !profile.pertencimento_racial || !profile.regiao || !profile.experiencia_bancas) {
+        toast({
+          title: "Complete seu perfil",
+          description: "Complete seu perfil antes de participar da sessão",
+          variant: "destructive",
+        });
+        navigate('/complete-profile');
+        return;
+      }
 
       if (profile?.email) {
         // Extract name from email (part before @) and capitalize
@@ -121,8 +141,8 @@ export default function Antessala() {
       }
     };
 
-    loadProfile();
-  }, [user]);
+    checkAuthAndProfile();
+  }, [user, navigate, sessionId, toast]);
 
   // Load session data and setup realtime
   useEffect(() => {
