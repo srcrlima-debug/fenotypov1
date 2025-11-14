@@ -168,6 +168,19 @@ All colors MUST be HSL.
   .button-3d:active {
     transform: perspective(1000px) translateZ(5px) scale(1.02);
   }
+
+  @keyframes pulse-zoom {
+    0%, 100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.15);
+    }
+  }
+
+  .animate-pulse-zoom {
+    animation: pulse-zoom 2s ease-in-out infinite;
+  }
 }
 
 @layer base {
