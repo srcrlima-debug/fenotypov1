@@ -60,6 +60,7 @@ export default function AdminLiveControl() {
   const [newVotePulse, setNewVotePulse] = useState(false);
   const [adminVote, setAdminVote] = useState<string | null>(null);
   const [savingAdminVote, setSavingAdminVote] = useState(false);
+  const [canEarlyAdvance, setCanEarlyAdvance] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !adminLoading) {
