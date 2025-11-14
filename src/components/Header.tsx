@@ -4,6 +4,7 @@ import logo from "@/assets/logo-fenotypo-horiz-2.png";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,7 +28,7 @@ export const Header = () => {
           <img src={logo} alt="Fenotypo Logo" className="h-10" />
         </Link>
 
-        <nav className="flex items-center gap-4">
+        <nav className="flex items-center gap-2">
           <Button variant="ghost" size="sm" asChild className="hidden sm:inline-flex">
             <Link to="/">
               <Home className="mr-2 h-4 w-4" />
@@ -40,6 +41,8 @@ export const Header = () => {
               Como Funciona
             </Link>
           </Button>
+
+          <ThemeToggle />
 
           {user && (
             <DropdownMenu>

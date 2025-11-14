@@ -8,7 +8,17 @@ import { CountdownCircleTimer } from "react-countdown-circle-timer";
 import { getImageByPage } from "@/data/images";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Users, Clock } from "lucide-react";
+import { 
+  Users, 
+  Clock, 
+  CheckCircle, 
+  XCircle, 
+  ZoomIn, 
+  AlertCircle,
+  Loader2,
+  Info 
+} from "lucide-react";
+import { Header } from "@/components/Header";
 
 interface SessionData {
   id: string;
@@ -47,6 +57,22 @@ export default function SessionTraining() {
         .single();
 
       if (sessionError || !session) {
+        toast({
+          title: "Sessão não encontrada",
+          description: "Esta sessão não existe ou foi encerrada.",
+          variant: "destructive",
+        });
+        navigate("/");
+        return;
+      }
+
+      // Check if session has ended
+      if (session.session_status === "completed") {
+        toast({
+          title: "Sessão encerrada",
+          description: "Esta sessão foi encerrada pelo administrador.",
+          variant: "destructive",
+        });
         navigate("/");
         return;
       }
@@ -63,18 +89,32 @@ export default function SessionTraining() {
 
     const channel = supabase
       .channel('session-updates')
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'sessions', filter: `id=eq.${sessionId}` },
-        (payload) => {
-          const newSession = payload.new as SessionData;
-          setSessionData(newSession);
-          setStartTime(Date.now());
-          setTimerKey(prev => prev + 1);
-          setCanRespond(newSession.session_status === 'active');
+      .on('postgres_changes', { 
+        event: 'UPDATE', 
+        schema: 'public', 
+        table: 'sessions', 
+        filter: `id=eq.${sessionId}` 
+      }, (payload) => {
+        const newSession = payload.new as SessionData;
+        
+        // If session completed, redirect
+        if (newSession.session_status === "completed") {
+          toast({
+            title: "Sessão encerrada",
+            description: "O administrador encerrou esta sessão.",
+          });
+          navigate("/");
+          return;
         }
-      ).subscribe();
+        
+        setSessionData(newSession);
+        setStartTime(Date.now());
+        setTimerKey(prev => prev + 1);
+        setCanRespond(newSession.session_status === 'active');
+      }).subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [sessionId]);
+  }, [sessionId, navigate, toast]);
 
   useEffect(() => {
     window.history.pushState(null, "", window.location.href);
@@ -86,63 +126,257 @@ export default function SessionTraining() {
   const saveAvaliacao = async (resposta: string): Promise<boolean> => {
     if (!user || !sessionData) return false;
 
-    const { data: profile } = await supabase.from("profiles").select("genero, faixa_etaria, estado").eq("user_id", user.id).single();
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("genero, faixa_etaria, estado")
+      .eq("user_id", user.id)
+      .single();
+
     const { error } = await supabase.from("avaliacoes").insert({
-      session_id: sessionId, user_id: user.id, foto_id: sessionData.current_photo, resposta,
-      tempo_gasto: Date.now() - startTime, genero: profile?.genero, faixa_etaria: profile?.faixa_etaria, regiao: profile?.estado,
+      session_id: sessionId,
+      user_id: user.id,
+      foto_id: sessionData.current_photo,
+      resposta,
+      tempo_gasto: Date.now() - startTime,
+      genero: profile?.genero,
+      faixa_etaria: profile?.faixa_etaria,
+      regiao: profile?.estado,
     });
 
-    if (error) { toast({ title: "Erro", description: "Não foi possível salvar", variant: "destructive" }); return false; }
+    if (error) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível salvar sua resposta",
+        variant: "destructive",
+      });
+      return false;
+    }
     return true;
   };
 
   const handleDecision = async (decision: string) => {
     if (!canRespond) return;
-    if (await saveAvaliacao(decision)) { setCanRespond(false); toast({ title: "Resposta registrada" }); }
+    if (await saveAvaliacao(decision)) {
+      setCanRespond(false);
+      toast({
+        title: "Resposta registrada",
+        description: "Aguarde a próxima foto",
+      });
+    }
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin" /></div>;
+  if (loading) {
+    return (
+      <>
+        <Header />
+        <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center">
+          <Loader2 className="w-12 h-12 animate-spin text-primary" />
+        </div>
+      </>
+    );
+  }
+
   if (!sessionData) return null;
 
   const currentImage = getImageByPage(sessionData.current_photo);
   const progress = (sessionData.current_photo / 30) * 100;
 
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-primary/5 to-background flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-4xl space-y-8">
-        <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold">{sessionData.nome}</h1>
-          <p className="text-muted-foreground">Foto {sessionData.current_photo} de 30</p>
-          <div className="w-full bg-secondary rounded-full h-2"><div className="h-full bg-primary transition-all" style={{ width: `${progress}%` }} /></div>
+  // Waiting state - before admin starts
+  if (sessionData.session_status === "waiting") {
+    return (
+      <>
+        <Header />
+        <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4 bg-gradient-to-b from-background to-muted/20">
+          <Card className="max-w-2xl w-full p-8 space-y-6 text-center animate-fade-in">
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-primary/10 mb-4">
+              <Clock className="w-10 h-10 text-primary animate-pulse" />
+            </div>
+
+            <div className="space-y-2">
+              <h1 className="text-3xl font-bold">Aguarde o Início</h1>
+              <p className="text-lg text-muted-foreground">
+                Sessão: <span className="font-semibold text-foreground">{sessionData.nome}</span>
+              </p>
+            </div>
+
+            <div className="bg-muted/50 rounded-lg p-6 space-y-4 text-left">
+              <div className="flex items-start gap-3">
+                <Info className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+                <div className="space-y-2">
+                  <h3 className="font-semibold">Como funciona o treinamento:</h3>
+                  <ul className="space-y-2 text-sm text-muted-foreground">
+                    <li className="flex items-start gap-2">
+                      <span className="text-primary">•</span>
+                      <span>Você verá 30 imagens, uma de cada vez</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-primary">•</span>
+                      <span>Cada imagem terá um tempo limitado para avaliação</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-primary">•</span>
+                      <span>Clique em <strong>DEFERIDO</strong> ou <strong>INDEFERIDO</strong> conforme sua avaliação</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-primary">•</span>
+                      <span>Use os atalhos de teclado: <kbd className="px-2 py-1 bg-muted rounded text-xs">D</kbd> para Deferido e <kbd className="px-2 py-1 bg-muted rounded text-xs">I</kbd> para Indeferido</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-primary">•</span>
+                      <span>Se o tempo acabar sem resposta, será registrado como "Não Respondido"</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4 flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" />
+              <p className="text-sm text-left">
+                <strong>Atenção:</strong> A avaliação iniciará automaticamente quando o administrador 
+                começar a sessão. Mantenha-se atento e preparado!
+              </p>
+            </div>
+
+            <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground animate-pulse">
+              <Users className="h-4 w-4" />
+              <span>Aguardando início pelo administrador...</span>
+            </div>
+          </Card>
         </div>
+      </>
+    );
+  }
 
-        {sessionData.session_status === 'waiting' && <Card className="p-8 text-center"><Users className="w-16 h-16 mx-auto mb-4 text-muted-foreground" /><h2 className="text-2xl font-bold mb-2">Aguardando Início</h2><p className="text-muted-foreground">O administrador ainda não iniciou a sessão</p></Card>}
-        {sessionData.session_status === 'showing_results' && <Card className="p-8 text-center"><Clock className="w-16 h-16 mx-auto mb-4 text-muted-foreground" /><h2 className="text-2xl font-bold mb-2">Resultados</h2><p className="text-muted-foreground">Aguarde a próxima foto...</p></Card>}
-        {sessionData.session_status === 'completed' && <Card className="p-8 text-center"><h2 className="text-2xl font-bold mb-2">Sessão Finalizada</h2><Button onClick={() => navigate("/")} className="mt-4">Voltar</Button></Card>}
-
-        {sessionData.session_status === 'active' && (
-          <div className="flex flex-col items-center space-y-8">
-            <CountdownCircleTimer key={timerKey} isPlaying duration={sessionData.photo_duration} colors={["#10b981", "#f59e0b", "#ef4444"]} colorsTime={[40, 20, 0]} size={120} strokeWidth={8} onComplete={() => { if (canRespond) handleDecision("NÃO_RESPONDIDO"); }}>
-              {({ remainingTime }) => <div className="text-center"><div className="text-3xl font-bold">{remainingTime}</div><div className="text-sm text-muted-foreground">segundos</div></div>}
-            </CountdownCircleTimer>
-            <div className="w-full bg-card rounded-xl shadow-xl overflow-hidden cursor-pointer hover:opacity-90 transition-opacity" onClick={() => setZoomOpen(true)}>
-              {currentImage && <img src={currentImage.imageUrl} alt={currentImage.nome} className="w-full h-auto" />}
+  // Showing results state
+  if (sessionData.session_status === "showing_results") {
+    return (
+      <>
+        <Header />
+        <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4">
+          <Card className="max-w-xl w-full p-8 text-center space-y-6 animate-fade-in">
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-500/10 mb-4">
+              <CheckCircle className="w-10 h-10 text-green-600" />
             </div>
-            <div className="flex gap-4 w-full max-w-md">
-              <Button onClick={() => handleDecision("DEFERIDO")} disabled={!canRespond} className="flex-1 h-16 text-lg bg-green-500 hover:bg-green-600">DEFERIDO</Button>
-              <Button onClick={() => handleDecision("INDEFERIDO")} disabled={!canRespond} className="flex-1 h-16 text-lg bg-red-500 hover:bg-red-600">INDEFERIDO</Button>
-            </div>
+            <h1 className="text-3xl font-bold">Sessão Concluída!</h1>
+            <p className="text-muted-foreground">
+              Obrigado por participar. O administrador está exibindo os resultados.
+            </p>
+            <Button onClick={() => navigate("/")} size="lg" className="w-full">
+              Voltar ao Início
+            </Button>
+          </Card>
+        </div>
+      </>
+    );
+  }
 
-            <Dialog open={zoomOpen} onOpenChange={setZoomOpen}>
-              <DialogContent className="max-w-[95vw] max-h-[95vh] p-0">
-                {currentImage && (
-                  <img src={currentImage.imageUrl} alt={currentImage.nome} className="w-full h-full object-contain" />
-                )}
-              </DialogContent>
-            </Dialog>
+  // Active state - showing current photo
+  return (
+    <>
+      <Header />
+      <div className="min-h-[calc(100vh-4rem)] flex flex-col items-center justify-center p-4 bg-gradient-to-b from-background to-muted/20">
+        <div className="w-full max-w-4xl space-y-4 animate-fade-in">
+          {/* Progress bar */}
+          <div className="bg-card rounded-lg shadow-sm p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium">
+                Foto {sessionData.current_photo} de 30
+              </span>
+              <span className="text-sm text-muted-foreground">
+                {Math.round(progress)}% completo
+              </span>
+            </div>
+            <div className="w-full bg-secondary rounded-full h-2">
+              <div
+                className="h-full bg-primary transition-all duration-300 rounded-full"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
           </div>
-        )}
+
+          {/* Timer */}
+          <div className="flex justify-center">
+            <CountdownCircleTimer
+              key={timerKey}
+              isPlaying={canRespond}
+              duration={sessionData.photo_duration || 60}
+              colors={["#10b981", "#f59e0b", "#ef4444"]}
+              colorsTime={[sessionData.photo_duration || 60, 10, 0]}
+              size={120}
+              strokeWidth={8}
+            >
+              {({ remainingTime }) => (
+                <div className="text-center">
+                  <div className={`text-3xl font-bold ${remainingTime <= 10 ? 'text-red-500 animate-pulse' : ''}`}>
+                    {remainingTime}
+                  </div>
+                  <div className="text-sm text-muted-foreground">segundos</div>
+                </div>
+              )}
+            </CountdownCircleTimer>
+          </div>
+
+          {/* Image and buttons */}
+          <Card className="p-6 space-y-4">
+            <div className="relative group">
+              <img
+                src={currentImage?.imageUrl}
+                alt={`Imagem ${sessionData.current_photo}`}
+                className="w-full h-auto rounded-lg object-contain max-h-96 cursor-zoom-in transition-transform hover:scale-[1.02]"
+                onClick={() => setZoomOpen(true)}
+              />
+              <button
+                onClick={() => setZoomOpen(true)}
+                className="absolute top-4 right-4 bg-background/80 backdrop-blur-sm p-2 rounded-full opacity-0 group-hover:opacity-100 transition-all hover:scale-110"
+                aria-label="Ampliar imagem"
+              >
+                <ZoomIn className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Button
+                size="lg"
+                onClick={() => handleDecision("DEFERIDO")}
+                disabled={!canRespond}
+                className="h-16 text-lg font-semibold bg-green-600 hover:bg-green-700 active:scale-95 transition-transform"
+              >
+                <CheckCircle className="mr-2 h-6 w-6" />
+                DEFERIDO
+                <kbd className="ml-2 px-2 py-1 bg-green-700/50 rounded text-xs hidden sm:inline">D</kbd>
+              </Button>
+              <Button
+                size="lg"
+                variant="destructive"
+                onClick={() => handleDecision("INDEFERIDO")}
+                disabled={!canRespond}
+                className="h-16 text-lg font-semibold active:scale-95 transition-transform"
+              >
+                <XCircle className="mr-2 h-6 w-6" />
+                INDEFERIDO
+                <kbd className="ml-2 px-2 py-1 bg-red-700/50 rounded text-xs hidden sm:inline">I</kbd>
+              </Button>
+            </div>
+
+            {!canRespond && (
+              <div className="text-center text-sm text-muted-foreground bg-muted/50 rounded-lg p-3">
+                Resposta registrada. Aguardando próxima foto...
+              </div>
+            )}
+          </Card>
+        </div>
       </div>
-    </div>
+
+      <Dialog open={zoomOpen} onOpenChange={setZoomOpen}>
+        <DialogContent className="max-w-7xl w-full p-0">
+          <img
+            src={currentImage?.imageUrl}
+            alt="Visualização ampliada"
+            className="w-full h-auto"
+          />
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
