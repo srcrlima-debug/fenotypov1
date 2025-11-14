@@ -54,6 +54,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Progress } from '@/components/ui/progress';
+import { ImageZoomDialog, ImageThumbnail } from '@/components/ImageZoomDialog';
 
 interface SessionData {
   id: string;
@@ -138,6 +139,7 @@ const AdminDashboard = () => {
   const [rawEvaluations, setRawEvaluations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [dateFilter, setDateFilter] = useState({ start: '', end: '' });
+  const [zoomImage, setZoomImage] = useState<{ url: string; alt: string } | null>(null);
 
   useEffect(() => {
     if (sessionId) {
@@ -625,10 +627,23 @@ const AdminDashboard = () => {
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
-                <div>
+                <div className="space-y-2">
                   <p className="text-sm text-muted-foreground">Foto Mais Deferida</p>
-                  <p className="text-3xl font-bold text-foreground">#{kpis?.mostDeferida.fotoId}</p>
-                  <p className="text-sm text-accent">{kpis?.mostDeferida.percent.toFixed(1)}%</p>
+                  <div className="flex items-center gap-3">
+                    {kpis && (
+                      <ImageThumbnail 
+                        fotoId={kpis.mostDeferida.fotoId}
+                        onClick={() => setZoomImage({
+                          url: `/images/foto-${kpis.mostDeferida.fotoId}.jpg`,
+                          alt: `Foto ${kpis.mostDeferida.fotoId}`
+                        })}
+                      />
+                    )}
+                    <div>
+                      <p className="text-3xl font-bold text-foreground">#{kpis?.mostDeferida.fotoId}</p>
+                      <p className="text-sm text-accent">{kpis?.mostDeferida.percent.toFixed(1)}%</p>
+                    </div>
+                  </div>
                 </div>
                 <Award className="h-8 w-8 text-accent" />
               </div>
@@ -638,10 +653,23 @@ const AdminDashboard = () => {
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
-                <div>
+                <div className="space-y-2">
                   <p className="text-sm text-muted-foreground">Foto Mais Indeferida</p>
-                  <p className="text-3xl font-bold text-foreground">#{kpis?.mostIndeferida.fotoId}</p>
-                  <p className="text-sm text-destructive">{kpis?.mostIndeferida.percent.toFixed(1)}%</p>
+                  <div className="flex items-center gap-3">
+                    {kpis && (
+                      <ImageThumbnail 
+                        fotoId={kpis.mostIndeferida.fotoId}
+                        onClick={() => setZoomImage({
+                          url: `/images/foto-${kpis.mostIndeferida.fotoId}.jpg`,
+                          alt: `Foto ${kpis.mostIndeferida.fotoId}`
+                        })}
+                      />
+                    )}
+                    <div>
+                      <p className="text-3xl font-bold text-foreground">#{kpis?.mostIndeferida.fotoId}</p>
+                      <p className="text-sm text-destructive">{kpis?.mostIndeferida.percent.toFixed(1)}%</p>
+                    </div>
+                  </div>
                 </div>
                 <XCircle className="h-8 w-8 text-destructive" />
               </div>
@@ -651,10 +679,23 @@ const AdminDashboard = () => {
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
-                <div>
+                <div className="space-y-2">
                   <p className="text-sm text-muted-foreground">Maior Tempo Médio</p>
-                  <p className="text-3xl font-bold text-foreground">#{kpis?.longestTime.fotoId}</p>
-                  <p className="text-sm text-primary">{formatTime(kpis?.longestTime.time || 0)}</p>
+                  <div className="flex items-center gap-3">
+                    {kpis && (
+                      <ImageThumbnail 
+                        fotoId={kpis.longestTime.fotoId}
+                        onClick={() => setZoomImage({
+                          url: `/images/foto-${kpis.longestTime.fotoId}.jpg`,
+                          alt: `Foto ${kpis.longestTime.fotoId}`
+                        })}
+                      />
+                    )}
+                    <div>
+                      <p className="text-3xl font-bold text-foreground">#{kpis?.longestTime.fotoId}</p>
+                      <p className="text-sm text-primary">{formatTime(kpis?.longestTime.time || 0)}</p>
+                    </div>
+                  </div>
                 </div>
                 <Timer className="h-8 w-8 text-primary" />
               </div>
@@ -865,7 +906,16 @@ const AdminDashboard = () => {
                     .map((item) => (
                       <TableRow key={item.fotoId}>
                         <TableCell className="font-medium">
-                          #{item.fotoId}
+                          <div className="flex items-center gap-3">
+                            <ImageThumbnail 
+                              fotoId={item.fotoId}
+                              onClick={() => setZoomImage({
+                                url: `/images/foto-${item.fotoId}.jpg`,
+                                alt: `Foto ${item.fotoId}`
+                              })}
+                            />
+                            <span>#{item.fotoId}</span>
+                          </div>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
@@ -1030,7 +1080,16 @@ const AdminDashboard = () => {
                   {photoStats.map((photo) => (
                     <TableRow key={photo.fotoId}>
                       <TableCell className="font-medium">
-                        #{photo.fotoId}
+                        <div className="flex items-center gap-3">
+                          <ImageThumbnail 
+                            fotoId={photo.fotoId}
+                            onClick={() => setZoomImage({
+                              url: `/images/foto-${photo.fotoId}.jpg`,
+                              alt: `Foto ${photo.fotoId}`
+                            })}
+                          />
+                          <span>#{photo.fotoId}</span>
+                        </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
@@ -1087,6 +1146,13 @@ const AdminDashboard = () => {
           </CardContent>
         </Card>
       </div>
+      
+      <ImageZoomDialog
+        imageUrl={zoomImage?.url || ''}
+        altText={zoomImage?.alt || ''}
+        isOpen={!!zoomImage}
+        onOpenChange={(open) => !open && setZoomImage(null)}
+      />
     </div>
   );
 };
