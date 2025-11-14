@@ -111,12 +111,13 @@ export default function Antessala() {
         .from("profiles")
         .select("email")
         .eq("user_id", user.id)
-        .single();
+        .maybeSingle();
 
       if (profile?.email) {
-        // Extract name from email (part before @)
-        const name = profile.email.split("@")[0];
-        setUserName(name);
+        // Extract name from email (part before @) and capitalize
+        const emailName = profile.email.split("@")[0];
+        const capitalized = emailName.charAt(0).toUpperCase() + emailName.slice(1);
+        setUserName(capitalized);
       }
     };
 
@@ -259,7 +260,7 @@ export default function Antessala() {
         </div>
 
         <div className="grid gap-6 mb-8">
-          <div ref={card1Ref} className={`scroll-reveal ${card1Visible ? 'revealed' : ''}`}>
+          <div ref={card1Ref} className={card1Visible ? 'revealed' : ''}>
             <Card ref={tilt1} className="card-3d-tilt">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -276,7 +277,7 @@ export default function Antessala() {
             </Card>
           </div>
 
-          <div ref={card2Ref} className={`scroll-reveal ${card2Visible ? 'revealed' : ''}`}>
+          <div ref={card2Ref} className={card2Visible ? 'revealed' : ''}>
             <Card ref={tilt2} className="card-3d-tilt">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -300,7 +301,7 @@ export default function Antessala() {
             </Card>
           </div>
 
-          <div ref={card3Ref} className={`scroll-reveal ${card3Visible ? 'revealed' : ''}`}>
+          <div ref={card3Ref} className={card3Visible ? 'revealed' : ''}>
             <Card ref={tilt3} className="card-3d-tilt">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -332,7 +333,7 @@ export default function Antessala() {
             </Card>
           </div>
 
-          <div ref={card4Ref} className={`scroll-reveal ${card4Visible ? 'revealed' : ''}`}>
+          <div ref={card4Ref} className={card4Visible ? 'revealed' : ''}>
             <Card ref={tilt4} className="card-3d-tilt">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -358,7 +359,7 @@ export default function Antessala() {
             </Card>
           </div>
 
-          <div ref={card5Ref} className={`scroll-reveal ${card5Visible ? 'revealed' : ''}`}>
+          <div ref={card5Ref} className={card5Visible ? 'revealed' : ''}>
             <Card className="bg-[#a0755f]/10 border-2 border-[#a0755f]">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-[#5a4a42]">
