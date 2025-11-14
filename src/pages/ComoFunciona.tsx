@@ -114,9 +114,6 @@ const ComoFunciona = () => {
           <Button variant="outline" onClick={() => navigate(-1)} size="lg">
             Voltar
           </Button>
-          <Button onClick={() => navigate("/")} size="lg" className="min-w-40">
-            Começar Treinamento
-          </Button>
         </div>
       </div>
     </div>
