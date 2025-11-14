@@ -11,6 +11,7 @@ import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { sessionSchema } from '@/lib/validators';
 import { z } from 'zod';
+import { Header } from '@/components/Header';
 
 interface Session {
   id: string;
@@ -124,14 +125,16 @@ const Admin = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-6xl mx-auto space-y-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-4xl font-bold text-foreground">Painel Administrativo</h1>
-            <p className="text-muted-foreground mt-2">Gerencie sessões de avaliação</p>
+    <>
+      <Header />
+      <div className="min-h-screen bg-background p-6">
+        <div className="max-w-6xl mx-auto space-y-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-4xl font-bold text-foreground">Painel Administrativo</h1>
+              <p className="text-muted-foreground mt-2">Gerencie sessões de avaliação</p>
+            </div>
           </div>
-        </div>
 
         {/* Create Session Form */}
         <Card>
@@ -250,6 +253,7 @@ const Admin = () => {
         </div>
       </div>
     </div>
+    </>
   );
 };
 
