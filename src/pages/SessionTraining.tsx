@@ -193,9 +193,18 @@ export default function SessionTraining() {
             </div>
 
             <div className="space-y-2">
-              <h1 className="text-3xl font-bold">Aguarde o Início</h1>
+              <h1 className="text-3xl font-bold">Sala de Espera</h1>
               <p className="text-lg text-muted-foreground">
                 Sessão: <span className="font-semibold text-foreground">{sessionData.nome}</span>
+              </p>
+            </div>
+
+            <div className="bg-primary/10 border border-primary/20 rounded-lg p-6 text-center">
+              <p className="text-lg font-medium">
+                O Prof. Cristhian em breve começará a realizar o teste.
+              </p>
+              <p className="text-sm text-muted-foreground mt-2">
+                Aguarde na sala de espera. O teste iniciará automaticamente.
               </p>
             </div>
 
@@ -203,11 +212,15 @@ export default function SessionTraining() {
               <div className="flex items-start gap-3">
                 <Info className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
                 <div className="space-y-2">
-                  <h3 className="font-semibold">Como funciona o treinamento:</h3>
+                  <h3 className="font-semibold">Como funciona o teste:</h3>
                   <ul className="space-y-2 text-sm text-muted-foreground">
                     <li className="flex items-start gap-2">
                       <span className="text-primary">•</span>
                       <span>Você verá 30 imagens, uma de cada vez</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-primary">•</span>
+                      <span>Todos os participantes verão a mesma imagem ao mesmo tempo</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-primary">•</span>
@@ -219,28 +232,16 @@ export default function SessionTraining() {
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-primary">•</span>
-                      <span>Use os atalhos de teclado: <kbd className="px-2 py-1 bg-muted rounded text-xs">D</kbd> para Deferido e <kbd className="px-2 py-1 bg-muted rounded text-xs">I</kbd> para Indeferido</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-primary">•</span>
-                      <span>Se o tempo acabar sem resposta, será registrado como "Não Respondido"</span>
+                      <span>Use os atalhos: <kbd className="px-2 py-1 bg-muted rounded text-xs">D</kbd> para Deferido e <kbd className="px-2 py-1 bg-muted rounded text-xs">I</kbd> para Indeferido</span>
                     </li>
                   </ul>
                 </div>
               </div>
             </div>
 
-            <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4 flex items-start gap-3">
-              <AlertCircle className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" />
-              <p className="text-sm text-left">
-                <strong>Atenção:</strong> A avaliação iniciará automaticamente quando o administrador 
-                começar a sessão. Mantenha-se atento e preparado!
-              </p>
-            </div>
-
             <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground animate-pulse">
               <Users className="h-4 w-4" />
-              <span>Aguardando início pelo administrador...</span>
+              <span>Aguardando Prof. Cristhian iniciar o teste...</span>
             </div>
           </Card>
         </div>
