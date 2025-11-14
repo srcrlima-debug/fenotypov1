@@ -3,16 +3,22 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle, Timer, Image, Keyboard, AlertCircle } from "lucide-react";
 import { Header } from "@/components/Header";
+import { useScrollReveal } from "@/hooks/useScrollReveal";
 
 const ComoFunciona = () => {
   const navigate = useNavigate();
+  const { ref: card1Ref, isVisible: card1Visible } = useScrollReveal();
+  const { ref: card2Ref, isVisible: card2Visible } = useScrollReveal();
+  const { ref: card3Ref, isVisible: card3Visible } = useScrollReveal();
+  const { ref: card4Ref, isVisible: card4Visible } = useScrollReveal();
+  const { ref: card5Ref, isVisible: card5Visible } = useScrollReveal();
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
       <Header />
       
-      <div className="container max-w-4xl py-8 px-4 animate-fade-in">
-        <div className="text-center mb-8">
+      <div className="container max-w-4xl py-8 px-4 page-transition">
+        <div className="text-center mb-8 animate-fade-slide-up">
           <h1 className="text-4xl font-bold mb-4">Como Funciona o Treinamento</h1>
           <p className="text-lg text-muted-foreground">
             Entenda como realizar a avaliação das imagens de forma rápida e eficiente
@@ -20,7 +26,8 @@ const ComoFunciona = () => {
         </div>
 
         <div className="grid gap-6 mb-8">
-          <Card className="hover-scale">
+          <div ref={card1Ref} className={`scroll-reveal ${card1Visible ? 'revealed' : ''}`}>
+            <Card className="hover-scale">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Image className="h-5 w-5 text-primary" />
@@ -34,7 +41,9 @@ const ComoFunciona = () => {
               </p>
             </CardContent>
           </Card>
+          </div>
 
+          <div ref={card2Ref} className={`scroll-reveal ${card2Visible ? 'revealed' : ''}`}>
           <Card className="hover-scale">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -56,7 +65,9 @@ const ComoFunciona = () => {
               </div>
             </CardContent>
           </Card>
+          </div>
 
+          <div ref={card3Ref} className={`scroll-reveal ${card3Visible ? 'revealed' : ''}`}>
           <Card className="hover-scale">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -84,7 +95,9 @@ const ComoFunciona = () => {
               </div>
             </CardContent>
           </Card>
+          </div>
 
+          <div ref={card4Ref} className={`scroll-reveal ${card4Visible ? 'revealed' : ''}`}>
           <Card className="hover-scale">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -108,9 +121,10 @@ const ComoFunciona = () => {
               </div>
             </CardContent>
           </Card>
+          </div>
         </div>
 
-        <div className="flex justify-center gap-4">
+        <div className="flex justify-center gap-4 animate-fade-slide-up">
           <Button variant="outline" onClick={() => navigate(-1)} size="lg">
             Voltar
           </Button>
