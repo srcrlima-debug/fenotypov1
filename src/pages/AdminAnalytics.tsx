@@ -11,7 +11,10 @@ import {
   Download,
   TrendingUp,
   BarChart3,
-  PieChart as PieChartIcon
+  PieChart as PieChartIcon,
+  AlertTriangle,
+  FileText,
+  Activity
 } from 'lucide-react';
 import {
   Select,
@@ -37,9 +40,16 @@ import {
   Legend,
   ResponsiveContainer,
   Tooltip,
+  ScatterChart,
+  Scatter,
+  ZAxis,
 } from 'recharts';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import Papa from 'papaparse';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 interface SessionData {
   id: string;
@@ -69,6 +79,22 @@ interface CrossAnalysis {
   percentDeferido: number;
 }
 
+interface BiasAlert {
+  category: string;
+  group1: string;
+  group2: string;
+  difference: number;
+  severity: 'high' | 'medium' | 'low';
+  description: string;
+}
+
+interface HeatmapData {
+  x: string;
+  y: string;
+  value: number;
+  label: string;
+}
+
 const COLORS = ['#10b981', '#ef4444', '#f59e0b', '#3b82f6', '#8b5cf6', '#ec4899'];
 
 const AdminAnalytics = () => {
@@ -87,6 +113,12 @@ const AdminAnalytics = () => {
   
   // Cross analysis
   const [crossAnalysis, setCrossAnalysis] = useState<CrossAnalysis[]>([]);
+  
+  // Bias detection
+  const [biasAlerts, setBiasAlerts] = useState<BiasAlert[]>([]);
+  
+  // Heatmap data
+  const [heatmapData, setHeatmapData] = useState<HeatmapData[]>([]);
   
   // Filters
   const [filterGenero, setFilterGenero] = useState<string>('all');
@@ -309,6 +341,12 @@ const AdminAnalytics = () => {
       setAvailableRegioes(Array.from(regioesSet).sort());
       setAvailableExperiencias(Array.from(experienciasSet).sort());
 
+      // Detect bias
+      detectBias(generoArray, racaArray, regiaoArray, experienciaArray);
+      
+      // Generate heatmap
+      generateHeatmap(generoArray, racaArray, regiaoArray, experienciaArray);
+
     } catch (error: any) {
       toast({
         title: 'Erro ao carregar dados',
@@ -317,6 +355,219 @@ const AdminAnalytics = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const detectBias = (
+    generoData: DemographicStats[],
+    racaData: DemographicStats[],
+    regiaoData: DemographicStats[],
+    experienciaData: DemographicStats[]
+  ) => {
+    const alerts: BiasAlert[] = [];
+    const threshold = 15; // 15% difference threshold
+
+    // Helper function to detect bias within a category
+    const detectInCategory = (data: DemographicStats[], categoryName: string) => {
+      for (let i = 0; i < data.length; i++) {
+        for (let j = i + 1; j < data.length; j++) {
+          const diff = Math.abs(data[i].percentDeferido - data[j].percentDeferido);
+          
+          // Only consider if both groups have significant samples (at least 5)
+          if (data[i].total >= 5 && data[j].total >= 5 && diff >= threshold) {
+            const severity: 'high' | 'medium' | 'low' = 
+              diff >= 30 ? 'high' : diff >= 20 ? 'medium' : 'low';
+            
+            alerts.push({
+              category: categoryName,
+              group1: data[i].value,
+              group2: data[j].value,
+              difference: diff,
+              severity,
+              description: `Diferença de ${diff.toFixed(1)}% na taxa de deferimento entre "${data[i].value}" (${data[i].percentDeferido.toFixed(1)}%) e "${data[j].value}" (${data[j].percentDeferido.toFixed(1)}%)`,
+            });
+          }
+        }
+      }
+    };
+
+    detectInCategory(generoData, 'Identidade de Gênero');
+    detectInCategory(racaData, 'Pertencimento Racial');
+    detectInCategory(regiaoData, 'Região');
+    detectInCategory(experienciaData, 'Experiência');
+
+    // Sort by severity and difference
+    alerts.sort((a, b) => {
+      const severityOrder = { high: 3, medium: 2, low: 1 };
+      if (severityOrder[a.severity] !== severityOrder[b.severity]) {
+        return severityOrder[b.severity] - severityOrder[a.severity];
+      }
+      return b.difference - a.difference;
+    });
+
+    setBiasAlerts(alerts);
+  };
+
+  const generateHeatmap = (
+    generoData: DemographicStats[],
+    racaData: DemographicStats[],
+    regiaoData: DemographicStats[],
+    experienciaData: DemographicStats[]
+  ) => {
+    const heatmap: HeatmapData[] = [];
+
+    // Create heatmap cells for each combination
+    const categories = [
+      { name: 'Gênero', data: generoData },
+      { name: 'Raça', data: racaData },
+      { name: 'Região', data: regiaoData },
+      { name: 'Experiência', data: experienciaData },
+    ];
+
+    categories.forEach(cat1 => {
+      cat1.data.forEach(item1 => {
+        categories.forEach(cat2 => {
+          if (cat1.name !== cat2.name) {
+            cat2.data.forEach(item2 => {
+              // Calculate correlation (simplified - based on deferimento rate similarity)
+              const correlation = 100 - Math.abs(item1.percentDeferido - item2.percentDeferido);
+              
+              heatmap.push({
+                x: `${cat1.name}: ${item1.value}`,
+                y: `${cat2.name}: ${item2.value}`,
+                value: correlation,
+                label: `${correlation.toFixed(0)}%`,
+              });
+            });
+          }
+        });
+      });
+    });
+
+    setHeatmapData(heatmap);
+  };
+
+  const handleGeneratePDF = async () => {
+    try {
+      toast({
+        title: 'Gerando relatório PDF',
+        description: 'Aguarde enquanto o relatório é processado...',
+      });
+
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      let yPosition = 20;
+
+      // Title
+      pdf.setFontSize(20);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Relatório de Análise Demográfica', pageWidth / 2, yPosition, { align: 'center' });
+      yPosition += 10;
+
+      pdf.setFontSize(12);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(session?.nome || 'Sessão', pageWidth / 2, yPosition, { align: 'center' });
+      yPosition += 15;
+
+      // Summary Statistics
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Estatísticas Gerais', 15, yPosition);
+      yPosition += 8;
+
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      
+      const totalParticipantes = generoStats.reduce((sum, item) => sum + item.total, 0);
+      const totalAvaliacoes = generoStats.reduce((sum, item) => sum + item.deferido + item.indeferido, 0);
+      
+      pdf.text(`Total de Participantes: ${totalParticipantes}`, 15, yPosition);
+      yPosition += 6;
+      pdf.text(`Total de Avaliações: ${totalAvaliacoes}`, 15, yPosition);
+      yPosition += 10;
+
+      // Bias Alerts
+      if (biasAlerts.length > 0) {
+        pdf.setFontSize(14);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setTextColor(220, 38, 38); // red
+        pdf.text('⚠ Alertas de Possível Viés Inconsciente', 15, yPosition);
+        pdf.setTextColor(0, 0, 0);
+        yPosition += 8;
+
+        pdf.setFontSize(9);
+        pdf.setFont('helvetica', 'normal');
+
+        biasAlerts.slice(0, 5).forEach((alert, index) => {
+          if (yPosition > pageHeight - 40) {
+            pdf.addPage();
+            yPosition = 20;
+          }
+
+          const severity = alert.severity === 'high' ? 'ALTA' : alert.severity === 'medium' ? 'MÉDIA' : 'BAIXA';
+          pdf.text(`${index + 1}. [${severity}] ${alert.category}`, 15, yPosition);
+          yPosition += 5;
+          
+          const descLines = pdf.splitTextToSize(alert.description, pageWidth - 30);
+          pdf.text(descLines, 20, yPosition);
+          yPosition += descLines.length * 5 + 3;
+        });
+        
+        yPosition += 5;
+      }
+
+      // Demographic breakdown
+      pdf.addPage();
+      yPosition = 20;
+
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Análise por Identidade de Gênero', 15, yPosition);
+      yPosition += 10;
+
+      pdf.setFontSize(9);
+      pdf.setFont('helvetica', 'normal');
+      generoStats.forEach(item => {
+        if (yPosition > pageHeight - 20) {
+          pdf.addPage();
+          yPosition = 20;
+        }
+        pdf.text(`${item.value}: ${item.total} participantes (${item.percentDeferido.toFixed(1)}% deferimento)`, 15, yPosition);
+        yPosition += 5;
+      });
+
+      yPosition += 10;
+
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Análise por Pertencimento Racial', 15, yPosition);
+      yPosition += 10;
+
+      pdf.setFontSize(9);
+      pdf.setFont('helvetica', 'normal');
+      racaStats.forEach(item => {
+        if (yPosition > pageHeight - 20) {
+          pdf.addPage();
+          yPosition = 20;
+        }
+        pdf.text(`${item.value}: ${item.total} participantes (${item.percentDeferido.toFixed(1)}% deferimento)`, 15, yPosition);
+        yPosition += 5;
+      });
+
+      // Save PDF
+      pdf.save(`analise-demografica-${session?.nome || 'sessao'}.pdf`);
+
+      toast({
+        title: 'Relatório gerado!',
+        description: 'O PDF foi baixado com sucesso',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Erro ao gerar PDF',
+        description: error.message,
+        variant: 'destructive',
+      });
     }
   };
 
@@ -380,10 +631,16 @@ const AdminAnalytics = () => {
               <p className="text-muted-foreground">{session?.nome}</p>
             </div>
           </div>
-          <Button onClick={handleExportCSV} variant="outline">
-            <Download className="w-4 h-4 mr-2" />
-            Exportar CSV
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={handleGeneratePDF} variant="outline">
+              <FileText className="w-4 h-4 mr-2" />
+              Gerar PDF
+            </Button>
+            <Button onClick={handleExportCSV} variant="outline">
+              <Download className="w-4 h-4 mr-2" />
+              Exportar CSV
+            </Button>
+          </div>
         </div>
 
         {/* Filters */}
@@ -467,6 +724,131 @@ const AdminAnalytics = () => {
                 </Button>
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        {/* Bias Alerts */}
+        {biasAlerts.length > 0 && (
+          <Card className="border-orange-500">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-orange-600">
+                <AlertTriangle className="w-5 h-5" />
+                Alertas de Possível Viés Inconsciente
+              </CardTitle>
+              <CardDescription>
+                Diferenças significativas detectadas nas taxas de deferimento entre grupos demográficos
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {biasAlerts.map((alert, index) => (
+                <Alert key={index} variant={alert.severity === 'high' ? 'destructive' : 'default'}>
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTitle className="flex items-center gap-2">
+                    <Badge variant={alert.severity === 'high' ? 'destructive' : alert.severity === 'medium' ? 'default' : 'secondary'}>
+                      {alert.severity === 'high' ? 'ALTA' : alert.severity === 'medium' ? 'MÉDIA' : 'BAIXA'}
+                    </Badge>
+                    {alert.category}
+                  </AlertTitle>
+                  <AlertDescription>
+                    {alert.description}
+                  </AlertDescription>
+                </Alert>
+              ))}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Heatmap */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="w-5 h-5" />
+              Mapa de Calor: Correlações entre Variáveis
+            </CardTitle>
+            <CardDescription>
+              Visualiza a similitude nas taxas de deferimento entre diferentes características demográficas
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {heatmapData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={400}>
+                <ScatterChart margin={{ top: 20, right: 20, bottom: 100, left: 100 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis 
+                    type="category" 
+                    dataKey="x" 
+                    angle={-45} 
+                    textAnchor="end" 
+                    height={150}
+                    tick={{ fontSize: 10 }}
+                  />
+                  <YAxis 
+                    type="category" 
+                    dataKey="y" 
+                    width={150}
+                    tick={{ fontSize: 10 }}
+                  />
+                  <ZAxis type="number" dataKey="value" range={[50, 400]} />
+                  <Tooltip 
+                    content={({ payload }) => {
+                      if (payload && payload.length > 0) {
+                        const data = payload[0].payload;
+                        return (
+                          <div className="bg-background border rounded p-2 shadow-lg">
+                            <p className="font-semibold text-sm">{data.x}</p>
+                            <p className="font-semibold text-sm">{data.y}</p>
+                            <p className="text-sm">Similaridade: {data.label}</p>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  <Scatter 
+                    data={heatmapData} 
+                    fill="#8b5cf6"
+                    shape={(props: any) => {
+                      const { cx, cy, payload } = props;
+                      const size = (payload.value / 100) * 20;
+                      const color = payload.value > 80 ? '#10b981' : payload.value > 60 ? '#3b82f6' : payload.value > 40 ? '#f59e0b' : '#ef4444';
+                      return (
+                        <circle 
+                          cx={cx} 
+                          cy={cy} 
+                          r={size} 
+                          fill={color} 
+                          fillOpacity={0.6}
+                          stroke={color}
+                          strokeWidth={2}
+                        />
+                      );
+                    }}
+                  />
+                </ScatterChart>
+              </ResponsiveContainer>
+            ) : (
+              <p className="text-center text-muted-foreground py-8">
+                Dados insuficientes para gerar o mapa de calor
+              </p>
+            )}
+            <div className="mt-4 flex items-center justify-center gap-6 text-sm">
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded-full bg-green-500" />
+                <span>Alta correlação (&gt;80%)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded-full bg-blue-500" />
+                <span>Boa correlação (60-80%)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded-full bg-orange-500" />
+                <span>Correlação moderada (40-60%)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded-full bg-red-500" />
+                <span>Baixa correlação (&lt;40%)</span>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
