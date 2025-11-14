@@ -6,7 +6,7 @@ import { useAdmin } from "@/hooks/useAdmin";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Play, SkipForward, BarChart3, Users, Clock, CheckCircle, XCircle, AlertCircle, RotateCcw, Download, FileText } from "lucide-react";
+import { Play, SkipForward, BarChart3, Users, Clock, CheckCircle, XCircle, AlertCircle, RotateCcw, Download, FileText, AlertTriangle } from "lucide-react";
 import { getImageByPage } from "@/data/images";
 import { Progress } from "@/components/ui/progress";
 import { format } from "date-fns";
@@ -58,6 +58,8 @@ export default function AdminLiveControl() {
   const [exportingCSV, setExportingCSV] = useState(false);
   const [exportingPDF, setExportingPDF] = useState(false);
   const [newVotePulse, setNewVotePulse] = useState(false);
+  const [adminVote, setAdminVote] = useState<string | null>(null);
+  const [savingAdminVote, setSavingAdminVote] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !adminLoading) {
@@ -241,6 +243,18 @@ export default function AdminLiveControl() {
     if (!currentSession) return;
 
     console.log("Fetching stats for session:", sessionId, "photo:", currentSession.current_photo);
+
+    // Check if admin has voted on current photo
+    const { data: adminVoteData } = await supabase
+      .from("avaliacoes")
+      .select("resposta")
+      .eq("session_id", sessionId)
+      .eq("foto_id", currentSession.current_photo)
+      .eq("user_id", user?.id)
+      .eq("is_admin_vote", true)
+      .maybeSingle();
+    
+    setAdminVote(adminVoteData?.resposta || null);
 
     // Get all participants
     const { data: participants } = await supabase
@@ -463,6 +477,62 @@ export default function AdminLiveControl() {
       title: "Voltou ao Início",
       description: "Sessão reiniciada na foto 1. Todas as avaliações foram apagadas.",
     });
+  };
+
+  const handleAdminVote = async (decision: string) => {
+    if (!session || !user) return;
+
+    try {
+      setSavingAdminVote(true);
+
+      // Get admin profile data
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("genero, faixa_etaria, regiao")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      // Delete existing admin vote for this photo if any
+      await supabase
+        .from("avaliacoes")
+        .delete()
+        .eq("session_id", sessionId)
+        .eq("foto_id", session.current_photo)
+        .eq("user_id", user.id)
+        .eq("is_admin_vote", true);
+
+      // Insert new admin vote
+      const { error } = await supabase
+        .from("avaliacoes")
+        .insert({
+          session_id: sessionId,
+          user_id: user.id,
+          foto_id: session.current_photo,
+          resposta: decision,
+          tempo_gasto: 0,
+          genero: profile?.genero,
+          faixa_etaria: profile?.faixa_etaria,
+          regiao: profile?.regiao,
+          is_admin_vote: true,
+        });
+
+      if (error) throw error;
+
+      setAdminVote(decision);
+      toast({
+        title: "Voto registrado",
+        description: `Seu voto "${decision}" foi salvo`,
+      });
+    } catch (error) {
+      console.error("Error saving admin vote:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível salvar seu voto",
+        variant: "destructive",
+      });
+    } finally {
+      setSavingAdminVote(false);
+    }
   };
 
   const handleExportCSV = async () => {
@@ -871,18 +941,26 @@ export default function AdminLiveControl() {
               <FileText className={`w-4 h-4 ${exportingCSV ? 'animate-pulse' : ''}`} />
               {exportingCSV ? "Gerando CSV..." : "Exportar CSV"}
             </Button>
-            <Button 
-              variant="outline" 
-              onClick={handleExportPDF} 
-              disabled={exportingCSV || exportingPDF}
-              className="gap-2"
-            >
-              <Download className={`w-4 h-4 ${exportingPDF ? 'animate-pulse' : ''}`} />
-              {exportingPDF ? "Gerando PDF..." : "Exportar PDF"}
-            </Button>
-            <Button variant="outline" onClick={() => navigate("/admin")}>
-              Voltar
-            </Button>
+              <Button 
+                variant="outline" 
+                onClick={handleExportPDF} 
+                disabled={exportingCSV || exportingPDF}
+                className="gap-2"
+              >
+                <Download className={`w-4 h-4 ${exportingPDF ? 'animate-pulse' : ''}`} />
+                {exportingPDF ? "Gerando PDF..." : "Exportar PDF"}
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => navigate(`/admin/divergence/${sessionId}`)}
+                className="gap-2"
+              >
+                <AlertTriangle className="w-4 h-4" />
+                Análise de Divergências
+              </Button>
+              <Button variant="outline" onClick={() => navigate("/admin")}>
+                Voltar
+              </Button>
           </div>
         </div>
 
@@ -968,18 +1046,52 @@ export default function AdminLiveControl() {
           </div>
         </Card>
 
-        {/* Current Photo */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Foto Atual</h3>
-            {currentImage && (
-              <img
-                src={currentImage.imageUrl}
-                alt={currentImage.nome}
-                className="w-full rounded-lg shadow-lg"
-              />
-            )}
-          </Card>
+          {/* Current Photo */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card className="p-6">
+              <h3 className="text-lg font-semibold mb-4">Foto Atual</h3>
+              {currentImage && (
+                <div className="space-y-4">
+                  <img
+                    src={currentImage.imageUrl}
+                    alt={currentImage.nome}
+                    className="w-full rounded-lg shadow-lg"
+                  />
+                  
+                  {/* Admin Voting Controls */}
+                  {session.session_status === 'active' && (
+                    <div className="space-y-3">
+                      <h4 className="text-sm font-semibold text-muted-foreground">Seu Voto (Administrador)</h4>
+                      <div className="grid grid-cols-2 gap-3">
+                        <Button
+                          onClick={() => handleAdminVote("DEFERIDO")}
+                          disabled={savingAdminVote}
+                          variant={adminVote === "DEFERIDO" ? "default" : "outline"}
+                          className={`h-12 ${adminVote === "DEFERIDO" ? 'bg-green-600 hover:bg-green-700 text-white' : ''}`}
+                        >
+                          <CheckCircle className="mr-2 h-5 w-5" />
+                          Deferido
+                        </Button>
+                        <Button
+                          onClick={() => handleAdminVote("INDEFERIDO")}
+                          disabled={savingAdminVote}
+                          variant={adminVote === "INDEFERIDO" ? "destructive" : "outline"}
+                          className="h-12"
+                        >
+                          <XCircle className="mr-2 h-5 w-5" />
+                          Indeferido
+                        </Button>
+                      </div>
+                      {adminVote && (
+                        <p className="text-xs text-center text-muted-foreground">
+                          ✓ Você votou: {adminVote}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </Card>
 
           {/* Real-time Stats */}
           <div className="space-y-4">

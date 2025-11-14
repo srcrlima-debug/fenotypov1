@@ -21,6 +21,7 @@ export type Database = {
           foto_id: number
           genero: string | null
           id: string
+          is_admin_vote: boolean
           regiao: string | null
           resposta: string
           session_id: string
@@ -33,6 +34,7 @@ export type Database = {
           foto_id: number
           genero?: string | null
           id?: string
+          is_admin_vote?: boolean
           regiao?: string | null
           resposta: string
           session_id: string
@@ -45,6 +47,7 @@ export type Database = {
           foto_id?: number
           genero?: string | null
           id?: string
+          is_admin_vote?: boolean
           regiao?: string | null
           resposta?: string
           session_id?: string

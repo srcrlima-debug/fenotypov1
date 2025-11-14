@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Copy, Plus, Calendar, Users, Link as LinkIcon, BarChart3, Play, Edit, Trash2 } from 'lucide-react';
+import { Copy, Plus, Calendar, Users, Link as LinkIcon, BarChart3, Play, Edit, Trash2, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { sessionSchema } from '@/lib/validators';
@@ -369,6 +369,14 @@ const Admin = () => {
                         >
                           <Users className="h-4 w-4 mr-2" />
                           Análise Demográfica
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => navigate(`/admin/divergence/${session.id}`)}
+                        >
+                          <AlertTriangle className="h-4 w-4 mr-2" />
+                          Divergências
                         </Button>
                         <Button
                           variant="outline"
