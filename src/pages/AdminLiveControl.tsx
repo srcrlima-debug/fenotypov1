@@ -54,6 +54,8 @@ export default function AdminLiveControl() {
   });
   const [timeRemaining, setTimeRemaining] = useState(60);
   const [onlineParticipants, setOnlineParticipants] = useState(0);
+  const [exportingCSV, setExportingCSV] = useState(false);
+  const [exportingPDF, setExportingPDF] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !adminLoading) {
@@ -361,78 +363,99 @@ export default function AdminLiveControl() {
   };
 
   const handleExportCSV = async () => {
-    if (!session) return;
+    if (!session || exportingCSV) return;
 
-    toast({
-      title: "Preparando exportação...",
-      description: "Coletando dados da sessão",
-    });
-
-    // Get all evaluations for this session
-    const { data: avaliacoes, error } = await supabase
-      .from("avaliacoes")
-      .select(`
-        foto_id,
-        resposta,
-        tempo_gasto,
-        created_at,
-        genero,
-        faixa_etaria,
-        regiao
-      `)
-      .eq("session_id", sessionId)
-      .order("foto_id", { ascending: true });
-
-    if (error || !avaliacoes) {
+    setExportingCSV(true);
+    
+    try {
       toast({
-        title: "Erro",
-        description: "Não foi possível coletar os dados",
+        title: "Preparando exportação CSV...",
+        description: "Coletando dados da sessão",
+      });
+
+      // Get all evaluations for this session
+      const { data: avaliacoes, error } = await supabase
+        .from("avaliacoes")
+        .select(`
+          foto_id,
+          resposta,
+          tempo_gasto,
+          created_at,
+          genero,
+          faixa_etaria,
+          regiao
+        `)
+        .eq("session_id", sessionId)
+        .order("foto_id", { ascending: true });
+
+      if (error || !avaliacoes) {
+        toast({
+          title: "Erro",
+          description: "Não foi possível coletar os dados",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "Gerando CSV...",
+        description: `Processando ${avaliacoes.length} avaliações`,
+      });
+
+      // Format data for CSV
+      const csvData = avaliacoes.map((a) => ({
+        "Foto": a.foto_id,
+        "Resposta": a.resposta,
+        "Tempo (segundos)": (a.tempo_gasto / 1000).toFixed(2),
+        "Gênero": a.genero || "Não informado",
+        "Faixa Etária": a.faixa_etaria || "Não informado",
+        "Região": a.regiao || "Não informado",
+        "Data/Hora": format(new Date(a.created_at), "dd/MM/yyyy HH:mm:ss"),
+      }));
+
+      // Generate CSV
+      const Papa = await import('papaparse');
+      const csv = Papa.unparse(csvData as any);
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      const url = URL.createObjectURL(blob);
+      
+      link.setAttribute("href", url);
+      link.setAttribute("download", `${session.nome}_resultados_${format(new Date(), "yyyy-MM-dd")}.csv`);
+      link.style.visibility = "hidden";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast({
+        title: "CSV Exportado!",
+        description: "Arquivo baixado com sucesso",
+      });
+    } catch (error) {
+      console.error("Erro ao exportar CSV:", error);
+      toast({
+        title: "Erro na exportação",
+        description: "Ocorreu um erro ao gerar o CSV",
         variant: "destructive",
       });
-      return;
+    } finally {
+      setExportingCSV(false);
     }
-
-    // Format data for CSV
-    const csvData = avaliacoes.map((a) => ({
-      "Foto": a.foto_id,
-      "Resposta": a.resposta,
-      "Tempo (segundos)": (a.tempo_gasto / 1000).toFixed(2),
-      "Gênero": a.genero || "Não informado",
-      "Faixa Etária": a.faixa_etaria || "Não informado",
-      "Região": a.regiao || "Não informado",
-      "Data/Hora": format(new Date(a.created_at), "dd/MM/yyyy HH:mm:ss"),
-    }));
-
-    // Generate CSV
-    const Papa = await import('papaparse');
-    const csv = Papa.unparse(csvData as any);
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    
-    link.setAttribute("href", url);
-    link.setAttribute("download", `${session.nome}_resultados_${format(new Date(), "yyyy-MM-dd")}.csv`);
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    toast({
-      title: "CSV Exportado!",
-      description: "Arquivo baixado com sucesso",
-    });
   };
 
   const handleExportPDF = async () => {
-    if (!session) return;
+    if (!session || exportingPDF) return;
 
-    toast({
-      title: "Preparando PDF...",
-      description: "Gerando relatório com análises",
-    });
+    setExportingPDF(true);
 
-    // Helper function to generate pie chart
-    const generatePieChart = (data: {label: string, value: number, color: string}[]): string => {
+    try {
+      toast({
+        title: "Preparando PDF...",
+        description: "Coletando dados e gerando gráficos",
+      });
+
+      // Helper function to generate pie chart
+      const generatePieChart = (data: {label: string, value: number, color: string}[]): string => {
       const canvas = document.createElement('canvas');
       canvas.width = 400;
       canvas.height = 300;
@@ -547,7 +570,19 @@ export default function AdminLiveControl() {
       .select("foto_id, resposta, tempo_gasto, genero, faixa_etaria, regiao")
       .eq("session_id", sessionId);
 
-    if (!avaliacoes) return;
+    if (!avaliacoes) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível coletar os dados",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toast({
+      title: "Gerando gráficos...",
+      description: `Processando ${avaliacoes.length} avaliações`,
+    });
 
     // Dynamically import jsPDF to avoid heavy initial bundle
     const { default: JsPDF } = await import('jspdf');
@@ -682,7 +717,17 @@ export default function AdminLiveControl() {
       title: "PDF Gerado!",
       description: "Relatório com gráficos baixado com sucesso",
     });
-  };
+  } catch (error) {
+    console.error("Erro ao exportar PDF:", error);
+    toast({
+      title: "Erro na exportação",
+      description: "Ocorreu um erro ao gerar o PDF",
+      variant: "destructive",
+    });
+  } finally {
+    setExportingPDF(false);
+  }
+};
 
   if (authLoading || adminLoading) {
     return (
@@ -712,13 +757,23 @@ export default function AdminLiveControl() {
             <p className="text-muted-foreground">Controle Ao Vivo - Foto {session.current_photo}/30</p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={handleExportCSV} className="gap-2">
-              <FileText className="w-4 h-4" />
-              Exportar CSV
+            <Button 
+              variant="outline" 
+              onClick={handleExportCSV} 
+              disabled={exportingCSV || exportingPDF}
+              className="gap-2"
+            >
+              <FileText className={`w-4 h-4 ${exportingCSV ? 'animate-pulse' : ''}`} />
+              {exportingCSV ? "Gerando CSV..." : "Exportar CSV"}
             </Button>
-            <Button variant="outline" onClick={handleExportPDF} className="gap-2">
-              <Download className="w-4 h-4" />
-              Exportar PDF
+            <Button 
+              variant="outline" 
+              onClick={handleExportPDF} 
+              disabled={exportingCSV || exportingPDF}
+              className="gap-2"
+            >
+              <Download className={`w-4 h-4 ${exportingPDF ? 'animate-pulse' : ''}`} />
+              {exportingPDF ? "Gerando PDF..." : "Exportar PDF"}
             </Button>
             <Button variant="outline" onClick={() => navigate("/admin")}>
               Voltar
