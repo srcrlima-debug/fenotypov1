@@ -108,7 +108,11 @@ export default function AdminLiveControl() {
           filter: `id=eq.${sessionId}`,
         },
         (payload) => {
-          setSession(payload.new as SessionData);
+          const updatedSession = payload.new as SessionData;
+          console.log("Session updated:", updatedSession);
+          setSession(updatedSession);
+          // Buscar stats com a sessão atualizada
+          fetchStats(updatedSession);
         }
       )
       .subscribe();
@@ -126,7 +130,8 @@ export default function AdminLiveControl() {
         },
         (payload) => {
           console.log("New avaliacao inserted:", payload);
-          fetchStats();
+          // Refazer busca de stats para garantir dados atualizados
+          fetchSession();
         }
       )
       .subscribe();
