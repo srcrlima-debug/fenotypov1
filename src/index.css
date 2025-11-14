@@ -91,6 +91,17 @@ All colors MUST be HSL.
     }
   }
 
+  @keyframes vote-pulse {
+    0%, 100% {
+      transform: scale(1);
+      box-shadow: 0 0 0 0 hsl(var(--primary) / 0.7);
+    }
+    50% {
+      transform: scale(1.05);
+      box-shadow: 0 0 0 10px hsl(var(--primary) / 0);
+    }
+  }
+
   .animate-float-gentle {
     animation: float-gentle 3s ease-in-out infinite;
   }
@@ -101,6 +112,10 @@ All colors MUST be HSL.
 
   .animate-fade-slide-in {
     animation: fade-slide-in 0.5s ease-out forwards;
+  }
+
+  .animate-vote-pulse {
+    animation: vote-pulse 1.5s ease-in-out 3;
   }
 
   .scroll-reveal {
