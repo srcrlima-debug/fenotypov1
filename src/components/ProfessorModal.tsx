@@ -22,7 +22,7 @@ export const ProfessorModal = ({ open, onOpenChange }: ProfessorModalProps) => {
               <img 
                 src={profPhoto} 
                 alt="Prof. Dr. Cristhian Lima" 
-                className="rounded-xl shadow-xl w-full max-w-md object-cover"
+                className="rounded-xl shadow-xl w-full max-w-md object-cover transition-all duration-700 hover:scale-105 hover:shadow-2xl animate-fade-in"
               />
               {/* Social Icons Overlay - Always visible with subtle floating animation */}
               <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 rounded-b-xl" style={{ perspective: '1000px' }}>
@@ -107,8 +107,8 @@ export const ProfessorModal = ({ open, onOpenChange }: ProfessorModalProps) => {
             </p>
             
             <div className="space-y-2 pt-4">
-              <p className="text-2xl font-bold text-[#a0755f] flex items-center gap-2">
-                <BookOpen className="w-6 h-6" />
+              <p className="text-base font-medium text-[#a0755f] flex items-center gap-2">
+                <BookOpen className="w-5 h-5" />
                 Professor efetivo do IF Goiano, Campus Urutaí
               </p>
             </div>
