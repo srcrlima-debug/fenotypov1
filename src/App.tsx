@@ -21,6 +21,7 @@ import Admin from "./pages/Admin";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminLiveControl from "./pages/AdminLiveControl";
 import AdminAnalytics from "./pages/AdminAnalytics";
+import AdminDivergenceAnalysis from "./pages/AdminDivergenceAnalysis";
 import Training from "./pages/Training";
 import SessionTraining from "./pages/SessionTraining";
 import Results from "./pages/Results";
@@ -85,7 +86,15 @@ const App = () => (
                     </AdminRoute>
                   }
                 />
-                <Route 
+                <Route
+                  path="/admin/divergence/:sessionId"
+                  element={
+                    <AdminRoute>
+                      <AdminDivergenceAnalysis />
+                    </AdminRoute>
+                  }
+                />
+                <Route
                   path="/treino/:sessionId"
                   element={
                     <ProtectedRoute>
