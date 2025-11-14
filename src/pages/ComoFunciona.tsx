@@ -1,0 +1,126 @@
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { CheckCircle, Timer, Image, Keyboard, AlertCircle } from "lucide-react";
+import { Header } from "@/components/Header";
+
+const ComoFunciona = () => {
+  const navigate = useNavigate();
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
+      <Header />
+      
+      <div className="container max-w-4xl py-8 px-4 animate-fade-in">
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold mb-4">Como Funciona o Treinamento</h1>
+          <p className="text-lg text-muted-foreground">
+            Entenda como realizar a avaliação das imagens de forma rápida e eficiente
+          </p>
+        </div>
+
+        <div className="grid gap-6 mb-8">
+          <Card className="hover-scale">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Image className="h-5 w-5 text-primary" />
+                Visualização das Imagens
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground">
+                Você verá uma série de imagens, uma de cada vez. Para cada imagem, você terá um tempo
+                limitado para fazer sua avaliação.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="hover-scale">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Timer className="h-5 w-5 text-primary" />
+                Tempo de Resposta
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground mb-4">
+                Cada imagem tem um cronômetro. Quando o tempo acabar, a resposta será automaticamente
+                registrada como "Não Respondido".
+              </p>
+              <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 flex items-start gap-2">
+                <AlertCircle className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" />
+                <p className="text-sm text-amber-700 dark:text-amber-300">
+                  <strong>Atenção:</strong> Nos últimos 10 segundos, o cronômetro ficará vermelho
+                  para alertá-lo sobre o tempo restante.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="hover-scale">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CheckCircle className="h-5 w-5 text-primary" />
+                Como Avaliar
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div>
+                  <h4 className="font-semibold mb-2">Opções de Resposta:</h4>
+                  <ul className="space-y-2">
+                    <li className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-green-500" />
+                      <strong className="text-green-700 dark:text-green-400">DEFERIDO:</strong>
+                      <span className="text-muted-foreground">Se a imagem atende aos critérios</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-red-500" />
+                      <strong className="text-red-700 dark:text-red-400">INDEFERIDO:</strong>
+                      <span className="text-muted-foreground">Se a imagem não atende aos critérios</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="hover-scale">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Keyboard className="h-5 w-5 text-primary" />
+                Atalhos de Teclado
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground mb-4">
+                Para agilizar sua avaliação, você pode usar atalhos de teclado:
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="bg-muted rounded-lg p-3 flex items-center gap-3">
+                  <kbd className="px-3 py-1.5 bg-background border rounded font-mono text-sm font-semibold">D</kbd>
+                  <span className="text-sm">Deferido</span>
+                </div>
+                <div className="bg-muted rounded-lg p-3 flex items-center gap-3">
+                  <kbd className="px-3 py-1.5 bg-background border rounded font-mono text-sm font-semibold">I</kbd>
+                  <span className="text-sm">Indeferido</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="flex justify-center gap-4">
+          <Button variant="outline" onClick={() => navigate(-1)} size="lg">
+            Voltar
+          </Button>
+          <Button onClick={() => navigate("/")} size="lg" className="min-w-40">
+            Começar Treinamento
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ComoFunciona;
