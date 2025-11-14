@@ -1,8 +1,9 @@
 import { Link } from "react-router-dom";
-import { Home, User, Settings, LogOut, BookOpen } from "lucide-react";
+import { User, Settings, LogOut, BookOpen } from "lucide-react";
 import logo from "@/assets/logo-fenotypo-horiz-2.png";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAdmin } from "@/hooks/useAdmin";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { ProfessorModal } from "@/components/ProfessorModal";
@@ -15,6 +16,7 @@ import {
 
 export const Header = () => {
   const { user, logout } = useAuth();
+  const { isAdmin } = useAdmin();
   const navigate = useNavigate();
   const [professorModalOpen, setProfessorModalOpen] = useState(false);
 
@@ -27,36 +29,22 @@ export const Header = () => {
     <>
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-16 items-center justify-between px-4">
-          <Link to="/" className="flex items-center gap-2 transition-opacity hover:opacity-80">
+          <div className="flex items-center gap-2">
             <img 
               src={logo} 
               alt="Fenotypo Logo" 
               className="h-10 transition-all" 
             />
-          </Link>
+          </div>
 
           <nav className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" asChild>
-              <Link to="/">
-                <Home className="mr-2 h-4 w-4" />
-                <span className="hidden sm:inline">Início</span>
-              </Link>
-            </Button>
-
-            <Button variant="ghost" size="sm" asChild className="hidden sm:inline-flex">
-              <Link to="/como-funciona">
-                Como Funciona
-              </Link>
-            </Button>
-
             <Button 
               variant="ghost" 
               size="sm" 
               onClick={() => setProfessorModalOpen(true)}
-              className="hidden sm:inline-flex"
             >
               <BookOpen className="mr-2 h-4 w-4" />
-              Sobre o Professor
+              <span className="hidden sm:inline">Sobre o Professor</span>
             </Button>
 
             {user && (
@@ -67,12 +55,14 @@ export const Header = () => {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem asChild>
-                    <Link to="/admin">
-                      <Settings className="mr-2 h-4 w-4" />
-                      Admin
-                    </Link>
-                  </DropdownMenuItem>
+                  {isAdmin && (
+                    <DropdownMenuItem asChild>
+                      <Link to="/admin">
+                        <Settings className="mr-2 h-4 w-4" />
+                        Admin
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem onClick={handleLogout}>
                     <LogOut className="mr-2 h-4 w-4" />
                     Sair
