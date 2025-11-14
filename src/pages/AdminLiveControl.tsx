@@ -9,8 +9,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Play, SkipForward, BarChart3, Users, Clock, CheckCircle, XCircle, AlertCircle, RotateCcw, Download, FileText } from "lucide-react";
 import { getImageByPage } from "@/data/images";
 import { Progress } from "@/components/ui/progress";
-import Papa from "papaparse";
-import jsPDF from "jspdf";
 import { format } from "date-fns";
 
 interface SessionData {
@@ -406,7 +404,8 @@ export default function AdminLiveControl() {
     }));
 
     // Generate CSV
-    const csv = Papa.unparse(csvData);
+    const Papa = await import('papaparse');
+    const csv = Papa.unparse(csvData as any);
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
@@ -550,7 +549,10 @@ export default function AdminLiveControl() {
 
     if (!avaliacoes) return;
 
-    const pdf = new jsPDF();
+    // Dynamically import jsPDF to avoid heavy initial bundle
+    const { default: JsPDF } = await import('jspdf');
+
+    const pdf = new JsPDF();
     let yPos = 20;
 
     // Title
