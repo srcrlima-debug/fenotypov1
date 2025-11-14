@@ -5,7 +5,6 @@ import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useAuth } from "@/contexts/AuthContext";
 import logoVertical from "@/assets/logo-fenotypo-vert-2.png";
 import fistIcon from "@/assets/fist-icon.png";
-import profPhoto from "@/assets/prof-cristhian-lima.jpg";
 
 const Home = () => {
   const navigate = useNavigate();
@@ -42,7 +41,7 @@ const Home = () => {
             
             <div className="card-3d bg-[#a0755f]/10 border-2 border-[#a0755f] rounded-xl p-6 max-w-2xl mx-auto">
               <p className="text-base text-[#5a4a42] font-medium">
-                📧 Os links de acesso ao treinamento serão enviados por e-mail quando o administrador iniciar a sessão.
+                💬 Os links de acesso ao treinamento serão enviados pelo chat quando o administrador iniciar a sessão.
               </p>
             </div>
           </div>
@@ -119,49 +118,6 @@ const Home = () => {
             <div className="flex items-center gap-3">
               <div className="w-3 h-3 rounded-full bg-[#a0755f]" />
               <span className="text-base">Certificado Final</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Sobre o Professor Section */}
-        <div className="max-w-6xl w-full mt-24 px-6">
-          <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-2xl overflow-hidden border-4 border-[#a0755f]">
-            <div className="grid md:grid-cols-2 gap-8 items-center p-8">
-              {/* Photo */}
-              <div className="flex justify-center">
-                <div className="relative">
-                  <img 
-                    src={profPhoto} 
-                    alt="Prof. Dr. Cristhian Lima" 
-                    className="rounded-xl shadow-xl w-full max-w-md object-cover"
-                  />
-                </div>
-              </div>
-              
-              {/* Biography */}
-              <div className="space-y-4 text-[#5a4a42]">
-                <h2 className="text-3xl font-bold text-[#a0755f] mb-4">Prof. Dr. Cristhian Lima</h2>
-                <p className="text-base leading-relaxed">
-                  Há três décadas caminhando pelos corredores da educação brasileira — da sala de aula básica aos seminários de pós-graduação — o Prof. Cristhian Lima constrói pontes entre a teoria social e as urgências do nosso tempo. Doutor em Ciências Sociais pela UFRRJ, dedica sua pesquisa às cartografias invisíveis: territórios sagrados afro-brasileiros, segregações urbanas, saberes que resistem nas margens.
-                </p>
-                <p className="text-base leading-relaxed">
-                  Como ex-coordenador do NEABI no IF Goiano e pesquisador das relações raciais, desenvolveu olhar atento às bancas de heteroidentificação — espaços delicados onde política pública encontra histórias pessoais, onde critérios técnicos dialogam com memórias ancestrais. Sua atuação nasce da escuta: compreender os fenótipos que o racismo brasileiro marca, honrar as trajetórias que as cotas buscam reparar.
-                </p>
-                
-                <div className="space-y-2 pt-4">
-                  <p className="text-sm font-semibold">📍 Professor efetivo do IF Goiano, Campus Urutaí</p>
-                  <div className="flex flex-wrap gap-3 text-sm">
-                    <a href="https://profcristhianlima.lovable.app" target="_blank" rel="noopener noreferrer" className="hover:text-[#a0755f] transition-colors">🌐 Site</a>
-                    <a href="https://instagram.com/srcrlima" target="_blank" rel="noopener noreferrer" className="hover:text-[#a0755f] transition-colors">📱 Instagram</a>
-                    <a href="https://youtube.com/@sociologandocursos" target="_blank" rel="noopener noreferrer" className="hover:text-[#a0755f] transition-colors">🎥 YouTube</a>
-                    <a href="http://lattes.cnpq.br/1542213940535701" target="_blank" rel="noopener noreferrer" className="hover:text-[#a0755f] transition-colors">📄 Lattes</a>
-                  </div>
-                </div>
-                
-                <p className="text-lg font-semibold italic pt-4 text-[#a0755f]">
-                  "O Corpo sabe, o que o livro não diz."
-                </p>
-              </div>
             </div>
           </div>
         </div>
