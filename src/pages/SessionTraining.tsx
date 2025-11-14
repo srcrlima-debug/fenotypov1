@@ -19,6 +19,7 @@ import {
   Info 
 } from "lucide-react";
 import { Header } from "@/components/Header";
+import { VotingFooter } from "@/components/VotingFooter";
 
 interface SessionData {
   id: string;
@@ -294,9 +295,9 @@ export default function SessionTraining() {
   // Waiting state - before admin starts
   if (sessionData.session_status === "waiting") {
     return (
-      <>
+      <div className="min-h-screen flex flex-col">
         <Header />
-        <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4 bg-gradient-to-b from-background to-muted/20">
+        <div className="flex-1 flex items-center justify-center p-4 bg-gradient-to-b from-background to-muted/20">
           <Card className="max-w-2xl w-full p-8 space-y-6 text-center animate-fade-in">
             <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-primary/10 mb-4">
               <Clock className="w-10 h-10 text-primary animate-pulse" />
@@ -363,16 +364,17 @@ export default function SessionTraining() {
             </div>
           </Card>
         </div>
-      </>
+        <VotingFooter />
+      </div>
     );
   }
 
   // Showing results state
   if (sessionData.session_status === "showing_results") {
     return (
-      <>
+      <div className="min-h-screen flex flex-col">
         <Header />
-        <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4">
+        <div className="flex-1 flex items-center justify-center p-4">
           <Card className="max-w-xl w-full p-8 text-center space-y-6 animate-fade-in">
             <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-500/10 mb-4">
               <CheckCircle className="w-10 h-10 text-green-600" />
@@ -386,15 +388,16 @@ export default function SessionTraining() {
             </Button>
           </Card>
         </div>
-      </>
+        <VotingFooter />
+      </div>
     );
   }
 
   // Active state - showing current photo
   return (
-    <>
+    <div className="min-h-screen flex flex-col">
       <Header />
-      <div className="min-h-[calc(100vh-4rem)] flex flex-col items-center justify-center p-4 bg-gradient-to-b from-background to-muted/20">
+      <div className="flex-1 flex flex-col items-center justify-center p-4 bg-gradient-to-b from-background to-muted/20">
         <div className="w-full max-w-4xl space-y-4 animate-fade-in">
           {/* Progress bar */}
           <div className="bg-card rounded-lg shadow-sm p-4">
@@ -501,6 +504,7 @@ export default function SessionTraining() {
           />
         </DialogContent>
       </Dialog>
-    </>
+      <VotingFooter />
+    </div>
   );
 }

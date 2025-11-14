@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle, Timer, Image, Keyboard, AlertCircle, Loader2 } from "lucide-react";
 import { Header } from "@/components/Header";
+import { VotingFooter } from "@/components/VotingFooter";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCardTilt } from "@/hooks/useCardTilt";
 import { useToast } from "@/hooks/use-toast";
@@ -219,17 +220,21 @@ export default function Antessala() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background to-muted/20">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        <div className="flex-1 flex items-center justify-center bg-gradient-to-b from-background to-muted/20">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+        <VotingFooter />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
+    <div className="min-h-screen flex flex-col">
       <Header />
       
-      <div className="container max-w-4xl py-8 px-4 page-transition">
+      <div className="flex-1 container max-w-4xl py-8 px-4 page-transition">
         {/* Welcome Section */}
         <div className="text-center mb-12 animate-fade-slide-up">
           <div className="mb-6">
@@ -425,6 +430,7 @@ export default function Antessala() {
           </div>
         </div>
       </div>
+      <VotingFooter />
     </div>
   );
 }
