@@ -1,7 +1,6 @@
 import { Link } from "react-router-dom";
 import { CircleUser, Settings, LogOut, BookOpenText } from "lucide-react";
 import logo from "@/assets/logo-fenotypo-horiz-2.png";
-import fistIcon from "@/assets/fist-icon.png";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdmin } from "@/hooks/useAdmin";
@@ -35,12 +34,6 @@ export const Header = () => {
               src={logo} 
               alt="Fenotypo Logo" 
               className="h-10 transition-all" 
-            />
-            <img 
-              src={fistIcon} 
-              alt="Punho cerrado" 
-              className="h-8 w-8 animate-bounce-slow"
-              style={{ animationDuration: '1.5s' }}
             />
           </Link>
 

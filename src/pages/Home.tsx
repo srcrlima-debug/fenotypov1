@@ -41,8 +41,8 @@ const Home = () => {
             </p>
             
             <div className="card-3d bg-[#a0755f]/10 border-2 border-[#a0755f] rounded-xl p-6 max-w-2xl mx-auto">
-              <p className="text-base text-[#5a4a42] font-medium">
-                💬 Os links de acesso ao treinamento serão enviados pelo chat quando o administrador iniciar a sessão.
+              <p className="text-base text-[#5a4a42] font-bold leading-relaxed">
+                Os links de acesso ao treinamento serão enviados pelo chat quando o administrador iniciar a sessão.
               </p>
             </div>
           </div>

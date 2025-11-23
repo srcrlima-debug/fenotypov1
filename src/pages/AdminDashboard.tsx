@@ -580,13 +580,23 @@ const AdminDashboard = () => {
               Dashboard de Análise de Resultados
             </p>
           </div>
-          <Button
-            variant="default"
-            onClick={() => navigate(`/admin/analytics/${sessionId}`)}
-          >
-            <Users className="h-4 w-4 mr-2" />
-            Análise Demográfica
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="default"
+              onClick={() => navigate(`/admin/analytics/${sessionId}`)}
+            >
+              <Users className="h-4 w-4 mr-2" />
+              Análise Demográfica
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => navigate(`/admin/demographic/${sessionId}`)}
+              className="group"
+            >
+              <TrendingUp className="h-4 w-4 mr-2 transition-transform duration-300 group-hover:scale-110" />
+              Dashboard Interativo
+            </Button>
+          </div>
         </div>
 
         {/* Filters */}
