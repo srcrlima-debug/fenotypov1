@@ -9,18 +9,18 @@ import { useToast } from '@/hooks/use-toast';
 import { 
   ArrowLeft, 
   Users, 
-  CheckCircle, 
+  CircleCheck, 
   Clock, 
   TrendingUp,
   Filter,
   Image as ImageIcon,
   Award,
-  XCircle,
+  CircleX,
   Timer,
   Target,
   Download,
   FileText,
-  AlertTriangle
+  TriangleAlert
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import Papa from 'papaparse';
@@ -709,7 +709,7 @@ const AdminDashboard = () => {
                   <p className="text-sm text-muted-foreground">Avaliações Concluídas</p>
                   <p className="text-3xl font-bold text-foreground">{stats?.totalEvaluations || 0}</p>
                 </div>
-                <CheckCircle className="h-8 w-8 text-accent" />
+                <CircleCheck className="h-8 w-8 text-accent" />
               </div>
             </CardContent>
           </Card>
@@ -792,7 +792,7 @@ const AdminDashboard = () => {
                     </div>
                   </div>
                 </div>
-                <XCircle className="h-8 w-8 text-destructive" />
+                <CircleX className="h-8 w-8 text-destructive" />
               </div>
             </CardContent>
           </Card>
@@ -1046,7 +1046,7 @@ const AdminDashboard = () => {
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2 text-destructive">
-                            <AlertTriangle className="h-4 w-4" />
+                            <TriangleAlert className="h-4 w-4" />
                             Baixo Consenso
                           </div>
                         </TableCell>

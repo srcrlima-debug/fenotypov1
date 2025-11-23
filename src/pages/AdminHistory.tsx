@@ -8,13 +8,13 @@ import { Badge } from "@/components/ui/badge";
 import { Header } from "@/components/Header";
 import { useToast } from "@/hooks/use-toast";
 import { 
-  FileDown, 
-  FileSpreadsheet, 
-  Calendar, 
+  Download, 
+  Sheet, 
+  CalendarDays, 
   Users, 
   Image as ImageIcon,
   ArrowLeft,
-  Loader2
+  Loader
 } from "lucide-react";
 import jsPDF from "jspdf";
 import * as XLSX from "xlsx";
@@ -661,7 +661,7 @@ export default function AdminHistory() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <Loader className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -687,7 +687,7 @@ export default function AdminHistory() {
 
         {sessions.length === 0 ? (
           <Card className="p-12 text-center">
-            <Calendar className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
+            <CalendarDays className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
             <h3 className="text-xl font-semibold mb-2">Nenhuma sessão concluída</h3>
             <p className="text-muted-foreground">
               Sessões concluídas aparecerão aqui
@@ -702,7 +702,7 @@ export default function AdminHistory() {
                     <h3 className="text-xl font-semibold mb-2">{session.nome}</h3>
                     <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                       <div className="flex items-center gap-2">
-                        <Calendar className="w-4 h-4" />
+                        <CalendarDays className="w-4 h-4" />
                         {new Date(session.data).toLocaleDateString("pt-BR")}
                       </div>
                       <div className="flex items-center gap-2">
@@ -722,9 +722,9 @@ export default function AdminHistory() {
                     className="flex-1"
                   >
                     {exportingPdf === session.id ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      <Loader className="w-4 h-4 mr-2 animate-spin" />
                     ) : (
-                      <FileDown className="w-4 h-4 mr-2" />
+                      <Download className="w-4 h-4 mr-2" />
                     )}
                     Exportar PDF Completo
                   </Button>
@@ -735,9 +735,9 @@ export default function AdminHistory() {
                     className="flex-1"
                   >
                     {exportingExcel === session.id ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      <Loader className="w-4 h-4 mr-2 animate-spin" />
                     ) : (
-                      <FileSpreadsheet className="w-4 h-4 mr-2" />
+                      <Sheet className="w-4 h-4 mr-2" />
                     )}
                     Exportar Excel
                   </Button>
@@ -777,9 +777,9 @@ export default function AdminHistory() {
                           disabled={exportingPhotoPdf === `${photo.foto_id}`}
                         >
                           {exportingPhotoPdf === `${photo.foto_id}` ? (
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            <Loader className="w-4 h-4 mr-2 animate-spin" />
                           ) : (
-                            <FileDown className="w-4 h-4 mr-2" />
+                            <Download className="w-4 h-4 mr-2" />
                           )}
                           PDF
                         </Button>

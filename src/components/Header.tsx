@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { User, Settings, LogOut, BookOpen } from "lucide-react";
+import { CircleUser, Settings, LogOut, BookOpenText } from "lucide-react";
 import logo from "@/assets/logo-fenotypo-horiz-2.png";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -43,7 +43,7 @@ export const Header = () => {
               size="sm" 
               onClick={() => setProfessorModalOpen(true)}
             >
-              <BookOpen className="mr-2 h-4 w-4" />
+              <BookOpenText className="mr-2 h-4 w-4" />
               <span className="hidden sm:inline">Sobre o Professor</span>
             </Button>
 
@@ -51,7 +51,7 @@ export const Header = () => {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="sm">
-                    <User className="h-4 w-4" />
+                    <CircleUser className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
