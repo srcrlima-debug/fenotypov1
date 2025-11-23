@@ -19,7 +19,7 @@ interface SessionData {
 }
 
 export default function Antessala() {
-  const { sessionId } = useParams();
+  const { sessionId, trainingId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -175,6 +175,38 @@ export default function Antessala() {
         return;
       }
 
+      // If trainingId is provided, validate user is participant
+      if (trainingId) {
+        // Check if session belongs to the training
+        if (session.training_id !== trainingId) {
+          toast({
+            title: "Sessão inválida",
+            description: "Esta sessão não pertence ao treinamento especificado.",
+            variant: "destructive",
+          });
+          navigate("/");
+          return;
+        }
+
+        // Check if user is participant of this training
+        const { data: participant, error: participantError } = await supabase
+          .from("training_participants")
+          .select("*")
+          .eq("training_id", trainingId)
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (participantError || !participant) {
+          toast({
+            title: "Acesso negado",
+            description: "Você não está cadastrado neste treinamento.",
+            variant: "destructive",
+          });
+          navigate(`/training/${trainingId}/register`);
+          return;
+        }
+      }
+
       setSessionData(session);
       setLoading(false);
 
@@ -222,7 +254,7 @@ export default function Antessala() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [sessionId, user, navigate, toast]);
+  }, [sessionId, trainingId, user, navigate, toast]);
 
   if (loading) {
     return (
