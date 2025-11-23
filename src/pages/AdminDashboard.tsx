@@ -644,7 +644,7 @@ const AdminDashboard = () => {
                     )}
                     <div>
                       <p className="text-3xl font-bold text-foreground">#{kpis?.mostDeferida.fotoId}</p>
-                      <p className="text-sm text-accent">{kpis?.mostDeferida.percent.toFixed(1)}%</p>
+                      <p className="text-sm text-success">{kpis?.mostDeferida.percent.toFixed(1)}%</p>
                     </div>
                   </div>
                 </div>
@@ -731,7 +731,7 @@ const AdminDashboard = () => {
               <ChartContainer
                 config={{
                   total: { label: 'Total', color: 'hsl(var(--primary))' },
-                  deferido: { label: 'Deferido', color: 'hsl(var(--accent))' },
+                  deferido: { label: 'Deferido', color: 'hsl(var(--success))' },
                   indeferido: { label: 'Indeferido', color: 'hsl(var(--destructive))' },
                 }}
                 className="h-[300px]"
@@ -771,7 +771,7 @@ const AdminDashboard = () => {
             <CardContent>
               <ChartContainer
                 config={{
-                  deferido: { label: 'Deferido', color: 'hsl(var(--accent))' },
+                  deferido: { label: 'Deferido', color: 'hsl(var(--success))' },
                   indeferido: { label: 'Indeferido', color: 'hsl(var(--destructive))' },
                 }}
                 className="h-[300px]"
@@ -789,7 +789,7 @@ const AdminDashboard = () => {
                     <YAxis stroke="hsl(var(--foreground))" />
                     <ChartTooltip content={<ChartTooltipContent />} />
                     <Legend />
-                    <Bar dataKey="deferido" fill="hsl(var(--accent))" />
+                    <Bar dataKey="deferido" fill="hsl(var(--success))" />
                     <Bar dataKey="indeferido" fill="hsl(var(--destructive))" />
                   </BarChart>
                 </ResponsiveContainer>
@@ -806,7 +806,7 @@ const AdminDashboard = () => {
             <CardContent>
               <ChartContainer
                 config={{
-                  deferido: { label: 'Deferido', color: 'hsl(var(--accent))' },
+                  deferido: { label: 'Deferido', color: 'hsl(var(--success))' },
                   indeferido: { label: 'Indeferido', color: 'hsl(var(--destructive))' },
                 }}
                 className="h-[300px]"
@@ -828,7 +828,7 @@ const AdminDashboard = () => {
                     <YAxis dataKey="name" type="category" stroke="hsl(var(--foreground))" />
                     <ChartTooltip content={<ChartTooltipContent />} />
                     <Legend />
-                    <Bar dataKey="deferido" fill="hsl(var(--accent))" />
+                    <Bar dataKey="deferido" fill="hsl(var(--success))" />
                     <Bar dataKey="indeferido" fill="hsl(var(--destructive))" />
                   </BarChart>
                 </ResponsiveContainer>
@@ -1034,7 +1034,7 @@ const AdminDashboard = () => {
                       <TableCell>{item.faixaEtaria}</TableCell>
                       <TableCell>{item.regiao}</TableCell>
                       <TableCell className="font-semibold">{item.total}</TableCell>
-                      <TableCell className="text-accent">{item.totalDeferido}</TableCell>
+                      <TableCell className="text-success">{item.totalDeferido}</TableCell>
                       <TableCell className="text-destructive">{item.totalIndeferido}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
@@ -1096,7 +1096,7 @@ const AdminDashboard = () => {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <span className="text-accent font-semibold">{photo.totalDeferido}</span>
+                          <span className="text-success font-semibold">{photo.totalDeferido}</span>
                           <span className="text-xs text-muted-foreground">
                             ({photo.percentDeferido.toFixed(1)}%)
                           </span>
@@ -1124,7 +1124,7 @@ const AdminDashboard = () => {
                         <div className="space-y-1 min-w-[200px]">
                           <div className="flex gap-1">
                             <div
-                              className="h-2 bg-accent rounded-l"
+                              className="h-2 bg-success rounded-l"
                               style={{ width: `${photo.percentDeferido}%` }}
                             />
                             <div
