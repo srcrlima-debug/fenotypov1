@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
 import { CheckCircle, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getRegiaoFromEstado } from '@/lib/regionMapping';
 
 const profileSchema = z.object({
   genero: z.string().min(1, { message: 'Selecione um gênero' }),
@@ -80,6 +81,16 @@ const CompleteProfile = () => {
     setFormData(prev => ({ ...prev, [fieldName]: value }));
     setTouched(prev => ({ ...prev, [fieldName]: true }));
     validateField(fieldName, value);
+    
+    // Auto-preencher região quando estado é selecionado
+    if (fieldName === 'estado') {
+      const regiao = getRegiaoFromEstado(value);
+      if (regiao) {
+        setFormData(prev => ({ ...prev, regiao }));
+        setTouched(prev => ({ ...prev, regiao: true }));
+        validateField('regiao', regiao);
+      }
+    }
   };
 
   const isFieldValid = (fieldName: string) => {
@@ -350,12 +361,17 @@ const CompleteProfile = () => {
                 {isFieldValid('regiao') && <CheckCircle className="h-4 w-4 text-green-500" />}
                 {isFieldInvalid('regiao') && <AlertCircle className="h-4 w-4 text-destructive" />}
               </Label>
-              <Select value={formData.regiao} onValueChange={(value) => handleFieldChange('regiao', value)}>
+              <Select 
+                value={formData.regiao} 
+                onValueChange={(value) => handleFieldChange('regiao', value)}
+                disabled={true}
+              >
                 <SelectTrigger className={cn(
                   isFieldValid('regiao') && "border-green-500",
-                  isFieldInvalid('regiao') && "border-destructive"
+                  isFieldInvalid('regiao') && "border-destructive",
+                  "opacity-70"
                 )}>
-                  <SelectValue placeholder="Selecione" />
+                  <SelectValue placeholder="Preenchida automaticamente" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Norte">Norte</SelectItem>
@@ -365,6 +381,9 @@ const CompleteProfile = () => {
                   <SelectItem value="Sul">Sul</SelectItem>
                 </SelectContent>
               </Select>
+              <p className="text-xs text-muted-foreground">
+                A região é preenchida automaticamente baseada no estado selecionado
+              </p>
             </div>
 
             <div className="space-y-2">
