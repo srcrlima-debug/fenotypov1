@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { BiasAlertSystem } from '@/components/BiasAlertSystem';
 
 interface DemographicData {
   category: string;
@@ -370,6 +371,9 @@ const AdminDemographicDashboard = () => {
               </CardContent>
             </Card>
           </div>
+
+          {/* Bias Alert System */}
+          <BiasAlertSystem sessionId={sessionId!} threshold={15} />
 
           {/* Filters */}
           <Card className="animate-slide-in">

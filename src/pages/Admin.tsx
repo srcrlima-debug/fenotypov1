@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Copy, Plus, CalendarDays, Users, Link2, ChartBar, Play, Pencil, Trash2, TriangleAlert } from 'lucide-react';
+import { Copy, Plus, CalendarDays, Users, Link2, ChartBar, Play, Pencil, Trash2, TriangleAlert, TrendingUp } from 'lucide-react';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { sessionSchema } from '@/lib/validators';
@@ -285,6 +285,14 @@ const Admin = () => {
               >
                 <ChartBar className="h-4 w-4" />
                 Comparar Sessões
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => navigate('/admin/comparator')}
+                className="gap-2 group"
+              >
+                <TrendingUp className="h-4 w-4 transition-transform duration-300 group-hover:scale-110" />
+                Comparador Interativo
               </Button>
             </div>
           </div>
