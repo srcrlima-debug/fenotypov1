@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Header } from "@/components/Header";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useAuth } from "@/contexts/AuthContext";
+import { BookOpenText, LayoutDashboard, UserPlus, LogIn } from "lucide-react";
 import logoVertical from "@/assets/logo-fenotypo-vert-2.png";
 import fistIcon from "@/assets/fist-icon.png";
 
@@ -55,17 +56,19 @@ const Home = () => {
               <Button
                 onClick={() => navigate("/como-funciona")}
                 size="lg"
-                className="button-3d h-20 w-full sm:flex-1 text-xl font-bold bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-2xl rounded-xl border-4 border-green-700 transition-all duration-300"
+                className="button-3d h-20 w-full sm:flex-1 text-xl font-bold bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-2xl rounded-xl border-4 border-green-700 transition-all duration-300 group"
               >
-                📖 Como Funciona
+                <BookOpenText className="inline-block mr-2 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-12" />
+                Como Funciona
               </Button>
               {user && (
                 <Button
                   onClick={() => navigate("/admin")}
                   size="lg"
-                  className="button-3d h-20 w-full sm:flex-1 text-xl font-bold bg-gradient-to-r from-[#5a4a42] to-[#4a3a32] hover:from-[#4a3a32] hover:to-[#3a2a22] text-white shadow-2xl rounded-xl border-4 border-[#5a4a42] transition-all duration-300"
+                  className="button-3d h-20 w-full sm:flex-1 text-xl font-bold bg-gradient-to-r from-[#5a4a42] to-[#4a3a32] hover:from-[#4a3a32] hover:to-[#3a2a22] text-white shadow-2xl rounded-xl border-4 border-[#5a4a42] transition-all duration-300 group"
                 >
-                  📊 Acessar Dashboard
+                  <LayoutDashboard className="inline-block mr-2 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12" />
+                  Acessar Dashboard
                 </Button>
               )}
             </div>
@@ -80,16 +83,18 @@ const Home = () => {
                 <Button
                   onClick={() => navigate("/registro")}
                   size="lg"
-                  className="h-14 px-12 text-lg font-semibold bg-gradient-to-r from-[#a0755f] to-[#8a6350] hover:from-[#8a6350] hover:to-[#75533f] text-white shadow-xl rounded-lg w-full sm:w-auto transition-all duration-300"
+                  className="h-14 px-12 text-lg font-semibold bg-gradient-to-r from-[#a0755f] to-[#8a6350] hover:from-[#8a6350] hover:to-[#75533f] text-white shadow-xl rounded-lg w-full sm:w-auto transition-all duration-300 group"
                 >
-                  📝 Cadastre-se
+                  <UserPlus className="inline-block mr-2 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-12" />
+                  Cadastre-se
                 </Button>
                 <Button
                   onClick={() => navigate("/login")}
                   size="lg"
-                  className="h-14 px-12 text-lg font-semibold bg-gradient-to-r from-[#c9a588] to-[#b8936f] hover:from-[#b8936f] hover:to-[#a77d5e] text-white shadow-xl rounded-lg w-full sm:w-auto transition-all duration-300"
+                  className="h-14 px-12 text-lg font-semibold bg-gradient-to-r from-[#c9a588] to-[#b8936f] hover:from-[#b8936f] hover:to-[#a77d5e] text-white shadow-xl rounded-lg w-full sm:w-auto transition-all duration-300 group"
                 >
-                  🔐 Entrar
+                  <LogIn className="inline-block mr-2 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12" />
+                  Entrar
                 </Button>
               </div>
               <p className="text-sm text-center text-muted-foreground">

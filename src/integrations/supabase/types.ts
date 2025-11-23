@@ -69,6 +69,13 @@ export type Database = {
             referencedRelation: "sessions_public"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "avaliacoes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
         ]
       }
       profiles: {
