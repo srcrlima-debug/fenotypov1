@@ -23,6 +23,7 @@ import AdminLiveControl from "./pages/AdminLiveControl";
 import AdminAnalytics from "./pages/AdminAnalytics";
 import AdminDivergenceAnalysis from "./pages/AdminDivergenceAnalysis";
 import AdminHistory from "./pages/AdminHistory";
+import AdminSessionComparison from "./pages/AdminSessionComparison";
 import Training from "./pages/Training";
 import SessionTraining from "./pages/SessionTraining";
 import Results from "./pages/Results";
@@ -100,6 +101,14 @@ const App = () => (
                   element={
                     <AdminRoute>
                       <AdminHistory />
+                    </AdminRoute>
+                  }
+                />
+                <Route
+                  path="/admin/comparison"
+                  element={
+                    <AdminRoute>
+                      <AdminSessionComparison />
                     </AdminRoute>
                   }
                 />
