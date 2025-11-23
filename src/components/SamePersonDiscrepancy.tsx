@@ -3,8 +3,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { AlertTriangle, User, Check } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { AlertTriangle, User, Check, Download, FileText, TrendingDown, TrendingUp } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ScatterChart, Scatter, Cell } from 'recharts';
+import Papa from 'papaparse';
+import jsPDF from 'jspdf';
 
 interface DiscrepancyData {
   userId: string;
@@ -15,6 +19,17 @@ interface DiscrepancyData {
   foto14Time: number;
 }
 
+interface VoteDistribution {
+  vote: string;
+  foto1: number;
+  foto14: number;
+}
+
+interface TimeCorrelation {
+  avgTime: number;
+  isConsistent: boolean;
+}
+
 interface SamePersonDiscrepancyProps {
   sessionId: string;
 }
@@ -23,6 +38,9 @@ export const SamePersonDiscrepancy = ({ sessionId }: SamePersonDiscrepancyProps)
   const [discrepancies, setDiscrepancies] = useState<DiscrepancyData[]>([]);
   const [totalUsers, setTotalUsers] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [voteDistribution, setVoteDistribution] = useState<VoteDistribution[]>([]);
+  const [timeCorrelation, setTimeCorrelation] = useState<{ consistent: TimeCorrelation; inconsistent: TimeCorrelation } | null>(null);
+  const [allUserVotes, setAllUserVotes] = useState<any[]>([]);
 
   useEffect(() => {
     if (sessionId) {
@@ -119,6 +137,64 @@ export const SamePersonDiscrepancy = ({ sessionId }: SamePersonDiscrepancyProps)
 
       setDiscrepancies(discrepancyList);
       setTotalUsers(totalUsersWithBothVotes);
+
+      // Calculate vote distribution
+      const foto1Votes = { DEFERIDO: 0, INDEFERIDO: 0, NÃO_RESPONDIDO: 0 };
+      const foto14Votes = { DEFERIDO: 0, INDEFERIDO: 0, NÃO_RESPONDIDO: 0 };
+
+      userVotes.forEach((data) => {
+        if (data.foto1) foto1Votes[data.foto1.vote as keyof typeof foto1Votes]++;
+        if (data.foto14) foto14Votes[data.foto14.vote as keyof typeof foto14Votes]++;
+      });
+
+      const distribution: VoteDistribution[] = [
+        { vote: 'Deferido', foto1: foto1Votes.DEFERIDO, foto14: foto14Votes.DEFERIDO },
+        { vote: 'Indeferido', foto1: foto1Votes.INDEFERIDO, foto14: foto14Votes.INDEFERIDO },
+        { vote: 'Não Respondido', foto1: foto1Votes.NÃO_RESPONDIDO, foto14: foto14Votes.NÃO_RESPONDIDO },
+      ];
+      setVoteDistribution(distribution);
+
+      // Calculate time correlation
+      let consistentTotalTime = 0;
+      let consistentCount = 0;
+      let inconsistentTotalTime = 0;
+      let inconsistentCount = 0;
+
+      userVotes.forEach((data) => {
+        if (data.foto1 && data.foto14) {
+          const avgTime = (data.foto1.time + data.foto14.time) / 2;
+          if (data.foto1.vote === data.foto14.vote) {
+            consistentTotalTime += avgTime;
+            consistentCount++;
+          } else {
+            inconsistentTotalTime += avgTime;
+            inconsistentCount++;
+          }
+        }
+      });
+
+      setTimeCorrelation({
+        consistent: {
+          avgTime: consistentCount > 0 ? consistentTotalTime / consistentCount : 0,
+          isConsistent: true,
+        },
+        inconsistent: {
+          avgTime: inconsistentCount > 0 ? inconsistentTotalTime / inconsistentCount : 0,
+          isConsistent: false,
+        },
+      });
+
+      // Store all user votes for export
+      const exportData = Array.from(userVotes.entries()).map(([userId, data]) => ({
+        userId,
+        email: data.email,
+        foto1Vote: data.foto1?.vote || 'N/A',
+        foto1Time: data.foto1?.time || 0,
+        foto14Vote: data.foto14?.vote || 'N/A',
+        foto14Time: data.foto14?.time || 0,
+        isConsistent: data.foto1?.vote === data.foto14?.vote,
+      }));
+      setAllUserVotes(exportData);
     } catch (error) {
       console.error('Error fetching discrepancies:', error);
     } finally {
@@ -153,6 +229,60 @@ export const SamePersonDiscrepancy = ({ sessionId }: SamePersonDiscrepancyProps)
   const discrepancyRate = totalUsers > 0 ? (discrepancies.length / totalUsers) * 100 : 0;
   const consistencyRate = 100 - discrepancyRate;
 
+  const exportToCSV = () => {
+    const csv = Papa.unparse(allUserVotes);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `discrepancias_fotos_1_14_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+  };
+
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+    
+    // Title
+    doc.setFontSize(18);
+    doc.text('Análise de Consistência - Fotos 1 e 14', 14, 20);
+    
+    // Summary
+    doc.setFontSize(12);
+    doc.text(`Total de Participantes: ${totalUsers}`, 14, 35);
+    doc.text(`Taxa de Consistência: ${consistencyRate.toFixed(1)}%`, 14, 42);
+    doc.text(`Discrepâncias: ${discrepancies.length} (${discrepancyRate.toFixed(1)}%)`, 14, 49);
+    
+    // Time correlation
+    if (timeCorrelation) {
+      doc.text('Correlação Tempo vs Consistência:', 14, 63);
+      doc.setFontSize(10);
+      doc.text(`Consistentes: ${timeCorrelation.consistent.avgTime.toFixed(1)}s (média)`, 20, 70);
+      doc.text(`Inconsistentes: ${timeCorrelation.inconsistent.avgTime.toFixed(1)}s (média)`, 20, 77);
+    }
+    
+    // Discrepancies list
+    doc.setFontSize(12);
+    doc.text('Lista de Discrepâncias:', 14, 91);
+    doc.setFontSize(8);
+    
+    let yPos = 98;
+    discrepancies.slice(0, 20).forEach((disc, index) => {
+      if (yPos > 270) {
+        doc.addPage();
+        yPos = 20;
+      }
+      doc.text(`${index + 1}. ${disc.userEmail}`, 14, yPos);
+      doc.text(`Foto 1: ${getVoteLabel(disc.foto1Vote)} (${disc.foto1Time}s)`, 20, yPos + 5);
+      doc.text(`Foto 14: ${getVoteLabel(disc.foto14Vote)} (${disc.foto14Time}s)`, 20, yPos + 10);
+      yPos += 18;
+    });
+    
+    if (discrepancies.length > 20) {
+      doc.text(`... e mais ${discrepancies.length - 20} discrepâncias`, 14, yPos);
+    }
+    
+    doc.save(`discrepancias_fotos_1_14_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
   if (loading) {
     return (
       <Card>
@@ -172,13 +302,27 @@ export const SamePersonDiscrepancy = ({ sessionId }: SamePersonDiscrepancyProps)
   return (
     <Card className="animate-fade-in">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <AlertTriangle className={`w-5 h-5 ${discrepancies.length > 0 ? 'text-warning' : 'text-success'}`} />
-          Análise de Consistência (Fotos 1 e 14)
-        </CardTitle>
-        <CardDescription>
-          As fotos 1 e 14 são da mesma pessoa - análise de consistência nas votações
-        </CardDescription>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <AlertTriangle className={`w-5 h-5 ${discrepancies.length > 0 ? 'text-warning' : 'text-success'}`} />
+              Análise de Consistência (Fotos 1 e 14)
+            </CardTitle>
+            <CardDescription>
+              As fotos 1 e 14 são da mesma pessoa - análise de consistência nas votações
+            </CardDescription>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={exportToCSV} disabled={allUserVotes.length === 0}>
+              <Download className="w-4 h-4 mr-2" />
+              CSV
+            </Button>
+            <Button variant="outline" size="sm" onClick={exportToPDF} disabled={allUserVotes.length === 0}>
+              <FileText className="w-4 h-4 mr-2" />
+              PDF
+            </Button>
+          </div>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Summary Stats */}
@@ -233,6 +377,84 @@ export const SamePersonDiscrepancy = ({ sessionId }: SamePersonDiscrepancyProps)
               Todos os participantes que votaram em ambas as fotos mantiveram consistência em suas avaliações.
             </AlertDescription>
           </Alert>
+        )}
+
+        {/* Vote Distribution Comparison */}
+        {voteDistribution.length > 0 && (
+          <div className="space-y-3">
+            <h4 className="text-sm font-semibold">Distribuição Comparativa de Votos</h4>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={voteDistribution}>
+                <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                <XAxis dataKey="vote" />
+                <YAxis />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: 'hsl(var(--background))',
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '8px'
+                  }}
+                />
+                <Legend />
+                <Bar dataKey="foto1" name="Foto 1" fill="hsl(var(--primary))" />
+                <Bar dataKey="foto14" name="Foto 14" fill="hsl(var(--accent))" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+
+        {/* Time Correlation Analysis */}
+        {timeCorrelation && (
+          <div className="space-y-3">
+            <h4 className="text-sm font-semibold">Correlação Tempo vs Consistência</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-4 bg-success/10 border border-success/20 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <Check className="w-4 h-4 text-success" />
+                  <span className="text-sm font-medium text-success">Votos Consistentes</span>
+                </div>
+                <p className="text-2xl font-bold">{timeCorrelation.consistent.avgTime.toFixed(1)}s</p>
+                <p className="text-xs text-muted-foreground mt-1">Tempo médio de resposta</p>
+              </div>
+              
+              <div className="p-4 bg-warning/10 border border-warning/20 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <AlertTriangle className="w-4 h-4 text-warning" />
+                  <span className="text-sm font-medium text-warning">Votos Inconsistentes</span>
+                </div>
+                <p className="text-2xl font-bold">{timeCorrelation.inconsistent.avgTime.toFixed(1)}s</p>
+                <p className="text-xs text-muted-foreground mt-1">Tempo médio de resposta</p>
+              </div>
+            </div>
+            
+            {timeCorrelation.consistent.avgTime > 0 && timeCorrelation.inconsistent.avgTime > 0 && (
+              <Alert className={
+                timeCorrelation.inconsistent.avgTime < timeCorrelation.consistent.avgTime 
+                  ? "border-warning/50 bg-warning/10" 
+                  : "border-primary/50 bg-primary/10"
+              }>
+                {timeCorrelation.inconsistent.avgTime < timeCorrelation.consistent.avgTime ? (
+                  <>
+                    <TrendingDown className="h-4 w-4 text-warning" />
+                    <AlertTitle className="text-warning">Respostas Rápidas Associadas a Inconsistências</AlertTitle>
+                    <AlertDescription>
+                      Participantes com votos inconsistentes gastaram em média{' '}
+                      <strong>{Math.abs(timeCorrelation.consistent.avgTime - timeCorrelation.inconsistent.avgTime).toFixed(1)}s</strong>{' '}
+                      a menos por foto. Isso pode indicar falta de atenção ou viés inconsciente.
+                    </AlertDescription>
+                  </>
+                ) : (
+                  <>
+                    <TrendingUp className="h-4 w-4 text-primary" />
+                    <AlertTitle>Padrão Normal de Tempo</AlertTitle>
+                    <AlertDescription>
+                      Não há correlação clara entre tempo de resposta e inconsistência nas votações.
+                    </AlertDescription>
+                  </>
+                )}
+              </Alert>
+            )}
+          </div>
         )}
 
         {/* Discrepancy List */}

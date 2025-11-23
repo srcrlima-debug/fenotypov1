@@ -49,10 +49,14 @@ const Login = () => {
       if (error) {
         if (error.message.includes('Invalid login credentials')) {
           toast({
-            title: 'Erro ao fazer login',
-            description: 'Email ou senha incorretos',
-            variant: 'destructive',
+            title: 'Email não encontrado',
+            description: 'Parece que você ainda não tem uma conta. Vamos criar uma agora!',
+            variant: 'default',
           });
+          // Redirecionar para registro mantendo o email preenchido
+          setTimeout(() => {
+            navigate(`/registro?email=${encodeURIComponent(validatedData.email)}${from !== '/' ? `&redirect=${encodeURIComponent(from)}` : ''}`);
+          }, 1500);
         } else {
           toast({
             title: 'Erro ao fazer login',
