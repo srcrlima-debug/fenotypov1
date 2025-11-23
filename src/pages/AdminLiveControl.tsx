@@ -84,8 +84,19 @@ export default function AdminLiveControl() {
         navigate("/");
         return;
       }
+      
+      // Validate sessionId is a valid UUID
+      if (!sessionId || sessionId.includes(':')) {
+        toast({
+          title: "Erro",
+          description: "ID da sessão inválido",
+          variant: "destructive",
+        });
+        navigate("/admin");
+        return;
+      }
     }
-  }, [user, isAdmin, authLoading, adminLoading, navigate]);
+  }, [user, isAdmin, authLoading, adminLoading, sessionId, navigate, toast]);
 
   // Track online participants using Realtime Presence
   useEffect(() => {
@@ -400,6 +411,15 @@ export default function AdminLiveControl() {
   };
 
   const handleStartSession = async () => {
+    if (!sessionId) {
+      toast({
+        title: "Erro",
+        description: "ID da sessão inválido",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const { error } = await supabase.rpc("start_session", {
       session_id_param: sessionId,
     });
@@ -420,6 +440,15 @@ export default function AdminLiveControl() {
   };
 
   const handleCompleteSession = async () => {
+    if (!sessionId) {
+      toast({
+        title: "Erro",
+        description: "ID da sessão inválido",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setShowCompleteSessionDialog(false);
 
     const { error } = await supabase
@@ -443,7 +472,7 @@ export default function AdminLiveControl() {
   };
 
   const handleNextPhoto = async () => {
-    if (!session) return;
+    if (!session || !sessionId) return;
 
     setShowNextPhotoDialog(false);
 
@@ -472,6 +501,8 @@ export default function AdminLiveControl() {
   };
 
   const handleShowResults = async () => {
+    if (!sessionId) return;
+
     const { error } = await supabase.rpc("show_results", {
       session_id_param: sessionId,
     });
@@ -486,7 +517,7 @@ export default function AdminLiveControl() {
   };
 
   const handleRestartPhoto = async () => {
-    if (!session) return;
+    if (!session || !sessionId) return;
 
     const { error } = await supabase.rpc("restart_current_photo", {
       session_id_param: sessionId,
