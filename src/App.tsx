@@ -22,6 +22,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import AdminLiveControl from "./pages/AdminLiveControl";
 import AdminAnalytics from "./pages/AdminAnalytics";
 import AdminDivergenceAnalysis from "./pages/AdminDivergenceAnalysis";
+import AdminHistory from "./pages/AdminHistory";
 import Training from "./pages/Training";
 import SessionTraining from "./pages/SessionTraining";
 import Results from "./pages/Results";
@@ -91,6 +92,14 @@ const App = () => (
                   element={
                     <AdminRoute>
                       <AdminDivergenceAnalysis />
+                    </AdminRoute>
+                  }
+                />
+                <Route
+                  path="/admin/history"
+                  element={
+                    <AdminRoute>
+                      <AdminHistory />
                     </AdminRoute>
                   }
                 />

@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { VotingFooter } from "@/components/VotingFooter";
+import { VotingStats } from "@/components/VotingStats";
 
 interface SessionData {
   id: string;
@@ -44,6 +45,7 @@ export default function SessionTraining() {
   const [timerKey, setTimerKey] = useState(0);
   const [zoomOpen, setZoomOpen] = useState(false);
   const [participantCount, setParticipantCount] = useState(0);
+  const [votedCount, setVotedCount] = useState(0);
 
   // Function to play notification sound when session starts
   const playStartSound = () => {
@@ -194,6 +196,40 @@ export default function SessionTraining() {
       supabase.removeChannel(presenceChannel);
     };
   }, [sessionId, user]);
+
+  // Track votes for current photo in real-time
+  useEffect(() => {
+    if (!sessionId || !sessionData?.current_photo) return;
+
+    const fetchVotesCount = async () => {
+      const { count } = await supabase
+        .from("avaliacoes")
+        .select("*", { count: "exact", head: true })
+        .eq("session_id", sessionId)
+        .eq("foto_id", sessionData.current_photo);
+      
+      setVotedCount(count || 0);
+    };
+
+    fetchVotesCount();
+
+    // Listen for new votes
+    const votesChannel = supabase
+      .channel(`votes-${sessionId}-${sessionData.current_photo}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'avaliacoes',
+        filter: `session_id=eq.${sessionId}`
+      }, () => {
+        fetchVotesCount();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(votesChannel);
+    };
+  }, [sessionId, sessionData?.current_photo]);
 
   useEffect(() => {
     window.history.pushState(null, "", window.location.href);
@@ -438,6 +474,9 @@ export default function SessionTraining() {
               )}
             </CountdownCircleTimer>
           </div>
+
+          {/* Voting Stats */}
+          <VotingStats votedCount={votedCount} totalParticipants={participantCount} />
 
           {/* Image and buttons */}
           <Card className="p-6 space-y-4">

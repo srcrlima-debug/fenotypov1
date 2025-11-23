@@ -269,6 +269,14 @@ const Admin = () => {
               <h1 className="text-4xl font-bold text-foreground">Painel Administrativo</h1>
               <p className="text-muted-foreground mt-2">Gerencie sessões de avaliação</p>
             </div>
+            <Button
+              variant="outline"
+              onClick={() => navigate('/admin/history')}
+              className="gap-2"
+            >
+              <Calendar className="h-4 w-4" />
+              Ver Histórico
+            </Button>
           </div>
 
         {/* Create Session Form */}
