@@ -131,7 +131,7 @@ const Login = () => {
             disabled={loading}
             type="button"
           >
-            <Chrome className="w-5 h-5 mr-2 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12" />
+            <Chrome className="w-9 h-9 mr-3 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12" />
             Continuar com Google
           </Button>
 
