@@ -6,12 +6,13 @@ import { useAdmin } from "@/hooks/useAdmin";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Play, SkipForward, BarChart3, Users, Clock, CheckCircle, XCircle, AlertCircle, RotateCcw, Download, FileText, AlertTriangle } from "lucide-react";
+import { Play, SkipForward, BarChart3, Users, Clock, CheckCircle, XCircle, AlertCircle, RotateCcw, Download, FileText, AlertTriangle, Activity } from "lucide-react";
 import { getImageByPage } from "@/data/images";
 import { Progress } from "@/components/ui/progress";
 import { format } from "date-fns";
 import { Header } from '@/components/Header';
 import { Badge } from "@/components/ui/badge";
+import { RealtimeMetricsDashboard } from '@/components/RealtimeMetricsDashboard';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -1293,6 +1294,26 @@ export default function AdminLiveControl() {
                 ))}
               </div>
             </Card>
+          </div>
+        )}
+
+        {/* Realtime Metrics Dashboard - Always visible during active session */}
+        {session.session_status === 'active' && (
+          <div className="mt-8">
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
+                <Activity className="h-6 w-6 text-primary" />
+                Dashboard de Métricas em Tempo Real
+              </h2>
+              <p className="text-muted-foreground mt-1">
+                Acompanhe o engajamento e as respostas dos participantes em tempo real
+              </p>
+            </div>
+            <RealtimeMetricsDashboard 
+              sessionId={sessionId!}
+              currentPhoto={session.current_photo}
+              sessionStatus={session.session_status}
+            />
           </div>
         )}
       </div>
