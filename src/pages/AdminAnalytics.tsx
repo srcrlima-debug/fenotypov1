@@ -10,9 +10,9 @@ import {
   Filter,
   Download,
   TrendingUp,
-  BarChart3,
-  PieChart as PieChartIcon,
-  AlertTriangle,
+  ChartBar,
+  ChartPie,
+  TriangleAlert,
   FileText,
   Activity
 } from 'lucide-react';
@@ -737,7 +737,7 @@ const AdminAnalytics = () => {
           <Card className="border-orange-500">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-orange-600">
-                <AlertTriangle className="w-5 h-5" />
+                <TriangleAlert className="w-5 h-5" />
                 Alertas de Possível Viés Inconsciente
               </CardTitle>
               <CardDescription>
@@ -747,7 +747,7 @@ const AdminAnalytics = () => {
             <CardContent className="space-y-3">
               {biasAlerts.map((alert, index) => (
                 <Alert key={index} variant={alert.severity === 'high' ? 'destructive' : 'default'}>
-                  <AlertTriangle className="h-4 w-4" />
+                  <TriangleAlert className="h-4 w-4" />
                   <AlertTitle className="flex items-center gap-2">
                     <Badge variant={alert.severity === 'high' ? 'destructive' : alert.severity === 'medium' ? 'default' : 'secondary'}>
                       {alert.severity === 'high' ? 'ALTA' : alert.severity === 'medium' ? 'MÉDIA' : 'BAIXA'}
@@ -865,7 +865,7 @@ const AdminAnalytics = () => {
               Identidade de Gênero
             </TabsTrigger>
             <TabsTrigger value="raca">
-              <BarChart3 className="w-4 h-4 mr-2" />
+              <ChartBar className="w-4 h-4 mr-2" />
               Pertencimento Racial
             </TabsTrigger>
             <TabsTrigger value="regiao">
@@ -873,7 +873,7 @@ const AdminAnalytics = () => {
               Região
             </TabsTrigger>
             <TabsTrigger value="experiencia">
-              <PieChartIcon className="w-4 h-4 mr-2" />
+              <ChartPie className="w-4 h-4 mr-2" />
               Experiência
             </TabsTrigger>
           </TabsList>

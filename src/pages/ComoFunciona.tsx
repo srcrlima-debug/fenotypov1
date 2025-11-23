@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle, Timer, Image, Keyboard, AlertCircle } from "lucide-react";
+import { CircleCheck, Timer, Image, Keyboard, TriangleAlert } from "lucide-react";
 import { Header } from "@/components/Header";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCardTilt } from "@/hooks/useCardTilt";
@@ -63,7 +63,7 @@ const ComoFunciona = () => {
                 registrada como "Não Respondido".
               </p>
               <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 flex items-start gap-2">
-                <AlertCircle className="h-5 w-5 text-red-500 mt-0.5 flex-shrink-0" />
+                <TriangleAlert className="h-5 w-5 text-red-500 mt-0.5 flex-shrink-0" />
                 <p className="text-sm text-red-700">
                   <strong>Atenção:</strong> Nos últimos 10 segundos, o cronômetro ficará vermelho
                   para alertá-lo sobre o tempo restante.
@@ -77,7 +77,7 @@ const ComoFunciona = () => {
           <Card ref={tilt3} className="card-3d-tilt">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <CheckCircle className="h-5 w-5 text-primary" />
+                <CircleCheck className="h-5 w-5 text-primary" />
                 Como Avaliar
               </CardTitle>
             </CardHeader>

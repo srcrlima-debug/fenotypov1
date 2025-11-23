@@ -11,11 +11,11 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { 
   Users, 
   Clock, 
-  CheckCircle, 
-  XCircle, 
+  CircleCheck, 
+  CircleX, 
   ZoomIn, 
-  AlertCircle,
-  Loader2,
+  TriangleAlert,
+  Loader,
   Info 
 } from "lucide-react";
 import { Header } from "@/components/Header";
@@ -326,7 +326,7 @@ export default function SessionTraining() {
       <>
         <Header />
         <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center">
-          <Loader2 className="w-12 h-12 animate-spin text-primary" />
+          <Loader className="w-12 h-12 animate-spin text-primary" />
         </div>
       </>
     );
@@ -422,7 +422,7 @@ export default function SessionTraining() {
         <div className="flex-1 flex items-center justify-center p-4">
           <Card className="max-w-xl w-full p-8 text-center space-y-6 animate-fade-in">
             <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-500/10 mb-4">
-              <CheckCircle className="w-10 h-10 text-green-600" />
+              <CircleCheck className="w-10 h-10 text-green-600" />
             </div>
             <h1 className="text-3xl font-bold">Sessão Concluída!</h1>
             <p className="text-muted-foreground">
@@ -512,7 +512,7 @@ export default function SessionTraining() {
                 disabled={!canRespond}
                 className="h-16 text-lg font-semibold bg-green-600 hover:bg-green-700 active:scale-95 transition-transform disabled:opacity-50"
               >
-                <CheckCircle className="mr-2 h-6 w-6" />
+                <CircleCheck className="mr-2 h-6 w-6" />
                 DEFERIDO
                 <kbd className="ml-2 px-2 py-1 bg-green-700/50 rounded text-xs hidden sm:inline">D</kbd>
               </Button>
@@ -523,7 +523,7 @@ export default function SessionTraining() {
                 disabled={!canRespond}
                 className="h-16 text-lg font-semibold active:scale-95 transition-transform disabled:opacity-50"
               >
-                <XCircle className="mr-2 h-6 w-6" />
+                <CircleX className="mr-2 h-6 w-6" />
                 INDEFERIDO
                 <kbd className="ml-2 px-2 py-1 bg-red-700/50 rounded text-xs hidden sm:inline">I</kbd>
               </Button>

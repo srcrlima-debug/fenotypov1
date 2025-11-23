@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Copy, Plus, Calendar, Users, Link as LinkIcon, BarChart3, Play, Edit, Trash2, AlertTriangle } from 'lucide-react';
+import { Copy, Plus, CalendarDays, Users, Link2, ChartBar, Play, Pencil, Trash2, TriangleAlert } from 'lucide-react';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { sessionSchema } from '@/lib/validators';
@@ -275,7 +275,7 @@ const Admin = () => {
                 onClick={() => navigate('/admin/history')}
                 className="gap-2"
               >
-                <Calendar className="h-4 w-4" />
+                <CalendarDays className="h-4 w-4" />
                 Ver Histórico
               </Button>
               <Button
@@ -283,7 +283,7 @@ const Admin = () => {
                 onClick={() => navigate('/admin/comparison')}
                 className="gap-2"
               >
-                <BarChart3 className="h-4 w-4" />
+                <ChartBar className="h-4 w-4" />
                 Comparar Sessões
               </Button>
             </div>
@@ -334,7 +334,7 @@ const Admin = () => {
         {/* Sessions List */}
         <div>
           <h2 className="text-2xl font-bold text-foreground mb-4 flex items-center gap-2">
-            <Calendar className="h-6 w-6" />
+            <CalendarDays className="h-6 w-6" />
             Sessões Criadas
           </h2>
           <div className="grid gap-4">
@@ -353,11 +353,11 @@ const Admin = () => {
                         <h3 className="font-semibold text-lg">{session.nome}</h3>
                         <div className="flex items-center gap-4 text-sm text-muted-foreground">
                           <span className="flex items-center gap-1">
-                            <Calendar className="h-4 w-4" />
+                            <CalendarDays className="h-4 w-4" />
                             {format(new Date(session.data), 'dd/MM/yyyy')}
                           </span>
                           <span className="flex items-center gap-1">
-                            <LinkIcon className="h-4 w-4" />
+                            <Link2 className="h-4 w-4" />
                             Criada em {format(new Date(session.created_at), 'dd/MM/yyyy HH:mm')}
                           </span>
                         </div>
@@ -377,7 +377,7 @@ const Admin = () => {
                           size="sm"
                           onClick={() => navigate(`/admin/dashboard/${session.id}`)}
                         >
-                          <BarChart3 className="h-4 w-4 mr-2" />
+                          <ChartBar className="h-4 w-4 mr-2" />
                           Dashboard
                         </Button>
                         <Button
@@ -393,7 +393,7 @@ const Admin = () => {
                           size="sm"
                           onClick={() => navigate(`/admin/divergence/${session.id}`)}
                         >
-                          <AlertTriangle className="h-4 w-4 mr-2" />
+                          <TriangleAlert className="h-4 w-4 mr-2" />
                           Divergências
                         </Button>
                         <Button
@@ -409,7 +409,7 @@ const Admin = () => {
                           size="sm"
                           onClick={() => handleEditClick(session)}
                         >
-                          <Edit className="h-4 w-4 mr-2" />
+                          <Pencil className="h-4 w-4 mr-2" />
                           Editar
                         </Button>
                         <Button
