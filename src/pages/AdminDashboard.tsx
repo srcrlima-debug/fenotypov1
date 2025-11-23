@@ -26,6 +26,13 @@ import jsPDF from 'jspdf';
 import Papa from 'papaparse';
 import { Header } from '@/components/Header';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
@@ -139,14 +146,25 @@ const AdminDashboard = () => {
   const [crossAnalysis, setCrossAnalysis] = useState<CrossAnalysisData[]>([]);
   const [rawEvaluations, setRawEvaluations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [dateFilter, setDateFilter] = useState({ start: '', end: '' });
+  const [demographicFilters, setDemographicFilters] = useState({
+    genero: 'all',
+    raca: 'all',
+    regiao: 'all',
+    experiencia: 'all',
+  });
+  const [availableFilters, setAvailableFilters] = useState({
+    generos: [] as string[],
+    racas: [] as string[],
+    regioes: [] as string[],
+    experiencias: [] as string[],
+  });
   const [zoomImage, setZoomImage] = useState<{ url: string; alt: string } | null>(null);
 
   useEffect(() => {
     if (sessionId) {
       fetchDashboardData();
     }
-  }, [sessionId, dateFilter]);
+  }, [sessionId, demographicFilters]);
 
   const fetchDashboardData = async () => {
     setLoading(true);
@@ -162,29 +180,67 @@ const AdminDashboard = () => {
       if (sessionError) throw sessionError;
       setSession(sessionData);
 
-      // Build query with filters
+      // Build query with demographic filters - join with profiles
       let query = supabase
         .from('avaliacoes')
-        .select('*')
+        .select(`
+          *,
+          profiles!inner(
+            genero,
+            faixa_etaria,
+            regiao,
+            pertencimento_racial,
+            experiencia_bancas
+          )
+        `)
         .eq('session_id', sessionId);
 
-      if (dateFilter.start) {
-        query = query.gte('created_at', dateFilter.start);
+      // Apply demographic filters
+      if (demographicFilters.genero !== 'all') {
+        query = query.eq('profiles.genero', demographicFilters.genero);
       }
-      if (dateFilter.end) {
-        query = query.lte('created_at', dateFilter.end);
+      if (demographicFilters.raca !== 'all') {
+        query = query.eq('profiles.pertencimento_racial', demographicFilters.raca);
+      }
+      if (demographicFilters.regiao !== 'all') {
+        query = query.eq('profiles.regiao', demographicFilters.regiao);
+      }
+      if (demographicFilters.experiencia !== 'all') {
+        query = query.eq('profiles.experiencia_bancas', demographicFilters.experiencia);
       }
 
       const { data: evaluations, error: evalError } = await query;
 
       if (evalError) throw evalError;
 
+      // Collect available filter options
+      const generosSet = new Set<string>();
+      const racasSet = new Set<string>();
+      const regioesSet = new Set<string>();
+      const experienciasSet = new Set<string>();
+
+      evaluations?.forEach((ev: any) => {
+        if (ev.profiles) {
+          if (ev.profiles.genero) generosSet.add(ev.profiles.genero);
+          if (ev.profiles.pertencimento_racial) racasSet.add(ev.profiles.pertencimento_racial);
+          if (ev.profiles.regiao) regioesSet.add(ev.profiles.regiao);
+          if (ev.profiles.experiencia_bancas) experienciasSet.add(ev.profiles.experiencia_bancas);
+        }
+      });
+
+      setAvailableFilters({
+        generos: Array.from(generosSet).sort(),
+        racas: Array.from(racasSet).sort(),
+        regioes: Array.from(regioesSet).sort(),
+        experiencias: Array.from(experienciasSet).sort(),
+      });
+
       // Calculate general stats
       const uniqueUsers = new Set(evaluations?.map(e => e.user_id)).size;
       const totalEvals = evaluations?.length || 0;
       const expectedEvals = uniqueUsers * 30; // 30 photos per user
       const completionRate = expectedEvals > 0 ? (totalEvals / expectedEvals) * 100 : 0;
-      const avgTime = evaluations?.reduce((sum, e) => sum + e.tempo_gasto, 0) / totalEvals || 0;
+      const avgTime = evaluations?.reduce((sum, e) => sum + (e.tempo_gasto || 0), 0) / totalEvals || 0;
 
       setStats({
         totalParticipants: uniqueUsers,
@@ -218,7 +274,7 @@ const AdminDashboard = () => {
         else if (evaluation.resposta === 'INDEFERIDO') photoStatsMap[fotoId].indeferido++;
         else if (evaluation.resposta === 'NÃO_RESPONDIDO') photoStatsMap[fotoId].naoRespondido++;
 
-        photoStatsMap[fotoId].totalTime += evaluation.tempo_gasto;
+        photoStatsMap[fotoId].totalTime += (evaluation.tempo_gasto || 0);
         photoStatsMap[fotoId].count++;
       });
 
@@ -252,8 +308,11 @@ const AdminDashboard = () => {
       const faixaEtariaStats: { [key: string]: { deferido: number; indeferido: number; total: number } } = {};
       const regiaoStats: { [key: string]: { deferido: number; indeferido: number; total: number } } = {};
 
-      evaluations?.forEach(evaluation => {
-        const { genero, faixa_etaria, regiao, resposta } = evaluation;
+      evaluations?.forEach((evaluation: any) => {
+        const profile = evaluation.profiles;
+        if (!profile) return;
+
+        const { genero, faixa_etaria, regiao, resposta } = { ...evaluation, ...profile };
 
         // Genero
         if (genero) {
@@ -535,32 +594,91 @@ const AdminDashboard = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Filter className="h-5 w-5" />
-              Filtros
+              Filtros Demográficos
             </CardTitle>
+            <CardDescription>Filtre as análises por características demográficas</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="startDate">Data Inicial</Label>
-                <Input
-                  id="startDate"
-                  type="date"
-                  value={dateFilter.start}
-                  onChange={(e) => setDateFilter({ ...dateFilter, start: e.target.value })}
-                />
+                <Label htmlFor="filterGenero">Identidade de Gênero</Label>
+                <Select
+                  value={demographicFilters.genero}
+                  onValueChange={(value) => setDemographicFilters({ ...demographicFilters, genero: value })}
+                >
+                  <SelectTrigger id="filterGenero">
+                    <SelectValue placeholder="Todos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    {availableFilters.generos.map((genero) => (
+                      <SelectItem key={genero} value={genero}>
+                        {genero}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="endDate">Data Final</Label>
-                <Input
-                  id="endDate"
-                  type="date"
-                  value={dateFilter.end}
-                  onChange={(e) => setDateFilter({ ...dateFilter, end: e.target.value })}
-                />
+                <Label htmlFor="filterRaca">Pertencimento Racial</Label>
+                <Select
+                  value={demographicFilters.raca}
+                  onValueChange={(value) => setDemographicFilters({ ...demographicFilters, raca: value })}
+                >
+                  <SelectTrigger id="filterRaca">
+                    <SelectValue placeholder="Todos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    {availableFilters.racas.map((raca) => (
+                      <SelectItem key={raca} value={raca}>
+                        {raca}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="filterRegiao">Região</Label>
+                <Select
+                  value={demographicFilters.regiao}
+                  onValueChange={(value) => setDemographicFilters({ ...demographicFilters, regiao: value })}
+                >
+                  <SelectTrigger id="filterRegiao">
+                    <SelectValue placeholder="Todas" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas</SelectItem>
+                    {availableFilters.regioes.map((regiao) => (
+                      <SelectItem key={regiao} value={regiao}>
+                        {regiao}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="filterExperiencia">Experiência</Label>
+                <Select
+                  value={demographicFilters.experiencia}
+                  onValueChange={(value) => setDemographicFilters({ ...demographicFilters, experiencia: value })}
+                >
+                  <SelectTrigger id="filterExperiencia">
+                    <SelectValue placeholder="Todas" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas</SelectItem>
+                    {availableFilters.experiencias.map((exp) => (
+                      <SelectItem key={exp} value={exp}>
+                        {exp}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <Button
-              onClick={() => setDateFilter({ start: '', end: '' })}
+              onClick={() => setDemographicFilters({ genero: 'all', raca: 'all', regiao: 'all', experiencia: 'all' })}
               variant="outline"
               size="sm"
               className="mt-4"
