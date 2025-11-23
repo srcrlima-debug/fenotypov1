@@ -314,3 +314,36 @@ All colors MUST be HSL.
     @apply bg-background text-foreground;
   }
 }
+
+/* Icon hover animations */
+@layer utilities {
+  /* Smooth icon transitions */
+  .lucide {
+    @apply transition-all duration-300 ease-in-out;
+  }
+  
+  /* Icon hover effects for buttons and links */
+  button:hover .lucide,
+  a:hover .lucide {
+    @apply brightness-110;
+  }
+  
+  /* Pulse animation for important icons */
+  .icon-pulse {
+    @apply animate-pulse;
+  }
+  
+  /* Bounce animation for interactive icons */
+  @keyframes bounce-gentle {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-10%);
+    }
+  }
+  
+  .icon-bounce {
+    animation: bounce-gentle 2s ease-in-out infinite;
+  }
+}
