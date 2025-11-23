@@ -24,6 +24,7 @@ import AdminAnalytics from "./pages/AdminAnalytics";
 import AdminDivergenceAnalysis from "./pages/AdminDivergenceAnalysis";
 import AdminHistory from "./pages/AdminHistory";
 import AdminSessionComparison from "./pages/AdminSessionComparison";
+import AdminDemographicDashboard from "./pages/AdminDemographicDashboard";
 import Training from "./pages/Training";
 import SessionTraining from "./pages/SessionTraining";
 import Results from "./pages/Results";
@@ -109,6 +110,14 @@ const App = () => (
                   element={
                     <AdminRoute>
                       <AdminSessionComparison />
+                    </AdminRoute>
+                  }
+                />
+                <Route
+                  path="/admin/demographic/:sessionId"
+                  element={
+                    <AdminRoute>
+                      <AdminDemographicDashboard />
                     </AdminRoute>
                   }
                 />
