@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams, Link } from 'react-router-dom';
+import { useNavigate, useParams, Link, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,8 @@ export default function TrainingLogin() {
   const { trainingId } = useParams<{ trainingId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+  const redirectUrl = searchParams.get('redirect');
   const [loading, setLoading] = useState(false);
   const [training, setTraining] = useState<any>(null);
   const [email, setEmail] = useState('');
@@ -75,6 +77,13 @@ export default function TrainingLogin() {
         .limit(1)
         .maybeSingle();
 
+      // If there's a redirect URL, use it
+      if (redirectUrl) {
+        navigate(redirectUrl);
+        return;
+      }
+
+      // Otherwise, check for active session
       if (sessionData) {
         navigate(`/training/${trainingId}/session/${sessionData.id}/antessala`);
       } else {

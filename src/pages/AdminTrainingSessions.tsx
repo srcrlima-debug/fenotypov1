@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, Plus, Play, BarChart3, Trash2 } from 'lucide-react';
+import { ArrowLeft, Plus, Play, BarChart3, Trash2, Link2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function AdminTrainingSessions() {
@@ -86,6 +86,12 @@ export default function AdminTrainingSessions() {
       console.error('Error deleting session:', error);
       toast.error('Erro ao deletar session');
     }
+  };
+
+  const copySessionLink = (sessionId: string, sessionName: string) => {
+    const link = `${window.location.origin}/training/${trainingId}/session/${sessionId}/antessala`;
+    navigator.clipboard.writeText(link);
+    toast.success(`Link da sessão "${sessionName}" copiado!`);
   };
 
   const getStatusBadge = (status: string) => {
@@ -193,6 +199,15 @@ export default function AdminTrainingSessions() {
                     </CardDescription>
                   </div>
                   <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => copySessionLink(session.id, session.nome)}
+                      className="border-green-500/50 hover:bg-green-50 dark:hover:bg-green-950"
+                    >
+                      <Link2 className="w-4 h-4 mr-2 text-green-600" />
+                      Copiar Link
+                    </Button>
                     <Button
                       variant="outline"
                       size="sm"
