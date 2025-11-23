@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AssessmentProvider } from "./contexts/AssessmentContext";
 import { AuthProvider } from "./contexts/AuthContext";
+import { TrainingProvider } from "./contexts/TrainingContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AdminRoute } from "./components/AdminRoute";
 import ErrorBoundary from "./pages/ErrorBoundary";
@@ -26,6 +27,12 @@ import AdminHistory from "./pages/AdminHistory";
 import AdminSessionComparison from "./pages/AdminSessionComparison";
 import AdminDemographicDashboard from "./pages/AdminDemographicDashboard";
 import AdminSessionComparator from "./pages/AdminSessionComparator";
+import AdminTrainings from "./pages/AdminTrainings";
+import AdminTrainingParticipants from "./pages/AdminTrainingParticipants";
+import AdminTrainingSessions from "./pages/AdminTrainingSessions";
+import AdminTrainingComparator from "./pages/AdminTrainingComparator";
+import TrainingRegister from "./pages/TrainingRegister";
+import TrainingLogin from "./pages/TrainingLogin";
 import Training from "./pages/Training";
 import SessionTraining from "./pages/SessionTraining";
 import Results from "./pages/Results";
@@ -38,127 +45,185 @@ const App = () => (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <AuthProvider>
-          <AssessmentProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/registro" element={<Registro />} />
-                <Route path="/complete-profile" element={<CompleteProfile />} />
-                <Route path="/esqueci-senha" element={<ForgotPassword />} />
-                <Route path="/redefinir-senha" element={<ResetPassword />} />
-                <Route path="/como-funciona" element={<ComoFunciona />} />
-                <Route 
-                  path="/antessala/:sessionId" 
-                  element={
-                    <ProtectedRoute>
-                      <Antessala />
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route 
-                  path="/admin" 
-                  element={
-                    <AdminRoute>
-                      <Admin />
-                    </AdminRoute>
-                  } 
-                />
-                <Route
-                  path="/admin/dashboard/:sessionId"
-                  element={
-                    <AdminRoute>
-                      <AdminDashboard />
-                    </AdminRoute>
-                  }
-                />
-                <Route
-                  path="/admin/live/:sessionId"
-                  element={
-                    <AdminRoute>
-                      <AdminLiveControl />
-                    </AdminRoute>
-                  }
-                />
-                <Route
-                  path="/admin/analytics/:sessionId"
-                  element={
-                    <AdminRoute>
-                      <AdminAnalytics />
-                    </AdminRoute>
-                  }
-                />
-                <Route
-                  path="/admin/divergence/:sessionId"
-                  element={
-                    <AdminRoute>
-                      <AdminDivergenceAnalysis />
-                    </AdminRoute>
-                  }
-                />
-                <Route
-                  path="/admin/history"
-                  element={
-                    <AdminRoute>
-                      <AdminHistory />
-                    </AdminRoute>
-                  }
-                />
-                <Route
-                  path="/admin/comparison"
-                  element={
-                    <AdminRoute>
-                      <AdminSessionComparison />
-                    </AdminRoute>
-                  }
-                />
-                <Route
-                  path="/admin/demographic/:sessionId"
-                  element={
-                    <AdminRoute>
-                      <AdminDemographicDashboard />
-                    </AdminRoute>
-                  }
-                />
-                <Route
-                  path="/admin/comparator"
-                  element={
-                    <AdminRoute>
-                      <AdminSessionComparator />
-                    </AdminRoute>
-                  }
-                />
-                <Route
-                  path="/treino/:sessionId"
-                  element={
-                    <ProtectedRoute>
-                      <SessionTraining />
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route 
-                  path="/training/:page" 
-                  element={
-                    <ProtectedRoute>
-                      <Training />
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route 
-                  path="/results" 
-                  element={
-                    <ProtectedRoute>
-                      <Results />
-                    </ProtectedRoute>
-                  } 
-                />
-                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                <Route path="*" element={<Error404 />} />
-              </Routes>
-            </BrowserRouter>
-          </AssessmentProvider>
+          <TrainingProvider>
+            <AssessmentProvider>
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
+                <Routes>
+                  <Route path="/" element={<Home />} />
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/registro" element={<Registro />} />
+                  <Route path="/complete-profile" element={<CompleteProfile />} />
+                  <Route path="/esqueci-senha" element={<ForgotPassword />} />
+                  <Route path="/redefinir-senha" element={<ResetPassword />} />
+                  <Route path="/como-funciona" element={<ComoFunciona />} />
+                  
+                  {/* Training-specific routes */}
+                  <Route path="/training/:trainingId/register" element={<TrainingRegister />} />
+                  <Route path="/training/:trainingId/login" element={<TrainingLogin />} />
+                  <Route 
+                    path="/training/:trainingId/session/:sessionId/antessala" 
+                    element={
+                      <ProtectedRoute>
+                        <Antessala />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  
+                  {/* Legacy antessala route for backwards compatibility */}
+                  <Route 
+                    path="/antessala/:sessionId" 
+                    element={
+                      <ProtectedRoute>
+                        <Antessala />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  
+                  {/* Admin routes */}
+                  <Route 
+                    path="/admin" 
+                    element={
+                      <AdminRoute>
+                        <Admin />
+                      </AdminRoute>
+                    } 
+                  />
+                  <Route
+                    path="/admin/trainings"
+                    element={
+                      <AdminRoute>
+                        <AdminTrainings />
+                      </AdminRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/training/:trainingId/participants"
+                    element={
+                      <AdminRoute>
+                        <AdminTrainingParticipants />
+                      </AdminRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/training/:trainingId/sessions"
+                    element={
+                      <AdminRoute>
+                        <AdminTrainingSessions />
+                      </AdminRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/training/:trainingId/dashboard"
+                    element={
+                      <AdminRoute>
+                        <AdminDashboard />
+                      </AdminRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/training/compare"
+                    element={
+                      <AdminRoute>
+                        <AdminTrainingComparator />
+                      </AdminRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/dashboard/:sessionId"
+                    element={
+                      <AdminRoute>
+                        <AdminDashboard />
+                      </AdminRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/live/:sessionId"
+                    element={
+                      <AdminRoute>
+                        <AdminLiveControl />
+                      </AdminRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/analytics/:sessionId"
+                    element={
+                      <AdminRoute>
+                        <AdminAnalytics />
+                      </AdminRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/divergence/:sessionId"
+                    element={
+                      <AdminRoute>
+                        <AdminDivergenceAnalysis />
+                      </AdminRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/history"
+                    element={
+                      <AdminRoute>
+                        <AdminHistory />
+                      </AdminRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/comparison"
+                    element={
+                      <AdminRoute>
+                        <AdminSessionComparison />
+                      </AdminRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/demographic/:sessionId"
+                    element={
+                      <AdminRoute>
+                        <AdminDemographicDashboard />
+                      </AdminRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/comparator"
+                    element={
+                      <AdminRoute>
+                        <AdminSessionComparator />
+                      </AdminRoute>
+                    }
+                  />
+                  <Route
+                    path="/treino/:sessionId"
+                    element={
+                      <ProtectedRoute>
+                        <SessionTraining />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/training/:page" 
+                    element={
+                      <ProtectedRoute>
+                        <Training />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/results" 
+                    element={
+                      <ProtectedRoute>
+                        <Results />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                  <Route path="*" element={<Error404 />} />
+                </Routes>
+              </BrowserRouter>
+            </AssessmentProvider>
+          </TrainingProvider>
         </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>
