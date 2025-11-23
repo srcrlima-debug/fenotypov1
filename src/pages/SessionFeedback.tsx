@@ -399,23 +399,28 @@ export default function SessionFeedback() {
             </Card>
 
             {/* Recommendation */}
-            <Card>
+            <Card className={errors.recomendaria ? 'border-destructive' : ''}>
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between gap-4">
                   <div className="space-y-0.5 flex-1">
-                    <Label>Você recomendaria esta sessão?</Label>
+                    <Label>Você recomendaria esta sessão? *</Label>
                     <p className="text-sm text-muted-foreground">
                       Indicaria este tipo de avaliação para outros colegas?
                     </p>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className={`text-sm font-medium transition-all duration-300 ease-out ${
-                      formData.recomendaria === false 
-                        ? 'text-foreground scale-110' 
-                        : 'text-muted-foreground scale-100'
-                    }`}>
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, recomendaria: false })}
+                      disabled={submitted && !existingFeedback}
+                      className={`text-sm font-medium transition-all duration-300 ease-out cursor-pointer hover:scale-110 disabled:cursor-not-allowed ${
+                        formData.recomendaria === false 
+                          ? 'text-foreground scale-110' 
+                          : 'text-muted-foreground scale-100 hover:text-foreground'
+                      }`}
+                    >
                       Não
-                    </span>
+                    </button>
                     <Switch
                       checked={formData.recomendaria === true}
                       onCheckedChange={(checked) =>
@@ -428,17 +433,24 @@ export default function SessionFeedback() {
                           : 'scale-100'
                       }`}
                     />
-                    <span className={`text-sm font-medium transition-all duration-300 ease-out ${
-                      formData.recomendaria === true 
-                        ? 'text-green-600 font-semibold scale-110 animate-fade-in' 
-                        : 'text-muted-foreground scale-100'
-                    }`}>
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, recomendaria: true })}
+                      disabled={submitted && !existingFeedback}
+                      className={`text-sm font-medium transition-all duration-300 ease-out cursor-pointer hover:scale-110 disabled:cursor-not-allowed ${
+                        formData.recomendaria === true 
+                          ? 'text-green-600 font-semibold scale-110 animate-fade-in' 
+                          : 'text-muted-foreground scale-100 hover:text-green-600'
+                      }`}
+                    >
                       Sim
-                    </span>
+                    </button>
                   </div>
                 </div>
                 {errors.recomendaria && (
-                  <p className="text-sm text-destructive mt-2 animate-fade-in">{errors.recomendaria}</p>
+                  <p className="text-sm text-destructive mt-2 animate-fade-in flex items-center gap-1">
+                    <span className="font-semibold">⚠</span> {errors.recomendaria}
+                  </p>
                 )}
               </CardContent>
             </Card>
