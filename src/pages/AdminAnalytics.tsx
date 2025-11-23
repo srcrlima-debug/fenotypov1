@@ -51,6 +51,8 @@ import { Badge } from '@/components/ui/badge';
 import Papa from 'papaparse';
 import jsPDF from 'jspdf';
 import { ImageZoomDialog, ImageThumbnail } from '@/components/ImageZoomDialog';
+import logoHorizontal from '@/assets/logo-fenotypo-horiz-2.png';
+import fistIcon from '@/assets/fist-icon.png';
 
 interface SessionData {
   id: string;
@@ -450,6 +452,130 @@ const AdminAnalytics = () => {
     setHeatmapData(heatmap);
   };
 
+  // Helper function to create bar chart on canvas
+  const createBarChartImage = (data: DemographicStats[], title: string): Promise<string> => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 600;
+      canvas.height = 300;
+      const ctx = canvas.getContext('2d')!;
+
+      // Background
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Title
+      ctx.fillStyle = '#000000';
+      ctx.font = 'bold 16px Arial';
+      ctx.fillText(title, 20, 30);
+
+      // Chart area
+      const chartX = 80;
+      const chartY = 50;
+      const chartWidth = canvas.width - 100;
+      const chartHeight = canvas.height - 80;
+      const barPadding = 10;
+      const barWidth = (chartWidth / data.length) - barPadding;
+
+      // Find max value
+      const maxValue = Math.max(...data.map(d => d.total));
+
+      // Draw bars
+      data.forEach((item, index) => {
+        const barHeight = (item.deferido / maxValue) * chartHeight;
+        const barX = chartX + (index * (barWidth + barPadding));
+        const barY = chartY + chartHeight - barHeight;
+
+        // Deferido (green)
+        ctx.fillStyle = '#10b981';
+        ctx.fillRect(barX, barY, barWidth, barHeight);
+
+        // Indeferido (red) - stacked
+        const indBarHeight = (item.indeferido / maxValue) * chartHeight;
+        ctx.fillStyle = '#ef4444';
+        ctx.fillRect(barX, barY - indBarHeight, barWidth, indBarHeight);
+
+        // Label
+        ctx.fillStyle = '#000000';
+        ctx.font = '10px Arial';
+        ctx.save();
+        ctx.translate(barX + barWidth / 2, chartY + chartHeight + 15);
+        ctx.rotate(-Math.PI / 4);
+        ctx.fillText(item.value.substring(0, 15), 0, 0);
+        ctx.restore();
+      });
+
+      // Y-axis
+      ctx.strokeStyle = '#000000';
+      ctx.beginPath();
+      ctx.moveTo(chartX, chartY);
+      ctx.lineTo(chartX, chartY + chartHeight);
+      ctx.stroke();
+
+      // X-axis
+      ctx.beginPath();
+      ctx.moveTo(chartX, chartY + chartHeight);
+      ctx.lineTo(chartX + chartWidth, chartY + chartHeight);
+      ctx.stroke();
+
+      resolve(canvas.toDataURL('image/png'));
+    });
+  };
+
+  // Helper function to create pie chart on canvas
+  const createPieChartImage = (data: DemographicStats[], title: string): Promise<string> => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 600;
+      canvas.height = 350;
+      const ctx = canvas.getContext('2d')!;
+
+      // Background
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Title
+      ctx.fillStyle = '#000000';
+      ctx.font = 'bold 16px Arial';
+      ctx.fillText(title, 20, 30);
+
+      // Pie chart
+      const centerX = 200;
+      const centerY = 200;
+      const radius = 120;
+      const total = data.reduce((sum, item) => sum + item.total, 0);
+      
+      let currentAngle = -Math.PI / 2;
+      const colors = ['#10b981', '#ef4444', '#f59e0b', '#3b82f6', '#8b5cf6', '#ec4899'];
+
+      data.forEach((item, index) => {
+        const sliceAngle = (item.total / total) * 2 * Math.PI;
+        
+        // Draw slice
+        ctx.fillStyle = colors[index % colors.length];
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY);
+        ctx.arc(centerX, centerY, radius, currentAngle, currentAngle + sliceAngle);
+        ctx.closePath();
+        ctx.fill();
+
+        // Draw legend
+        const legendX = 380;
+        const legendY = 80 + (index * 25);
+        ctx.fillStyle = colors[index % colors.length];
+        ctx.fillRect(legendX, legendY, 15, 15);
+        
+        ctx.fillStyle = '#000000';
+        ctx.font = '12px Arial';
+        ctx.fillText(`${item.value.substring(0, 20)}: ${item.total}`, legendX + 20, legendY + 12);
+
+        currentAngle += sliceAngle;
+      });
+
+      resolve(canvas.toDataURL('image/png'));
+    });
+  };
+
   const handleGeneratePDF = async () => {
     try {
       toast({
@@ -474,20 +600,40 @@ const AdminAnalytics = () => {
         pdf.text(new Date().toLocaleDateString('pt-BR'), pageWidth - margin, footerY, { align: 'right' });
       };
 
-      // Header with background
+      // Header with background and logo
       pdf.setFillColor(160, 117, 95); // Primary color from app
-      pdf.rect(0, 0, pageWidth, 35, 'F');
+      pdf.rect(0, 0, pageWidth, 40, 'F');
+      
+      // Add logo
+      const logoImg = new Image();
+      logoImg.src = logoHorizontal;
+      await new Promise((resolve) => {
+        logoImg.onload = () => {
+          pdf.addImage(logoImg, 'PNG', margin, 5, 40, 10);
+          resolve(null);
+        };
+      });
+
+      // Add fist icon
+      const fistImg = new Image();
+      fistImg.src = fistIcon;
+      await new Promise((resolve) => {
+        fistImg.onload = () => {
+          pdf.addImage(fistImg, 'PNG', margin + 42, 5, 8, 8);
+          resolve(null);
+        };
+      });
       
       pdf.setTextColor(255, 255, 255);
-      pdf.setFontSize(22);
+      pdf.setFontSize(20);
       pdf.setFont('helvetica', 'bold');
-      pdf.text('Relatório de Análise Demográfica', pageWidth / 2, 15, { align: 'center' });
+      pdf.text('Relatório de Análise Demográfica', pageWidth / 2, 20, { align: 'center' });
       
-      pdf.setFontSize(14);
+      pdf.setFontSize(12);
       pdf.setFont('helvetica', 'normal');
-      pdf.text(session?.nome || 'Sessão', pageWidth / 2, 25, { align: 'center' });
+      pdf.text(session?.nome || 'Sessão', pageWidth / 2, 30, { align: 'center' });
       
-      yPosition = 45;
+      yPosition = 50;
       pdf.setTextColor(0, 0, 0);
 
       // Summary Statistics Card
@@ -640,6 +786,42 @@ const AdminAnalytics = () => {
       yPosition = createDemographicTable('🎨 Análise por Pertencimento Racial', racaStats, yPosition);
       yPosition = createDemographicTable('🗺️ Análise por Região', regiaoStats, yPosition);
       yPosition = createDemographicTable('📚 Análise por Experiência', experienciaStats, yPosition);
+
+      // Add charts page
+      pdf.addPage();
+      yPosition = 20;
+
+      // Add bar chart for gender
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Gráficos de Análise', pageWidth / 2, yPosition, { align: 'center' });
+      yPosition += 15;
+
+      const generoBarChart = await createBarChartImage(generoStats, 'Distribuição por Gênero');
+      pdf.addImage(generoBarChart, 'PNG', margin, yPosition, contentWidth, 50);
+      yPosition += 60;
+
+      // Add pie chart for race
+      if (yPosition > pageHeight - 100) {
+        addFooter(Math.floor(yPosition / pageHeight) + 1);
+        pdf.addPage();
+        yPosition = 20;
+      }
+
+      const racaPieChart = await createPieChartImage(racaStats, 'Distribuição por Raça');
+      pdf.addImage(racaPieChart, 'PNG', margin, yPosition, contentWidth, 58);
+      yPosition += 68;
+
+      // Add bar chart for region
+      if (yPosition > pageHeight - 100) {
+        addFooter(Math.floor(yPosition / pageHeight) + 1);
+        pdf.addPage();
+        yPosition = 20;
+      }
+
+      const regiaoBarChart = await createBarChartImage(regiaoStats, 'Distribuição por Região');
+      pdf.addImage(regiaoBarChart, 'PNG', margin, yPosition, contentWidth, 50);
+      yPosition += 60;
 
       // Add footer to last page
       addFooter(Math.floor(yPosition / pageHeight) + 1);
