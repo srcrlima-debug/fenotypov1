@@ -10,7 +10,8 @@ import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { estadosData } from '@/lib/regionMapping';
-import { BookOpen, ListChecks, Scale, AlertTriangle, UserPlus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { BookOpen, ListChecks, Scale, AlertTriangle, UserPlus, ChevronLeft, ChevronRight, Shield } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const registerSchema = z.object({
   email: z.string().email({ message: 'Email inválido' }),
@@ -19,6 +20,9 @@ const registerSchema = z.object({
   genero: z.string().min(1, { message: 'Selecione o gênero' }),
   faixa_etaria: z.string().min(1, { message: 'Selecione a faixa etária' }),
   estado: z.string().min(1, { message: 'Selecione o estado' }),
+  consent: z.boolean().refine(val => val === true, {
+    message: 'Você deve concordar com os termos para continuar'
+  })
 }).refine((data) => data.password === data.confirmPassword, {
   message: "As senhas não coincidem",
   path: ["confirmPassword"],
@@ -42,7 +46,8 @@ export default function TrainingRegister() {
     faixa_etaria: '',
     estado: '',
     pertencimento_racial: '',
-    experiencia_bancas: ''
+    experiencia_bancas: '',
+    consent: false
   });
 
   useEffect(() => {
@@ -301,7 +306,7 @@ export default function TrainingRegister() {
       if (participantError) throw participantError;
 
       toast.success('Cadastro realizado com sucesso!');
-      navigate(`/training/${trainingId}/login`);
+      navigate(`/training/${trainingId}/welcome`);
     } catch (error: any) {
       console.error('Error during registration:', error);
       toast.error(error.message || 'Erro ao realizar cadastro');
@@ -528,7 +533,37 @@ export default function TrainingRegister() {
               </Select>
             </div>
 
-            <Button type="submit" className="w-full" disabled={loading}>
+            {/* LGPD Compliance Card */}
+            <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 space-y-3">
+              <div className="flex items-start gap-3">
+                <Shield className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                <div className="space-y-2 text-sm">
+                  <h4 className="font-semibold text-blue-900 dark:text-blue-100">
+                    Segurança e Privacidade - Conformidade com LGPD
+                  </h4>
+                  <p className="text-blue-700 dark:text-blue-300">
+                    Todas as medidas de segurança seguem as melhores práticas e estão em 
+                    conformidade com a Lei Geral de Proteção de Dados (LGPD).
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex items-start gap-3 bg-white dark:bg-gray-900 rounded p-3 border border-blue-200 dark:border-blue-800">
+                <Checkbox 
+                  id="consent"
+                  checked={formData.consent}
+                  onCheckedChange={(checked) => setFormData({...formData, consent: checked as boolean})}
+                  required
+                />
+                <Label htmlFor="consent" className="text-xs leading-relaxed cursor-pointer">
+                  Li e concordo com o <strong>uso anônimo dos meus dados</strong> para estudos 
+                  acadêmicos e aprimoramento dos processos de heteroidentificação. Estou ciente 
+                  de que todas as informações são tratadas em conformidade com a LGPD.
+                </Label>
+              </div>
+            </div>
+
+            <Button type="submit" className="w-full" disabled={loading || !formData.consent}>
               {loading ? 'Cadastrando...' : 'Cadastrar'}
             </Button>
 
