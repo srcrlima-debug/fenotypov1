@@ -48,6 +48,8 @@ export default function SessionTraining() {
   const [zoomOpen, setZoomOpen] = useState(false);
   const [participantCount, setParticipantCount] = useState(0);
   const [votedCount, setVotedCount] = useState(0);
+  const [userCompletedEvaluations, setUserCompletedEvaluations] = useState(false);
+  const [userTotalVotes, setUserTotalVotes] = useState(0);
 
   // Function to play notification sound when session starts
   const playStartSound = () => {
@@ -93,6 +95,16 @@ export default function SessionTraining() {
         navigate("/");
         return;
       }
+
+      // Check how many evaluations the user has completed
+      const { count: userVotesCount } = await supabase
+        .from("avaliacoes")
+        .select("*", { count: "exact", head: true })
+        .eq("session_id", sessionId)
+        .eq("user_id", user.id);
+
+      setUserTotalVotes(userVotesCount || 0);
+      setUserCompletedEvaluations((userVotesCount || 0) >= 30);
 
       const { data: session, error: sessionError } = await supabase
         .from("sessions")
@@ -316,10 +328,23 @@ export default function SessionTraining() {
     if (!canRespond) return;
     if (await saveAvaliacao(decision)) {
       setCanRespond(false);
-      toast({
-        title: "Resposta registrada",
-        description: "Aguardando próxima foto. Você completou " + sessionData.current_photo + " de 30 análises.",
-      });
+      const newTotal = userTotalVotes + 1;
+      setUserTotalVotes(newTotal);
+      
+      // Check if user completed all 30 evaluations
+      if (newTotal >= 30) {
+        setUserCompletedEvaluations(true);
+        toast({
+          title: "🎉 Parabéns!",
+          description: "Você completou todas as 30 avaliações! Agora você pode deixar seu feedback sobre a experiência.",
+          duration: 5000,
+        });
+      } else {
+        toast({
+          title: "Resposta registrada",
+          description: `Aguardando próxima foto. Você completou ${newTotal} de 30 análises.`,
+        });
+      }
     }
   };
 
@@ -489,9 +514,9 @@ export default function SessionTraining() {
           {/* Voting Stats */}
           <VotingStats votedCount={votedCount} totalParticipants={participantCount} />
 
-          {/* Feedback Card - Shows when session is completed or showing results */}
-          {(sessionData.session_status === 'completed' || sessionData.session_status === 'showing_results') && (
-            <Card className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border-blue-200 dark:border-blue-800">
+          {/* Feedback Card - Shows when user completes 30 evaluations OR session is completed/showing results */}
+          {(userCompletedEvaluations || sessionData.session_status === 'completed' || sessionData.session_status === 'showing_results') && (
+            <Card className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border-blue-200 dark:border-blue-800 animate-fade-in">
               <div className="flex items-start gap-4">
                 <div className="p-3 bg-blue-100 dark:bg-blue-900 rounded-full">
                   <MessageSquare className="h-6 w-6 text-blue-600 dark:text-blue-300" />
@@ -499,10 +524,13 @@ export default function SessionTraining() {
                 <div className="flex-1 space-y-3">
                   <div>
                     <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-100">
-                      Compartilhe sua experiência
+                      {userCompletedEvaluations ? '🎉 Avaliação completa!' : 'Compartilhe sua experiência'}
                     </h3>
                     <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
-                      Sua opinião é muito importante para melhorarmos continuamente o sistema de avaliação.
+                      {userCompletedEvaluations 
+                        ? 'Você completou todas as 30 avaliações! Deixe seu feedback e concorra a badges exclusivos.'
+                        : 'Sua opinião é muito importante para melhorarmos continuamente o sistema de avaliação.'
+                      }
                     </p>
                   </div>
                   <Button
@@ -565,7 +593,7 @@ export default function SessionTraining() {
                   ✓ Voto registrado! Aguardando liberação da próxima imagem...
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Você completou {sessionData.current_photo} de 30 análises
+                  Você completou {userTotalVotes} de 30 análises
                 </p>
               </div>
             )}
