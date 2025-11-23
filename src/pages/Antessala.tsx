@@ -118,7 +118,10 @@ export default function Antessala() {
           description: "Faça login para participar da sessão",
           variant: "destructive",
         });
-        navigate(`/login?redirect=/antessala/${sessionId}`);
+        const redirectUrl = trainingId 
+          ? `/training/${trainingId}/login?redirect=/training/${trainingId}/session/${sessionId}/antessala`
+          : `/login?redirect=/antessala/${sessionId}`;
+        navigate(redirectUrl);
         return;
       }
 

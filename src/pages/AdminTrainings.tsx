@@ -10,13 +10,23 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Plus, Users, Calendar, Copy, BarChart3, FileText, GitCompare, Pencil, Archive } from 'lucide-react';
+import { Plus, Users, Calendar, Copy, BarChart3, FileText, GitCompare, PlayCircle, UserPlus, Link2 } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuLabel, 
+  DropdownMenuSeparator, 
+  DropdownMenuTrigger 
+} from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
 
 export default function AdminTrainings() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [trainings, setTrainings] = useState<any[]>([]);
+  const [sessions, setSessions] = useState<Record<string, any[]>>({});
   const [loading, setLoading] = useState(true);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [selectedForComparison, setSelectedForComparison] = useState<string[]>([]);
@@ -43,6 +53,24 @@ export default function AdminTrainings() {
 
       if (error) throw error;
       setTrainings(data || []);
+
+      // Load sessions for each training
+      if (data) {
+        const sessionsMap: Record<string, any[]> = {};
+        await Promise.all(
+          data.map(async (training) => {
+            const { data: sessionData } = await supabase
+              .from('sessions')
+              .select('*')
+              .eq('training_id', training.id)
+              .in('session_status', ['waiting', 'active'])
+              .order('created_at', { ascending: false });
+            
+            sessionsMap[training.id] = sessionData || [];
+          })
+        );
+        setSessions(sessionsMap);
+      }
     } catch (error) {
       console.error('Error loading trainings:', error);
       toast.error('Erro ao carregar treinamentos');
@@ -80,7 +108,13 @@ export default function AdminTrainings() {
   const copyRegistrationLink = (trainingId: string) => {
     const link = `${window.location.origin}/training/${trainingId}/register`;
     navigator.clipboard.writeText(link);
-    toast.success('Link copiado para área de transferência!');
+    toast.success('Link de Pré-cadastro copiado!');
+  };
+
+  const copySessionLink = (trainingId: string, sessionId: string, sessionName: string) => {
+    const link = `${window.location.origin}/training/${trainingId}/session/${sessionId}/antessala`;
+    navigator.clipboard.writeText(link);
+    toast.success(`Link da sessão "${sessionName}" copiado!`);
   };
 
   const toggleComparison = (trainingId: string) => {
@@ -213,14 +247,73 @@ export default function AdminTrainings() {
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => copyRegistrationLink(training.id)}
-                >
-                  <Copy className="w-4 h-4 mr-2" />
-                  Link de Cadastro
-                </Button>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => copyRegistrationLink(training.id)}
+                        className="border-blue-500/50 hover:bg-blue-50 dark:hover:bg-blue-950"
+                      >
+                        <UserPlus className="w-4 h-4 mr-2 text-blue-600" />
+                        Link de Pré-cadastro
+                        <Badge variant="outline" className="ml-2 bg-blue-100 text-blue-700 border-blue-300">
+                          Antes
+                        </Badge>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Enviar antes do treinamento para cadastro de participantes</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+
+                {sessions[training.id]?.length > 0 && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="border-green-500/50 hover:bg-green-50 dark:hover:bg-green-950"
+                            >
+                              <PlayCircle className="w-4 h-4 mr-2 text-green-600" />
+                              Link da Sessão
+                              <Badge variant="outline" className="ml-2 bg-green-100 text-green-700 border-green-300">
+                                Ao Vivo
+                              </Badge>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start" className="w-56">
+                            <DropdownMenuLabel>Selecione a sessão</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            {sessions[training.id].map((session) => (
+                              <DropdownMenuItem
+                                key={session.id}
+                                onClick={() => copySessionLink(training.id, session.id, session.nome)}
+                                className="cursor-pointer"
+                              >
+                                <Link2 className="w-4 h-4 mr-2" />
+                                <div className="flex flex-col">
+                                  <span className="font-medium">{session.nome}</span>
+                                  <span className="text-xs text-muted-foreground">
+                                    {new Date(session.data).toLocaleDateString('pt-BR')}
+                                  </span>
+                                </div>
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Enviar no dia do treinamento - apenas para participantes cadastrados</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
                 <Button
                   variant="outline"
                   size="sm"

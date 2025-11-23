@@ -1,16 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
+import { z } from 'zod';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { estadosData } from '@/lib/regionMapping';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { z } from 'zod';
+import { BookOpen, ListChecks, Scale, AlertTriangle, UserPlus, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const registerSchema = z.object({
   email: z.string().email({ message: 'Email inválido' }),
@@ -32,6 +32,7 @@ export default function TrainingRegister() {
   const [training, setTraining] = useState<any>(null);
   const [loadingTraining, setLoadingTraining] = useState(true);
   const [currentStep, setCurrentStep] = useState(0);
+  const [touchStart, setTouchStart] = useState(0);
 
   const [formData, setFormData] = useState({
     email: '',
@@ -102,57 +103,99 @@ export default function TrainingRegister() {
 
   const carouselSteps = [
     {
-      title: "Bem-vindo ao Treinamento",
+      title: 'Bem-vindo ao Treinamento',
+      icon: BookOpen,
       content: (
-        <div className="space-y-4">
-          <p className="text-lg">
-            Este é um treinamento para compreensão e aplicação da Portaria Normativa nº 4, de 6 de abril de 2018, 
-            que estabelece os procedimentos de heteroidentificação complementar à autodeclaração de candidatos negros.
+        <div className="text-center space-y-4">
+          <div className="mx-auto w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+            <BookOpen className="w-10 h-10 text-primary" />
+          </div>
+          <h3 className="text-2xl font-bold">Treinamento de Avaliação Fenotípica</h3>
+          <p className="text-muted-foreground text-lg">
+            Este treinamento visa aprimorar a percepção sobre vieses raciais em processos de avaliação. 
+            Você participará de uma dinâmica onde avaliará imagens de forma sincronizada com outros participantes.
           </p>
         </div>
       )
     },
     {
-      title: "Como Funciona",
+      title: 'Como Funciona',
+      icon: ListChecks,
       content: (
         <div className="space-y-4">
-          <h3 className="font-semibold text-lg">O treinamento consiste em:</h3>
-          <ol className="list-decimal list-inside space-y-2">
-            <li>Apresentação de 30 fotografias</li>
-            <li>Para cada foto, você terá tempo determinado para avaliar</li>
-            <li>Sua avaliação será registrada anonimamente</li>
-            <li>Ao final, você receberá feedback sobre suas escolhas</li>
-          </ol>
-        </div>
-      )
-    },
-    {
-      title: "Critérios de Avaliação",
-      content: (
-        <div className="space-y-4">
-          <p>As opções de resposta são:</p>
-          <ul className="list-disc list-inside space-y-2">
-            <li><strong>Branca:</strong> Pessoa que não apresenta características fenotípicas que a qualifiquem como preta ou parda</li>
-            <li><strong>Parda:</strong> Pessoa com características fenotípicas intermediárias</li>
-            <li><strong>Preta:</strong> Pessoa com características fenotípicas preponderantes da população afrodescendente</li>
-            <li><strong>Não se aplica:</strong> Quando não é possível fazer uma avaliação</li>
+          <div className="mx-auto w-20 h-20 rounded-full bg-blue-500/10 flex items-center justify-center mb-4">
+            <ListChecks className="w-10 h-10 text-blue-600" />
+          </div>
+          <h3 className="text-xl font-bold text-center">Dinâmica do Treinamento</h3>
+          <ul className="space-y-3 text-muted-foreground">
+            <li className="flex items-start gap-2">
+              <span className="font-bold text-primary">•</span>
+              <span>Você verá uma série de imagens apresentadas individualmente</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="font-bold text-primary">•</span>
+              <span>Para cada imagem, terá tempo limitado para fazer sua avaliação</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="font-bold text-primary">•</span>
+              <span>Todos os participantes avaliam simultaneamente</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="font-bold text-primary">•</span>
+              <span>Ao final, haverá análise coletiva dos resultados</span>
+            </li>
           </ul>
         </div>
       )
     },
     {
-      title: "Importante",
+      title: 'Critérios de Avaliação',
+      icon: Scale,
       content: (
         <div className="space-y-4">
-          <div className="bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
-            <p className="font-semibold mb-2">Atenção:</p>
-            <ul className="list-disc list-inside space-y-1">
-              <li>Use preferencialmente computador, notebook ou tablet</li>
-              <li>Certifique-se de ter boa conexão com a internet</li>
-              <li>O treinamento acontecerá em tempo real</li>
-              <li>Você precisa estar presente no horário agendado</li>
-            </ul>
+          <div className="mx-auto w-20 h-20 rounded-full bg-purple-500/10 flex items-center justify-center mb-4">
+            <Scale className="w-10 h-10 text-purple-600" />
           </div>
+          <h3 className="text-xl font-bold text-center">O que avaliar?</h3>
+          <p className="text-muted-foreground text-center">
+            Sua avaliação deve considerar características fenotípicas visíveis nas imagens, 
+            baseando-se em critérios específicos que serão explicados durante o treinamento.
+          </p>
+          <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 mt-4">
+            <p className="text-sm text-center font-medium">
+              📊 Os resultados serão analisados estatisticamente para identificar padrões e possíveis vieses
+            </p>
+          </div>
+        </div>
+      )
+    },
+    {
+      title: 'Importante',
+      icon: AlertTriangle,
+      content: (
+        <div className="space-y-4">
+          <div className="mx-auto w-20 h-20 rounded-full bg-amber-500/10 flex items-center justify-center mb-4">
+            <AlertTriangle className="w-10 h-10 text-amber-600" />
+          </div>
+          <h3 className="text-xl font-bold text-center text-amber-600">⚠️ Pontos de Atenção</h3>
+          <ul className="space-y-3 text-muted-foreground">
+            <li className="flex items-start gap-2">
+              <span className="font-bold text-amber-600">•</span>
+              <span>Mantenha concentração durante toda a dinâmica</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="font-bold text-amber-600">•</span>
+              <span>Não há respostas certas ou erradas, apenas percepções</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="font-bold text-amber-600">•</span>
+              <span>Os dados são anônimos e usados apenas para fins educacionais</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="font-bold text-amber-600">•</span>
+              <span>Sua participação é voluntária e pode ser interrompida a qualquer momento</span>
+            </li>
+          </ul>
         </div>
       )
     }
@@ -167,6 +210,23 @@ export default function TrainingRegister() {
   const prevStep = () => {
     if (currentStep > 0) {
       setCurrentStep(currentStep - 1);
+    }
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    const touchEnd = e.changedTouches[0].clientX;
+    const diff = touchStart - touchEnd;
+    
+    if (Math.abs(diff) > 50) {
+      if (diff > 0) {
+        nextStep();
+      } else {
+        prevStep();
+      }
     }
   };
 
@@ -281,38 +341,71 @@ export default function TrainingRegister() {
         <CardContent>
           {currentStep < carouselSteps.length ? (
             <div className="space-y-6">
-              <div className="min-h-[300px] flex items-center justify-center">
-                {carouselSteps[currentStep].content}
+              {/* Progress Bar */}
+              <div className="space-y-2">
+                <div className="w-full bg-muted rounded-full h-2">
+                  <div 
+                    className="bg-primary h-2 rounded-full transition-all duration-500 ease-out"
+                    style={{ width: `${((currentStep + 1) / (carouselSteps.length + 1)) * 100}%` }}
+                  />
+                </div>
+                <p className="text-sm text-muted-foreground text-center">
+                  Passo {currentStep + 1} de {carouselSteps.length}
+                </p>
               </div>
-              
-              <div className="flex justify-between items-center pt-4 border-t">
+
+              {/* Carousel Content with Touch Support */}
+              <div 
+                className="min-h-[350px] flex items-center justify-center"
+                onTouchStart={handleTouchStart}
+                onTouchEnd={handleTouchEnd}
+              >
+                <div className="animate-fade-in w-full">
+                  {carouselSteps[currentStep].content}
+                </div>
+              </div>
+
+              {/* Carousel indicators - Clickable */}
+              <div className="flex justify-center gap-2">
+                {carouselSteps.map((step, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setCurrentStep(index)}
+                    className={`rounded-full transition-all duration-300 hover:scale-125 ${
+                      index === currentStep 
+                        ? 'bg-primary w-8 h-3' 
+                        : index < currentStep 
+                          ? 'bg-primary/50 w-3 h-3' 
+                          : 'bg-muted w-3 h-3'
+                    }`}
+                    aria-label={`Ir para passo ${index + 1}: ${step.title}`}
+                  />
+                ))}
+              </div>
+
+              {/* Navigation buttons */}
+              <div className="flex justify-between gap-4">
                 <Button
-                  type="button"
                   variant="outline"
                   onClick={prevStep}
                   disabled={currentStep === 0}
+                  className="gap-2"
                 >
-                  <ChevronLeft className="w-4 h-4 mr-2" />
+                  <ChevronLeft className="w-4 h-4" />
                   Anterior
                 </Button>
-                
-                <div className="flex gap-2">
-                  {carouselSteps.map((_, index) => (
-                    <div
-                      key={index}
-                      className={`w-2 h-2 rounded-full transition-colors ${
-                        index === currentStep ? 'bg-primary' : 'bg-muted'
-                      }`}
-                    />
-                  ))}
-                </div>
-                
-                <Button
-                  type="button"
-                  onClick={nextStep}
-                >
-                  {currentStep === carouselSteps.length - 1 ? 'Fazer Cadastro' : 'Próximo'}
-                  <ChevronRight className="w-4 h-4 ml-2" />
+                <Button onClick={nextStep} className="gap-2">
+                  {currentStep === carouselSteps.length - 1 ? (
+                    <>
+                      <UserPlus className="w-4 h-4" />
+                      Ir para Cadastro
+                    </>
+                  ) : (
+                    <>
+                      Próximo
+                      <ChevronRight className="w-4 h-4" />
+                    </>
+                  )}
                 </Button>
               </div>
             </div>
