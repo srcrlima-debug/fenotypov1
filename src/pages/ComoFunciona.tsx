@@ -58,7 +58,7 @@ const ComoFunciona = () => {
                 </li>
                 <li className="flex items-start gap-3 p-3 bg-white/50 dark:bg-black/20 rounded-lg">
                   <span className="flex-shrink-0 w-7 h-7 flex items-center justify-center bg-blue-500 text-white rounded-full font-bold text-sm">2</span>
-                  <span>Crie seu usuário e complete seu perfil com todas as informações solicitadas</span>
+                  <span>Clique no botão Cadastre-se e crie seu usuário. Complete seu perfil com todas as informações solicitadas</span>
                 </li>
                 <li className="flex items-start gap-3 p-3 bg-white/50 dark:bg-black/20 rounded-lg">
                   <span className="flex-shrink-0 w-7 h-7 flex items-center justify-center bg-blue-500 text-white rounded-full font-bold text-sm">3</span>
