@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Copy, Plus, CalendarDays, Users, Link2, ChartBar, Play, Pencil, Trash2, TriangleAlert, TrendingUp } from 'lucide-react';
+import { Copy, Plus, CalendarDays, Users, Link2, ChartBar, Play, Pencil, Trash2, TriangleAlert, TrendingUp, UserPlus } from 'lucide-react';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { sessionSchema } from '@/lib/validators';
@@ -371,15 +371,47 @@ const Admin = () => {
                         </div>
                       </div>
                       <div className="flex gap-2 flex-wrap">
+                        {/* 1. Link de Cadastro - Primeiro */}
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => {
+                            const link = `${window.location.origin}/antessala/${session.id}`;
+                            navigator.clipboard.writeText(link);
+                            toast({
+                              title: 'Link de Cadastro Copiado!',
+                              description: 'Link para cadastro e vinculação de participantes copiado',
+                            });
+                          }}
+                          className="gap-2 bg-blue-600 hover:bg-blue-700"
+                        >
+                          <UserPlus className="h-4 w-4" />
+                          Link Cadastro
+                        </Button>
+
+                        {/* 2. Controlar Ao Vivo - Verde */}
                         <Button
                           variant="default"
                           size="sm"
                           onClick={() => navigate(`/admin/live/${session.id}`)}
-                          className="gap-2"
+                          className="gap-2 bg-green-600 hover:bg-green-700"
                         >
                           <Play className="h-4 w-4" />
                           Controlar Ao Vivo
                         </Button>
+
+                        {/* 3. Link para Ao Vivo - Laranja */}
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => copyLink(session.id)}
+                          className="gap-2 bg-orange-600 hover:bg-orange-700"
+                        >
+                          <Copy className="h-4 w-4" />
+                          Link Ao Vivo
+                        </Button>
+
+                        {/* 4. Dashboard */}
                         <Button
                           variant="outline"
                           size="sm"
@@ -388,6 +420,8 @@ const Admin = () => {
                           <ChartBar className="h-4 w-4 mr-2" />
                           Dashboard
                         </Button>
+
+                        {/* 5. Análise Demográfica */}
                         <Button
                           variant="outline"
                           size="sm"
@@ -396,6 +430,8 @@ const Admin = () => {
                           <Users className="h-4 w-4 mr-2" />
                           Análise Demográfica
                         </Button>
+
+                        {/* 6. Divergências */}
                         <Button
                           variant="outline"
                           size="sm"
@@ -404,14 +440,8 @@ const Admin = () => {
                           <TriangleAlert className="h-4 w-4 mr-2" />
                           Divergências
                         </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => copyLink(session.id)}
-                        >
-                          <Copy className="h-4 w-4 mr-2" />
-                          Copiar Link
-                        </Button>
+
+                        {/* 7. Editar */}
                         <Button
                           variant="outline"
                           size="sm"
@@ -420,6 +450,8 @@ const Admin = () => {
                           <Pencil className="h-4 w-4 mr-2" />
                           Editar
                         </Button>
+
+                        {/* 8. Excluir */}
                         <Button
                           variant="destructive"
                           size="sm"
