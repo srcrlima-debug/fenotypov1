@@ -26,6 +26,7 @@ export type Database = {
           resposta: string
           session_id: string
           tempo_gasto: number
+          training_id: string | null
           user_id: string
         }
         Insert: {
@@ -39,6 +40,7 @@ export type Database = {
           resposta: string
           session_id: string
           tempo_gasto: number
+          training_id?: string | null
           user_id: string
         }
         Update: {
@@ -52,6 +54,7 @@ export type Database = {
           resposta?: string
           session_id?: string
           tempo_gasto?: number
+          training_id?: string | null
           user_id?: string
         }
         Relationships: [
@@ -67,6 +70,13 @@ export type Database = {
             columns: ["session_id"]
             isOneToOne: false
             referencedRelation: "sessions_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "avaliacoes_training_id_fkey"
+            columns: ["training_id"]
+            isOneToOne: false
+            referencedRelation: "trainings"
             referencedColumns: ["id"]
           },
           {
@@ -131,6 +141,7 @@ export type Database = {
           photo_duration: number | null
           photo_start_time: string | null
           session_status: string | null
+          training_id: string | null
           updated_at: string
         }
         Insert: {
@@ -143,6 +154,7 @@ export type Database = {
           photo_duration?: number | null
           photo_start_time?: string | null
           session_status?: string | null
+          training_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -155,6 +167,98 @@ export type Database = {
           photo_duration?: number | null
           photo_start_time?: string | null
           session_status?: string | null
+          training_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sessions_training_id_fkey"
+            columns: ["training_id"]
+            isOneToOne: false
+            referencedRelation: "trainings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      training_participants: {
+        Row: {
+          created_at: string
+          email: string
+          estado: string
+          experiencia_bancas: string | null
+          faixa_etaria: string
+          genero: string
+          id: string
+          pertencimento_racial: string | null
+          regiao: string | null
+          training_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          estado: string
+          experiencia_bancas?: string | null
+          faixa_etaria: string
+          genero: string
+          id?: string
+          pertencimento_racial?: string | null
+          regiao?: string | null
+          training_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          estado?: string
+          experiencia_bancas?: string | null
+          faixa_etaria?: string
+          genero?: string
+          id?: string
+          pertencimento_racial?: string | null
+          regiao?: string | null
+          training_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_participants_training_id_fkey"
+            columns: ["training_id"]
+            isOneToOne: false
+            referencedRelation: "trainings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trainings: {
+        Row: {
+          created_at: string
+          created_by: string
+          data: string
+          descricao: string | null
+          id: string
+          nome: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          data: string
+          descricao?: string | null
+          id?: string
+          nome: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          data?: string
+          descricao?: string | null
+          id?: string
+          nome?: string
+          status?: string
           updated_at?: string
         }
         Relationships: []
@@ -230,6 +334,10 @@ export type Database = {
       is_session_active: { Args: { _session_id: string }; Returns: boolean }
       is_session_creator: {
         Args: { _session_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_training_participant: {
+        Args: { _training_id: string; _user_id: string }
         Returns: boolean
       }
       next_photo: { Args: { session_id_param: string }; Returns: undefined }
