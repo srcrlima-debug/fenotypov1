@@ -401,20 +401,32 @@ export default function SessionFeedback() {
             {/* Recommendation */}
             <Card>
               <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
+                <div className="space-y-4">
                   <div className="space-y-0.5">
                     <Label>Você recomendaria esta sessão?</Label>
                     <p className="text-sm text-muted-foreground">
                       Indicaria este tipo de avaliação para outros colegas?
                     </p>
                   </div>
-                  <Switch
-                    checked={formData.recomendaria}
-                    onCheckedChange={(checked) =>
-                      setFormData({ ...formData, recomendaria: checked })
-                    }
-                    disabled={submitted && !existingFeedback}
-                  />
+                  <div className="flex items-center justify-center gap-4">
+                    <span className={`text-sm font-medium transition-colors ${
+                      !formData.recomendaria ? 'text-foreground' : 'text-muted-foreground'
+                    }`}>
+                      Não
+                    </span>
+                    <Switch
+                      checked={formData.recomendaria}
+                      onCheckedChange={(checked) =>
+                        setFormData({ ...formData, recomendaria: checked })
+                      }
+                      disabled={submitted && !existingFeedback}
+                    />
+                    <span className={`text-sm font-medium transition-colors ${
+                      formData.recomendaria ? 'text-foreground' : 'text-muted-foreground'
+                    }`}>
+                      Sim
+                    </span>
+                  </div>
                 </div>
               </CardContent>
             </Card>
