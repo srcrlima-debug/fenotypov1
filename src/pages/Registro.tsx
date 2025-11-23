@@ -48,10 +48,18 @@ const Registro = () => {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  // Get redirect URL from query params or location state
+  // Get redirect URL and email from query params
   const searchParams = new URLSearchParams(location.search);
   const redirectParam = searchParams.get('redirect');
+  const emailParam = searchParams.get('email');
   const from = redirectParam || (location.state as any)?.from || '/';
+
+  // Pre-fill email if provided
+  useEffect(() => {
+    if (emailParam) {
+      setFormData(prev => ({ ...prev, email: emailParam }));
+    }
+  }, [emailParam]);
 
   useEffect(() => {
     if (user) {
