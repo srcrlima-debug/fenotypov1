@@ -63,6 +63,9 @@ import {
 } from '@/components/ui/table';
 import { Progress } from '@/components/ui/progress';
 import { ImageZoomDialog, ImageThumbnail } from '@/components/ImageZoomDialog';
+import { BiasAlertSystem } from '@/components/BiasAlertSystem';
+import { ResponsePatternAnalysis } from '@/components/ResponsePatternAnalysis';
+import { BiasIdentification } from '@/components/BiasIdentification';
 
 interface SessionData {
   id: string;
@@ -845,6 +848,17 @@ const AdminDashboard = () => {
               </div>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Bias Alert System */}
+        {sessionId && (
+          <BiasAlertSystem sessionId={sessionId} threshold={15} />
+        )}
+
+        {/* Pattern Analysis and Bias Identification */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {sessionId && <ResponsePatternAnalysis sessionId={sessionId} />}
+          {sessionId && <BiasIdentification sessionId={sessionId} />}
         </div>
 
         {/* Charts Grid */}
