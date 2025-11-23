@@ -763,9 +763,9 @@ export default function AdminHistory() {
                         <div className="flex-1">
                           <h4 className="font-semibold mb-1">Foto {photo.foto_id}</h4>
                           <div className="text-sm text-muted-foreground">
-                            <span className="text-green-600 font-medium">{photo.deferidos} Deferidos</span>
+                            <span className="text-success font-medium">{photo.deferidos} Deferidos</span>
                             {" · "}
-                            <span className="text-red-600 font-medium">{photo.indeferidos} Indeferidos</span>
+                            <span className="text-destructive font-medium">{photo.indeferidos} Indeferidos</span>
                             {" · "}
                             <span>{photo.total} votos</span>
                           </div>
