@@ -28,7 +28,10 @@ export const feedbackSchema = z.object({
     .trim()
     .max(1000, { message: 'Sugestões devem ter no máximo 1000 caracteres' })
     .optional(),
-  recomendaria: z.boolean().optional(),
+  recomendaria: z.boolean({
+    required_error: 'Por favor, indique se recomendaria esta sessão',
+    invalid_type_error: 'Por favor, selecione uma opção'
+  }),
 });
 
 export type FeedbackFormData = z.infer<typeof feedbackSchema>;
