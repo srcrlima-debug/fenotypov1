@@ -45,6 +45,13 @@ interface DemographicData {
   count: number;
 }
 
+interface PhotoData {
+  foto_id: number;
+  deferidos: number;
+  indeferidos: number;
+  total: number;
+}
+
 export default function AdminHistory() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -53,10 +60,59 @@ export default function AdminHistory() {
   const [loading, setLoading] = useState(true);
   const [exportingPdf, setExportingPdf] = useState<string | null>(null);
   const [exportingExcel, setExportingExcel] = useState<string | null>(null);
+  const [exportingPhotoPdf, setExportingPhotoPdf] = useState<string | null>(null);
+  const [expandedSession, setExpandedSession] = useState<string | null>(null);
+  const [sessionPhotos, setSessionPhotos] = useState<Record<string, PhotoData[]>>({});
 
   useEffect(() => {
     fetchSessions();
   }, []);
+
+  const loadSessionPhotos = async (sessionId: string) => {
+    if (sessionPhotos[sessionId]) return; // Already loaded
+    
+    try {
+      const { data: votes, error } = await supabase
+        .from("avaliacoes")
+        .select("foto_id, resposta")
+        .eq("session_id", sessionId);
+
+      if (error) throw error;
+
+      const photoStats: Record<number, PhotoData> = {};
+      votes?.forEach(vote => {
+        if (!photoStats[vote.foto_id]) {
+          photoStats[vote.foto_id] = { 
+            foto_id: vote.foto_id, 
+            deferidos: 0, 
+            indeferidos: 0, 
+            total: 0 
+          };
+        }
+        photoStats[vote.foto_id].total++;
+        if (vote.resposta === "DEFERIDO") photoStats[vote.foto_id].deferidos++;
+        if (vote.resposta === "INDEFERIDO") photoStats[vote.foto_id].indeferidos++;
+      });
+
+      const photosArray = Object.values(photoStats).sort((a, b) => a.foto_id - b.foto_id);
+      setSessionPhotos(prev => ({ ...prev, [sessionId]: photosArray }));
+    } catch (error: any) {
+      toast({
+        title: "Erro ao carregar fotos",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const toggleSession = (sessionId: string) => {
+    if (expandedSession === sessionId) {
+      setExpandedSession(null);
+    } else {
+      setExpandedSession(sessionId);
+      loadSessionPhotos(sessionId);
+    }
+  };
 
   const fetchSessions = async () => {
     try {
@@ -310,6 +366,107 @@ export default function AdminHistory() {
     }
   };
 
+  const exportPhotoToPDF = async (sessionName: string, photoData: PhotoData) => {
+    try {
+      setExportingPhotoPdf(`${photoData.foto_id}`);
+      
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      let yPos = 20;
+
+      // Load image
+      const imageUrl = `/images/foto-${photoData.foto_id}.jpg`;
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+        img.src = imageUrl;
+      });
+
+      // Title
+      doc.setFontSize(18);
+      doc.text(`Foto ${photoData.foto_id}`, pageWidth / 2, yPos, { align: "center" });
+      yPos += 15;
+
+      // Add image - scaled to fit nicely
+      const imgWidth = 80;
+      const imgHeight = (img.height / img.width) * imgWidth;
+      const imgX = 20;
+      doc.addImage(img, "JPEG", imgX, yPos, imgWidth, imgHeight);
+
+      // Results panel next to image
+      const panelX = imgX + imgWidth + 15;
+      const panelY = yPos;
+      
+      doc.setFontSize(16);
+      doc.setFont(undefined, "bold");
+      doc.text("Resultados", panelX, panelY);
+      
+      doc.setFontSize(14);
+      doc.setFont(undefined, "normal");
+      
+      const totalVotes = photoData.total;
+      const defPercent = ((photoData.deferidos / totalVotes) * 100).toFixed(1);
+      const indefPercent = ((photoData.indeferidos / totalVotes) * 100).toFixed(1);
+      
+      // Deferidos
+      doc.setDrawColor(34, 197, 94); // green
+      doc.setFillColor(34, 197, 94);
+      doc.rect(panelX, panelY + 10, 60, 20, "F");
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(12);
+      doc.text("DEFERIDOS", panelX + 30, panelY + 18, { align: "center" });
+      doc.setFontSize(16);
+      doc.setFont(undefined, "bold");
+      doc.text(`${photoData.deferidos}`, panelX + 30, panelY + 26, { align: "center" });
+      doc.setFontSize(10);
+      doc.setFont(undefined, "normal");
+      doc.text(`${defPercent}%`, panelX + 30, panelY + 31, { align: "center" });
+      
+      // Indeferidos
+      doc.setDrawColor(239, 68, 68); // red
+      doc.setFillColor(239, 68, 68);
+      doc.rect(panelX, panelY + 35, 60, 20, "F");
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(12);
+      doc.text("INDEFERIDOS", panelX + 30, panelY + 43, { align: "center" });
+      doc.setFontSize(16);
+      doc.setFont(undefined, "bold");
+      doc.text(`${photoData.indeferidos}`, panelX + 30, panelY + 51, { align: "center" });
+      doc.setFontSize(10);
+      doc.setFont(undefined, "normal");
+      doc.text(`${indefPercent}%`, panelX + 30, panelY + 56, { align: "center" });
+      
+      // Total votes
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(11);
+      doc.text(`Total de votos: ${totalVotes}`, panelX, panelY + 70);
+
+      // Session info at bottom
+      yPos = Math.max(yPos + imgHeight, panelY + 80) + 20;
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      doc.text(`Sessão: ${sessionName}`, 20, yPos);
+
+      doc.save(`Foto-${photoData.foto_id}.pdf`);
+      
+      toast({
+        title: "Relatório exportado",
+        description: `PDF da Foto ${photoData.foto_id} gerado com sucesso`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erro ao exportar PDF",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setExportingPhotoPdf(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -366,7 +523,7 @@ export default function AdminHistory() {
                   <Badge variant="secondary">Concluída</Badge>
                 </div>
 
-                <div className="flex gap-3">
+                <div className="flex gap-3 mb-4">
                   <Button
                     variant="outline"
                     onClick={() => exportToPDF(session)}
@@ -378,7 +535,7 @@ export default function AdminHistory() {
                     ) : (
                       <FileDown className="w-4 h-4 mr-2" />
                     )}
-                    Exportar PDF
+                    Exportar PDF Completo
                   </Button>
                   <Button
                     variant="outline"
@@ -394,6 +551,51 @@ export default function AdminHistory() {
                     Exportar Excel
                   </Button>
                 </div>
+
+                <Button
+                  variant="ghost"
+                  onClick={() => toggleSession(session.id)}
+                  className="w-full"
+                >
+                  {expandedSession === session.id ? "Ocultar" : "Ver"} Fotos Individuais
+                </Button>
+
+                {expandedSession === session.id && sessionPhotos[session.id] && (
+                  <div className="mt-4 pt-4 border-t grid gap-3">
+                    {sessionPhotos[session.id].map((photo) => (
+                      <div key={photo.foto_id} className="flex items-center gap-4 p-3 bg-muted/30 rounded-lg">
+                        <img 
+                          src={`/images/foto-${photo.foto_id}.jpg`}
+                          alt={`Foto ${photo.foto_id}`}
+                          className="w-16 h-16 object-cover rounded"
+                        />
+                        <div className="flex-1">
+                          <h4 className="font-semibold mb-1">Foto {photo.foto_id}</h4>
+                          <div className="text-sm text-muted-foreground">
+                            <span className="text-green-600 font-medium">{photo.deferidos} Deferidos</span>
+                            {" · "}
+                            <span className="text-red-600 font-medium">{photo.indeferidos} Indeferidos</span>
+                            {" · "}
+                            <span>{photo.total} votos</span>
+                          </div>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => exportPhotoToPDF(session.nome, photo)}
+                          disabled={exportingPhotoPdf === `${photo.foto_id}`}
+                        >
+                          {exportingPhotoPdf === `${photo.foto_id}` ? (
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          ) : (
+                            <FileDown className="w-4 h-4 mr-2" />
+                          )}
+                          PDF
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </Card>
             ))}
           </div>
