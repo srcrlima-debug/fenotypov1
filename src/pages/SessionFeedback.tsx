@@ -409,8 +409,10 @@ export default function SessionFeedback() {
                     </p>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className={`text-sm font-medium transition-colors ${
-                      formData.recomendaria === false ? 'text-foreground' : 'text-muted-foreground'
+                    <span className={`text-sm font-medium transition-all duration-300 ease-out ${
+                      formData.recomendaria === false 
+                        ? 'text-foreground scale-110' 
+                        : 'text-muted-foreground scale-100'
                     }`}>
                       Não
                     </span>
@@ -420,17 +422,23 @@ export default function SessionFeedback() {
                         setFormData({ ...formData, recomendaria: checked })
                       }
                       disabled={submitted && !existingFeedback}
-                      className={formData.recomendaria === true ? 'data-[state=checked]:bg-green-600' : ''}
+                      className={`transition-all duration-300 ${
+                        formData.recomendaria === true 
+                          ? 'data-[state=checked]:bg-green-600 scale-110' 
+                          : 'scale-100'
+                      }`}
                     />
-                    <span className={`text-sm font-medium transition-colors ${
-                      formData.recomendaria === true ? 'text-green-600 font-semibold' : 'text-muted-foreground'
+                    <span className={`text-sm font-medium transition-all duration-300 ease-out ${
+                      formData.recomendaria === true 
+                        ? 'text-green-600 font-semibold scale-110 animate-fade-in' 
+                        : 'text-muted-foreground scale-100'
                     }`}>
                       Sim
                     </span>
                   </div>
                 </div>
                 {errors.recomendaria && (
-                  <p className="text-sm text-destructive mt-2">{errors.recomendaria}</p>
+                  <p className="text-sm text-destructive mt-2 animate-fade-in">{errors.recomendaria}</p>
                 )}
               </CardContent>
             </Card>
