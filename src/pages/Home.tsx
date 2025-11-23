@@ -122,14 +122,14 @@ const Home = () => {
         <footer className="mt-16 pb-8 text-center">
           <div className="flex flex-col items-center gap-3">
             <div className="flex items-center justify-center gap-2 text-base font-bold text-muted-foreground">
-              <span>Feito pelo Prof. Cristhian Lima</span>
+              <span>Feito pelo Prof. Cristhian Lima - 2025</span>
               <img 
                 src={fistIcon} 
                 alt="Punho cerrado" 
                 className="h-16 w-16 inline-block animate-bounce-slow"
                 style={{ animationDuration: '1.5s' }}
               />
-              <span>Compromisso Antirracista 2025</span>
+              <span>Compromisso com a Educação Antirracista</span>
             </div>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <span>©</span>
