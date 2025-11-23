@@ -88,6 +88,33 @@ export type Database = {
           },
         ]
       }
+      badge_definitions: {
+        Row: {
+          created_at: string
+          criterio: string
+          descricao: string
+          icone: string
+          id: string
+          nome: string
+        }
+        Insert: {
+          created_at?: string
+          criterio: string
+          descricao: string
+          icone: string
+          id?: string
+          nome: string
+        }
+        Update: {
+          created_at?: string
+          criterio?: string
+          descricao?: string
+          icone?: string
+          id?: string
+          nome?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -320,6 +347,52 @@ export type Database = {
         }
         Relationships: []
       }
+      user_badges: {
+        Row: {
+          badge_id: string
+          earned_at: string
+          id: string
+          session_id: string | null
+          user_id: string
+        }
+        Insert: {
+          badge_id: string
+          earned_at?: string
+          id?: string
+          session_id?: string | null
+          user_id: string
+        }
+        Update: {
+          badge_id?: string
+          earned_at?: string
+          id?: string
+          session_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_badges_badge_id_fkey"
+            columns: ["badge_id"]
+            isOneToOne: false
+            referencedRelation: "badge_definitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_badges_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_badges_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -381,6 +454,16 @@ export type Database = {
       }
     }
     Functions: {
+      check_and_award_badges: {
+        Args: { _feedback_data: Json; _session_id: string; _user_id: string }
+        Returns: {
+          badge_descricao: string
+          badge_icone: string
+          badge_id: string
+          badge_nome: string
+          is_new: boolean
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

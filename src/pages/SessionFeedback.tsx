@@ -9,10 +9,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Switch } from '@/components/ui/switch';
 import { Header } from '@/components/Header';
-import { Star, Send, CheckCircle, Loader2 } from 'lucide-react';
+import { Star, Send, CheckCircle, Loader2, Award } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { feedbackSchema, FeedbackFormData } from '@/lib/feedbackValidation';
 import { z } from 'zod';
+import { BadgeNotification } from '@/components/BadgeNotification';
+import { BadgeDisplay } from '@/components/BadgeDisplay';
 
 export default function SessionFeedback() {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -25,15 +27,17 @@ export default function SessionFeedback() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [existingFeedback, setExistingFeedback] = useState<any>(null);
+  const [userBadges, setUserBadges] = useState<any[]>([]);
+  const [newBadges, setNewBadges] = useState<any[]>([]);
 
   const [formData, setFormData] = useState<FeedbackFormData>({
-    rating: 5,
+    rating: 0,
     experiencia_geral: '',
-    clareza_instrucoes: 5,
-    tempo_adequado: 5,
-    interface_qualidade: 5,
+    clareza_instrucoes: 0,
+    tempo_adequado: 0,
+    interface_qualidade: 0,
     sugestoes: '',
-    recomendaria: true,
+    recomendaria: false,
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -58,6 +62,31 @@ export default function SessionFeedback() {
       if (sessionError) throw sessionError;
       setSession(sessionData);
 
+      // Load user badges
+      const { data: badgesData } = await supabase
+        .from('user_badges')
+        .select(`
+          badge_id,
+          earned_at,
+          badge_definitions (
+            nome,
+            descricao,
+            icone
+          )
+        `)
+        .eq('user_id', user?.id);
+
+      if (badgesData) {
+        const formattedBadges = badgesData.map((b: any) => ({
+          badge_id: b.badge_id,
+          badge_nome: b.badge_definitions.nome,
+          badge_descricao: b.badge_definitions.descricao,
+          badge_icone: b.badge_definitions.icone,
+          earned_at: b.earned_at,
+        }));
+        setUserBadges(formattedBadges);
+      }
+
       // Check if user already submitted feedback
       const { data: feedbackData, error: feedbackError } = await supabase
         .from('training_feedback')
@@ -71,11 +100,11 @@ export default function SessionFeedback() {
         setFormData({
           rating: feedbackData.rating,
           experiencia_geral: feedbackData.experiencia_geral || '',
-          clareza_instrucoes: feedbackData.clareza_instrucoes || 5,
-          tempo_adequado: feedbackData.tempo_adequado || 5,
-          interface_qualidade: feedbackData.interface_qualidade || 5,
+          clareza_instrucoes: feedbackData.clareza_instrucoes || 0,
+          tempo_adequado: feedbackData.tempo_adequado || 0,
+          interface_qualidade: feedbackData.interface_qualidade || 0,
           sugestoes: feedbackData.sugestoes || '',
-          recomendaria: feedbackData.recomendaria ?? true,
+          recomendaria: feedbackData.recomendaria ?? false,
         });
         setSubmitted(true);
       }
@@ -125,6 +154,19 @@ export default function SessionFeedback() {
 
       if (error) throw error;
 
+      // Check for earned badges
+      const { data: earnedBadges } = await supabase.rpc('check_and_award_badges', {
+        _user_id: user?.id,
+        _session_id: sessionId,
+        _feedback_data: formData,
+      });
+
+      if (earnedBadges && earnedBadges.length > 0) {
+        setNewBadges(earnedBadges);
+        // Reload badges to show in UI
+        await loadData();
+      }
+
       setSubmitted(true);
       toast({
         title: 'Feedback enviado!',
@@ -133,7 +175,7 @@ export default function SessionFeedback() {
 
       setTimeout(() => {
         navigate('/');
-      }, 2000);
+      }, 3000);
     } catch (error) {
       if (error instanceof z.ZodError) {
         const newErrors: Record<string, string> = {};
@@ -223,6 +265,7 @@ export default function SessionFeedback() {
   return (
     <>
       <Header />
+      <BadgeNotification badges={newBadges} onDismiss={() => setNewBadges([])} />
       <div className="min-h-screen bg-background p-6">
         <div className="max-w-3xl mx-auto space-y-6">
           <div>
@@ -231,6 +274,24 @@ export default function SessionFeedback() {
               {session?.nome} - {new Date(session?.data).toLocaleDateString('pt-BR')}
             </p>
           </div>
+
+          {/* User Badges Display */}
+          {userBadges.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Award className="w-5 h-5 text-primary" />
+                  Seus Badges
+                </CardTitle>
+                <CardDescription>
+                  Continue deixando feedback detalhado para conquistar mais badges!
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <BadgeDisplay badges={userBadges} variant="compact" />
+              </CardContent>
+            </Card>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Overall Rating */}
@@ -263,7 +324,7 @@ export default function SessionFeedback() {
                 <div>
                   <Label>Clareza das Instruções</Label>
                   <div className="mt-2">
-                    {renderStars(formData.clareza_instrucoes || 5, (value) =>
+                    {renderStars(formData.clareza_instrucoes || 0, (value) =>
                       setFormData({ ...formData, clareza_instrucoes: value })
                     )}
                   </div>
@@ -272,7 +333,7 @@ export default function SessionFeedback() {
                 <div>
                   <Label>Tempo Adequado para Avaliação</Label>
                   <div className="mt-2">
-                    {renderStars(formData.tempo_adequado || 5, (value) =>
+                    {renderStars(formData.tempo_adequado || 0, (value) =>
                       setFormData({ ...formData, tempo_adequado: value })
                     )}
                   </div>
@@ -281,7 +342,7 @@ export default function SessionFeedback() {
                 <div>
                   <Label>Qualidade da Interface</Label>
                   <div className="mt-2">
-                    {renderStars(formData.interface_qualidade || 5, (value) =>
+                    {renderStars(formData.interface_qualidade || 0, (value) =>
                       setFormData({ ...formData, interface_qualidade: value })
                     )}
                   </div>
