@@ -42,7 +42,7 @@ const Home = () => {
             
             <div className="card-3d bg-[#a0755f]/10 border-2 border-[#a0755f] rounded-xl p-6 max-w-2xl mx-auto">
               <p className="text-base text-[#5a4a42] font-bold leading-relaxed">
-                Os links de acesso ao treinamento serão enviados pelo chat quando o administrador iniciar a sessão.
+                O link de acesso ao treinamento será enviado pelo chat quando o Prof. Cristhian iniciar a sessão de treinamento.
               </p>
             </div>
           </div>
@@ -110,7 +110,7 @@ const Home = () => {
           >
             <div className="flex items-center gap-3">
               <div className="w-3 h-3 rounded-full bg-[#a0755f]" />
-              <span className="text-base">30 Páginas</span>
+              <span className="text-base">Análise de 30 casos</span>
             </div>
             <div className="flex items-center gap-3">
               <div className="w-3 h-3 rounded-full bg-[#a0755f]" />
