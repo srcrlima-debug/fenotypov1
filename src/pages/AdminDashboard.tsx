@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import Papa from 'papaparse';
+import { generateDetailedPDFReport } from '@/lib/pdfExport';
 import { Header } from '@/components/Header';
 import {
   Select,
@@ -507,48 +508,42 @@ const AdminDashboard = () => {
   };
 
   const exportToPDF = () => {
-    const doc = new jsPDF();
-    
-    // Title
-    doc.setFontSize(18);
-    doc.text(`Relatório: ${session?.nome}`, 20, 20);
-    
-    doc.setFontSize(12);
-    doc.text(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 20, 30);
-    
-    // Stats
-    doc.setFontSize(14);
-    doc.text('Estatísticas Gerais', 20, 45);
-    doc.setFontSize(10);
-    doc.text(`Total de Participantes: ${stats?.totalParticipants}`, 20, 55);
-    doc.text(`Avaliações Concluídas: ${stats?.totalEvaluations}`, 20, 62);
-    doc.text(`Taxa de Conclusão: ${stats?.completionRate.toFixed(1)}%`, 20, 69);
-    doc.text(`Tempo Médio: ${formatTime(stats?.averageTime || 0)}`, 20, 76);
-    
-    // KPIs
-    doc.setFontSize(14);
-    doc.text('Principais Indicadores', 20, 91);
-    doc.setFontSize(10);
-    doc.text(`Foto Mais Deferida: #${kpis?.mostDeferida.fotoId} (${kpis?.mostDeferida.percent.toFixed(1)}%)`, 20, 101);
-    doc.text(`Foto Mais Indeferida: #${kpis?.mostIndeferida.fotoId} (${kpis?.mostIndeferida.percent.toFixed(1)}%)`, 20, 108);
-    doc.text(`Maior Tempo Médio: #${kpis?.longestTime.fotoId} (${formatTime(kpis?.longestTime.time || 0)})`, 20, 115);
-    doc.text(`Consenso Geral: ${kpis?.consenso.toFixed(1)}%`, 20, 122);
-    
-    // Low consensus photos
-    doc.setFontSize(14);
-    doc.text('Fotos com Baixo Consenso (<70%)', 20, 137);
-    doc.setFontSize(10);
-    const lowConsensus = consensusData.filter(c => c.baixoConsenso);
-    lowConsensus.slice(0, 10).forEach((item, idx) => {
-      doc.text(`Foto #${item.fotoId}: ${item.consenso.toFixed(1)}% de consenso`, 20, 147 + (idx * 7));
-    });
-    
-    doc.save(`relatorio_${session?.nome}_${new Date().toISOString().split('T')[0]}.pdf`);
-    
-    toast({
-      title: 'Relatório gerado',
-      description: 'PDF baixado com sucesso',
-    });
+    if (!session || !stats || !kpis) {
+      toast({
+        title: 'Erro',
+        description: 'Dados insuficientes para gerar relatório',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      const fileName = generateDetailedPDFReport({
+        sessionName: session.nome,
+        sessionDate: session.data,
+        totalParticipants: stats.totalParticipants,
+        totalEvaluations: stats.totalEvaluations,
+        completionRate: stats.completionRate,
+        averageTime: stats.averageTime,
+        photoStats,
+        demographicData,
+        kpis,
+        consensusData,
+        temporalData,
+      });
+      
+      toast({
+        title: 'Relatório detalhado gerado!',
+        description: `${fileName} foi baixado com sucesso`,
+      });
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast({
+        title: 'Erro ao gerar PDF',
+        description: 'Ocorreu um erro ao criar o relatório',
+        variant: 'destructive',
+      });
+    }
   };
 
   if (loading) {
