@@ -46,18 +46,29 @@ const Home = () => {
             </div>
           </div>
 
-          {/* Main CTA Button */}
+          {/* Main CTA Buttons */}
           <div 
             ref={ctaRef}
             className={`pt-3 scroll-reveal ${ctaVisible ? 'revealed' : ''}`}
           >
-            <Button
-              onClick={() => navigate("/como-funciona")}
-              size="lg"
-              className="button-3d h-20 px-16 text-xl font-bold bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-2xl rounded-xl border-4 border-green-700 transition-all duration-300"
-            >
-              📖 Como Funciona
-            </Button>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 max-w-2xl mx-auto">
+              <Button
+                onClick={() => navigate("/como-funciona")}
+                size="lg"
+                className="button-3d h-20 w-full sm:flex-1 text-xl font-bold bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-2xl rounded-xl border-4 border-green-700 transition-all duration-300"
+              >
+                📖 Como Funciona
+              </Button>
+              {user && (
+                <Button
+                  onClick={() => navigate("/admin")}
+                  size="lg"
+                  className="button-3d h-20 w-full sm:flex-1 text-xl font-bold bg-gradient-to-r from-[#5a4a42] to-[#4a3a32] hover:from-[#4a3a32] hover:to-[#3a2a22] text-white shadow-2xl rounded-xl border-4 border-[#5a4a42] transition-all duration-300"
+                >
+                  📊 Acessar Dashboard
+                </Button>
+              )}
+            </div>
           </div>
 
           {/* Login/Register Buttons for Non-Authenticated Users */}
@@ -84,21 +95,6 @@ const Home = () => {
               <p className="text-sm text-center text-muted-foreground">
                 (se já cadastrado, clique em Entrar)
               </p>
-            </div>
-          )}
-
-          {/* Dashboard Link for Authenticated Users */}
-          {user && (
-            <div 
-              className={`pt-4 scroll-reveal ${ctaVisible ? 'revealed' : ''}`}
-            >
-              <Button
-                onClick={() => navigate("/admin")}
-                size="lg"
-                className="h-14 px-12 text-lg font-semibold bg-[#5a4a42] hover:bg-[#4a3a32] text-white shadow-xl rounded-lg"
-              >
-                📊 Acessar Dashboard
-              </Button>
             </div>
           )}
 

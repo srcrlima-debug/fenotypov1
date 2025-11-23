@@ -269,14 +269,24 @@ const Admin = () => {
               <h1 className="text-4xl font-bold text-foreground">Painel Administrativo</h1>
               <p className="text-muted-foreground mt-2">Gerencie sessões de avaliação</p>
             </div>
-            <Button
-              variant="outline"
-              onClick={() => navigate('/admin/history')}
-              className="gap-2"
-            >
-              <Calendar className="h-4 w-4" />
-              Ver Histórico
-            </Button>
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                onClick={() => navigate('/admin/history')}
+                className="gap-2"
+              >
+                <Calendar className="h-4 w-4" />
+                Ver Histórico
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => navigate('/admin/comparison')}
+                className="gap-2"
+              >
+                <BarChart3 className="h-4 w-4" />
+                Comparar Sessões
+              </Button>
+            </div>
           </div>
 
         {/* Create Session Form */}

@@ -370,8 +370,51 @@ export default function AdminHistory() {
     try {
       setExportingPhotoPdf(`${photoData.foto_id}`);
       
+      // Fetch demographic data for this photo
+      const { data: votes, error } = await supabase
+        .from("avaliacoes")
+        .select(`
+          resposta,
+          profiles (
+            genero,
+            faixa_etaria,
+            regiao
+          )
+        `)
+        .eq("foto_id", photoData.foto_id);
+
+      if (error) throw error;
+
+      // Process demographic data
+      const demoStats = {
+        genero: {} as Record<string, { deferidos: number; indeferidos: number }>,
+        faixa_etaria: {} as Record<string, { deferidos: number; indeferidos: number }>,
+        regiao: {} as Record<string, { deferidos: number; indeferidos: number }>,
+      };
+
+      votes?.forEach((vote: any) => {
+        const profile = vote.profiles;
+        if (!profile) return;
+
+        ['genero', 'faixa_etaria', 'regiao'].forEach((demo) => {
+          const value = profile[demo];
+          if (!value) return;
+          
+          if (!demoStats[demo as keyof typeof demoStats][value]) {
+            demoStats[demo as keyof typeof demoStats][value] = { deferidos: 0, indeferidos: 0 };
+          }
+          
+          if (vote.resposta === "DEFERIDO") {
+            demoStats[demo as keyof typeof demoStats][value].deferidos++;
+          } else {
+            demoStats[demo as keyof typeof demoStats][value].indeferidos++;
+          }
+        });
+      });
+      
       const doc = new jsPDF();
       const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
       let yPos = 20;
 
       // Load image
@@ -412,7 +455,7 @@ export default function AdminHistory() {
       const indefPercent = ((photoData.indeferidos / totalVotes) * 100).toFixed(1);
       
       // Deferidos
-      doc.setDrawColor(34, 197, 94); // green
+      doc.setDrawColor(34, 197, 94);
       doc.setFillColor(34, 197, 94);
       doc.rect(panelX, panelY + 10, 60, 20, "F");
       doc.setTextColor(255, 255, 255);
@@ -426,7 +469,7 @@ export default function AdminHistory() {
       doc.text(`${defPercent}%`, panelX + 30, panelY + 31, { align: "center" });
       
       // Indeferidos
-      doc.setDrawColor(239, 68, 68); // red
+      doc.setDrawColor(239, 68, 68);
       doc.setFillColor(239, 68, 68);
       doc.rect(panelX, panelY + 35, 60, 20, "F");
       doc.setTextColor(255, 255, 255);
@@ -444,8 +487,156 @@ export default function AdminHistory() {
       doc.setFontSize(11);
       doc.text(`Total de votos: ${totalVotes}`, panelX, panelY + 70);
 
-      // Session info at bottom
-      yPos = Math.max(yPos + imgHeight, panelY + 80) + 20;
+      // New page for demographic charts
+      doc.addPage();
+      yPos = 20;
+
+      // Helper function to draw pie chart
+      const drawPieChart = (x: number, y: number, radius: number, data: Array<{ label: string; value: number; color: number[] }>) => {
+        let startAngle = -90;
+        const total = data.reduce((sum, d) => sum + d.value, 0);
+        
+        data.forEach(item => {
+          const sliceAngle = (item.value / total) * 360;
+          doc.setFillColor(item.color[0], item.color[1], item.color[2]);
+          
+          // Draw slice
+          const endAngle = startAngle + sliceAngle;
+          const startRad = (startAngle * Math.PI) / 180;
+          const endRad = (endAngle * Math.PI) / 180;
+          
+          doc.moveTo(x, y);
+          doc.lineTo(x + radius * Math.cos(startRad), y + radius * Math.sin(startRad));
+          
+          for (let a = startAngle; a <= endAngle; a += 5) {
+            const rad = (a * Math.PI) / 180;
+            doc.lineTo(x + radius * Math.cos(rad), y + radius * Math.sin(rad));
+          }
+          
+          doc.lineTo(x + radius * Math.cos(endRad), y + radius * Math.sin(endRad));
+          doc.lineTo(x, y);
+          doc.fill();
+          
+          startAngle = endAngle;
+        });
+      };
+
+      // Helper function to draw bar chart
+      const drawBarChart = (startX: number, startY: number, data: Array<{ label: string; deferidos: number; indeferidos: number }>, maxBarHeight: number) => {
+        const barWidth = 30;
+        const gap = 10;
+        const maxValue = Math.max(...data.map(d => Math.max(d.deferidos, d.indeferidos)));
+        
+        data.forEach((item, index) => {
+          const x = startX + index * (barWidth * 2 + gap);
+          
+          // Deferidos bar
+          const defHeight = (item.deferidos / maxValue) * maxBarHeight;
+          doc.setFillColor(34, 197, 94);
+          doc.rect(x, startY - defHeight, barWidth, defHeight, "F");
+          doc.setFontSize(8);
+          doc.setTextColor(0, 0, 0);
+          doc.text(`${item.deferidos}`, x + barWidth/2, startY - defHeight - 2, { align: "center" });
+          
+          // Indeferidos bar
+          const indefHeight = (item.indeferidos / maxValue) * maxBarHeight;
+          doc.setFillColor(239, 68, 68);
+          doc.rect(x + barWidth, startY - indefHeight, barWidth, indefHeight, "F");
+          doc.text(`${item.indeferidos}`, x + barWidth + barWidth/2, startY - indefHeight - 2, { align: "center" });
+          
+          // Label
+          doc.setFontSize(7);
+          doc.text(item.label.substring(0, 8), x + barWidth, startY + 5, { align: "center" });
+        });
+        
+        // Legend
+        doc.setFillColor(34, 197, 94);
+        doc.rect(startX, startY + 15, 8, 8, "F");
+        doc.setFontSize(9);
+        doc.setTextColor(0, 0, 0);
+        doc.text("Deferidos", startX + 10, startY + 21);
+        
+        doc.setFillColor(239, 68, 68);
+        doc.rect(startX + 50, startY + 15, 8, 8, "F");
+        doc.text("Indeferidos", startX + 60, startY + 21);
+      };
+
+      // Demographic Charts Title
+      doc.setFontSize(16);
+      doc.setFont(undefined, "bold");
+      doc.setTextColor(0, 0, 0);
+      doc.text("Análise Demográfica", pageWidth / 2, yPos, { align: "center" });
+      yPos += 15;
+
+      // Gender Pie Chart
+      doc.setFontSize(12);
+      doc.setFont(undefined, "bold");
+      doc.text("Distribuição por Gênero", 20, yPos);
+      yPos += 10;
+      
+      const generoData = Object.entries(demoStats.genero).map(([label, counts], index) => ({
+        label,
+        value: counts.deferidos + counts.indeferidos,
+        color: [[66, 135, 245], [245, 158, 66], [153, 102, 255], [102, 187, 106]][index % 4]
+      }));
+      
+      if (generoData.length > 0) {
+        drawPieChart(50, yPos + 20, 25, generoData);
+        
+        // Legend
+        let legendY = yPos + 5;
+        generoData.forEach((item, index) => {
+          doc.setFillColor(item.color[0], item.color[1], item.color[2]);
+          doc.rect(90, legendY, 5, 5, "F");
+          doc.setFontSize(9);
+          doc.setTextColor(0, 0, 0);
+          doc.text(`${item.label}: ${item.value}`, 98, legendY + 4);
+          legendY += 8;
+        });
+      }
+
+      // Age Group Bar Chart
+      yPos += 60;
+      doc.setFontSize(12);
+      doc.setFont(undefined, "bold");
+      doc.text("Votos por Faixa Etária", 20, yPos);
+      yPos += 10;
+      
+      const faixaData = Object.entries(demoStats.faixa_etaria).map(([label, counts]) => ({
+        label,
+        deferidos: counts.deferidos,
+        indeferidos: counts.indeferidos
+      }));
+      
+      if (faixaData.length > 0) {
+        drawBarChart(20, yPos + 50, faixaData, 40);
+      }
+
+      // Region Bar Chart
+      yPos += 90;
+      if (yPos > pageHeight - 80) {
+        doc.addPage();
+        yPos = 20;
+      }
+      
+      doc.setFontSize(12);
+      doc.setFont(undefined, "bold");
+      doc.text("Votos por Região", 20, yPos);
+      yPos += 10;
+      
+      const regiaoData = Object.entries(demoStats.regiao).map(([label, counts]) => ({
+        label,
+        deferidos: counts.deferidos,
+        indeferidos: counts.indeferidos
+      }));
+      
+      if (regiaoData.length > 0) {
+        drawBarChart(20, yPos + 50, regiaoData.slice(0, 5), 40);
+      }
+
+      // Session info at bottom of first page
+      doc.setPage(1);
+      yPos = Math.max(imgHeight + 35, 130);
       doc.setFontSize(10);
       doc.setTextColor(100, 100, 100);
       doc.text(`Sessão: ${sessionName}`, 20, yPos);
@@ -454,7 +645,7 @@ export default function AdminHistory() {
       
       toast({
         title: "Relatório exportado",
-        description: `PDF da Foto ${photoData.foto_id} gerado com sucesso`,
+        description: `PDF da Foto ${photoData.foto_id} com gráficos demográficos gerado com sucesso`,
       });
     } catch (error: any) {
       toast({
