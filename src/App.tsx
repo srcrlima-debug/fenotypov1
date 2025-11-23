@@ -36,6 +36,8 @@ import TrainingLogin from "./pages/TrainingLogin";
 import TrainingWelcome from "./pages/TrainingWelcome";
 import Training from "./pages/Training";
 import SessionTraining from "./pages/SessionTraining";
+import SessionFeedback from "./pages/SessionFeedback";
+import AdminFeedback from "./pages/AdminFeedback";
 import Results from "./pages/Results";
 import Error404 from "./pages/Error404";
 
@@ -197,10 +199,26 @@ const App = () => (
                     }
                   />
                   <Route
+                    path="/admin/feedback/:sessionId"
+                    element={
+                      <AdminRoute>
+                        <AdminFeedback />
+                      </AdminRoute>
+                    }
+                  />
+                  <Route
                     path="/treino/:sessionId"
                     element={
                       <ProtectedRoute>
                         <SessionTraining />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/feedback/:sessionId" 
+                    element={
+                      <ProtectedRoute>
+                        <SessionFeedback />
                       </ProtectedRoute>
                     } 
                   />

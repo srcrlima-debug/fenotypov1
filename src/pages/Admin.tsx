@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Copy, Plus, CalendarDays, Users, Link2, ChartBar, Play, Pencil, Trash2, TriangleAlert, TrendingUp, UserPlus } from 'lucide-react';
+import { Copy, Plus, CalendarDays, Users, Link2, ChartBar, Play, Pencil, Trash2, TriangleAlert, TrendingUp, UserPlus, MessageSquare } from 'lucide-react';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { sessionSchema } from '@/lib/validators';
@@ -441,7 +441,17 @@ const Admin = () => {
                           Divergências
                         </Button>
 
-                        {/* 7. Editar */}
+                        {/* 7. Feedbacks */}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => navigate(`/admin/feedback/${session.id}`)}
+                        >
+                          <MessageSquare className="h-4 w-4 mr-2" />
+                          Feedbacks
+                        </Button>
+
+                        {/* 8. Editar */}
                         <Button
                           variant="outline"
                           size="sm"
@@ -451,7 +461,7 @@ const Admin = () => {
                           Editar
                         </Button>
 
-                        {/* 8. Excluir */}
+                        {/* 9. Excluir */}
                         <Button
                           variant="destructive"
                           size="sm"

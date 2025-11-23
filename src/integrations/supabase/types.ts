@@ -180,6 +180,63 @@ export type Database = {
           },
         ]
       }
+      training_feedback: {
+        Row: {
+          clareza_instrucoes: number | null
+          created_at: string
+          experiencia_geral: string | null
+          id: string
+          interface_qualidade: number | null
+          rating: number
+          recomendaria: boolean | null
+          session_id: string
+          sugestoes: string | null
+          tempo_adequado: number | null
+          user_id: string
+        }
+        Insert: {
+          clareza_instrucoes?: number | null
+          created_at?: string
+          experiencia_geral?: string | null
+          id?: string
+          interface_qualidade?: number | null
+          rating: number
+          recomendaria?: boolean | null
+          session_id: string
+          sugestoes?: string | null
+          tempo_adequado?: number | null
+          user_id: string
+        }
+        Update: {
+          clareza_instrucoes?: number | null
+          created_at?: string
+          experiencia_geral?: string | null
+          id?: string
+          interface_qualidade?: number | null
+          rating?: number
+          recomendaria?: boolean | null
+          session_id?: string
+          sugestoes?: string | null
+          tempo_adequado?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_feedback_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_feedback_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       training_participants: {
         Row: {
           created_at: string
