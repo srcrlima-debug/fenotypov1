@@ -11,6 +11,8 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BiasAlertSystem } from '@/components/BiasAlertSystem';
+import { ResponsePatternAnalysis } from '@/components/ResponsePatternAnalysis';
+import { BiasIdentification } from '@/components/BiasIdentification';
 
 interface DemographicData {
   category: string;
@@ -374,6 +376,12 @@ const AdminDemographicDashboard = () => {
 
           {/* Bias Alert System */}
           <BiasAlertSystem sessionId={sessionId!} threshold={15} />
+
+          {/* Pattern Analysis and Bias Identification */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-fade-in">
+            <ResponsePatternAnalysis sessionId={sessionId!} />
+            <BiasIdentification sessionId={sessionId!} />
+          </div>
 
           {/* Filters */}
           <Card className="animate-slide-in">
