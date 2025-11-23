@@ -16,7 +16,9 @@ import {
   ZoomIn, 
   TriangleAlert,
   Loader,
-  Info 
+  Info,
+  MessageSquare,
+  Send
 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { VotingFooter } from "@/components/VotingFooter";
@@ -486,6 +488,34 @@ export default function SessionTraining() {
 
           {/* Voting Stats */}
           <VotingStats votedCount={votedCount} totalParticipants={participantCount} />
+
+          {/* Feedback Card - Shows when session is completed or showing results */}
+          {(sessionData.session_status === 'completed' || sessionData.session_status === 'showing_results') && (
+            <Card className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border-blue-200 dark:border-blue-800">
+              <div className="flex items-start gap-4">
+                <div className="p-3 bg-blue-100 dark:bg-blue-900 rounded-full">
+                  <MessageSquare className="h-6 w-6 text-blue-600 dark:text-blue-300" />
+                </div>
+                <div className="flex-1 space-y-3">
+                  <div>
+                    <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-100">
+                      Compartilhe sua experiência
+                    </h3>
+                    <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                      Sua opinião é muito importante para melhorarmos continuamente o sistema de avaliação.
+                    </p>
+                  </div>
+                  <Button
+                    onClick={() => navigate(`/feedback/${sessionId}`)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    <Send className="w-4 h-4 mr-2" />
+                    Deixar Feedback
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          )}
 
           {/* Image and buttons */}
           <Card className="p-6 space-y-4">
