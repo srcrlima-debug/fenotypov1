@@ -37,7 +37,7 @@ export default function SessionFeedback() {
     tempo_adequado: 0,
     interface_qualidade: 0,
     sugestoes: '',
-    recomendaria: false,
+    recomendaria: undefined,
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -401,33 +401,37 @@ export default function SessionFeedback() {
             {/* Recommendation */}
             <Card>
               <CardContent className="pt-6">
-                <div className="space-y-4">
-                  <div className="space-y-0.5">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="space-y-0.5 flex-1">
                     <Label>Você recomendaria esta sessão?</Label>
                     <p className="text-sm text-muted-foreground">
                       Indicaria este tipo de avaliação para outros colegas?
                     </p>
                   </div>
-                  <div className="flex items-center justify-center gap-4">
+                  <div className="flex items-center gap-3">
                     <span className={`text-sm font-medium transition-colors ${
-                      !formData.recomendaria ? 'text-foreground' : 'text-muted-foreground'
+                      formData.recomendaria === false ? 'text-foreground' : 'text-muted-foreground'
                     }`}>
                       Não
                     </span>
                     <Switch
-                      checked={formData.recomendaria}
+                      checked={formData.recomendaria === true}
                       onCheckedChange={(checked) =>
                         setFormData({ ...formData, recomendaria: checked })
                       }
                       disabled={submitted && !existingFeedback}
+                      className={formData.recomendaria === true ? 'data-[state=checked]:bg-green-600' : ''}
                     />
                     <span className={`text-sm font-medium transition-colors ${
-                      formData.recomendaria ? 'text-foreground' : 'text-muted-foreground'
+                      formData.recomendaria === true ? 'text-green-600 font-semibold' : 'text-muted-foreground'
                     }`}>
                       Sim
                     </span>
                   </div>
                 </div>
+                {errors.recomendaria && (
+                  <p className="text-sm text-destructive mt-2">{errors.recomendaria}</p>
+                )}
               </CardContent>
             </Card>
 
