@@ -3,7 +3,7 @@ import { z } from 'zod';
 export const feedbackSchema = z.object({
   rating: z.number()
     .int({ message: 'Avaliação deve ser um número inteiro' })
-    .min(1, { message: 'Avaliação mínima é 1' })
+    .min(1, { message: 'Por favor, selecione uma avaliação de 1 a 5 estrelas' })
     .max(5, { message: 'Avaliação máxima é 5' }),
   experiencia_geral: z.string()
     .trim()
@@ -11,17 +11,17 @@ export const feedbackSchema = z.object({
     .optional(),
   clareza_instrucoes: z.number()
     .int()
-    .min(1)
+    .min(0)
     .max(5)
     .optional(),
   tempo_adequado: z.number()
     .int()
-    .min(1)
+    .min(0)
     .max(5)
     .optional(),
   interface_qualidade: z.number()
     .int()
-    .min(1)
+    .min(0)
     .max(5)
     .optional(),
   sugestoes: z.string()
