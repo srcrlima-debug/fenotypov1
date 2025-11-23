@@ -66,6 +66,7 @@ import { ImageZoomDialog, ImageThumbnail } from '@/components/ImageZoomDialog';
 import { BiasAlertSystem } from '@/components/BiasAlertSystem';
 import { ResponsePatternAnalysis } from '@/components/ResponsePatternAnalysis';
 import { BiasIdentification } from '@/components/BiasIdentification';
+import { SamePersonDiscrepancy } from '@/components/SamePersonDiscrepancy';
 
 interface SessionData {
   id: string;
@@ -853,6 +854,11 @@ const AdminDashboard = () => {
         {/* Bias Alert System */}
         {sessionId && (
           <BiasAlertSystem sessionId={sessionId} threshold={15} />
+        )}
+
+        {/* Same Person Discrepancy Analysis */}
+        {sessionId && (
+          <SamePersonDiscrepancy sessionId={sessionId} />
         )}
 
         {/* Pattern Analysis and Bias Identification */}

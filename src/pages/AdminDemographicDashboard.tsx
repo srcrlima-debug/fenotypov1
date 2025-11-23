@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BiasAlertSystem } from '@/components/BiasAlertSystem';
 import { ResponsePatternAnalysis } from '@/components/ResponsePatternAnalysis';
 import { BiasIdentification } from '@/components/BiasIdentification';
+import { SamePersonDiscrepancy } from '@/components/SamePersonDiscrepancy';
 
 interface DemographicData {
   category: string;
@@ -376,6 +377,9 @@ const AdminDemographicDashboard = () => {
 
           {/* Bias Alert System */}
           <BiasAlertSystem sessionId={sessionId!} threshold={15} />
+
+          {/* Same Person Discrepancy Analysis */}
+          <SamePersonDiscrepancy sessionId={sessionId!} />
 
           {/* Pattern Analysis and Bias Identification */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-fade-in">
