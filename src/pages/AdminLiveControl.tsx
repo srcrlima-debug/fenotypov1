@@ -75,6 +75,7 @@ export default function AdminLiveControl() {
   const [resultsShownForPhoto, setResultsShownForPhoto] = useState<number | null>(null);
   const [showNextPhotoDialog, setShowNextPhotoDialog] = useState(false);
   const [showCompleteSessionDialog, setShowCompleteSessionDialog] = useState(false);
+  const [allVotedSoundPlayed, setAllVotedSoundPlayed] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !adminLoading) {
@@ -128,6 +129,31 @@ export default function AdminLiveControl() {
     oscillator.stop(audioContext.currentTime + 0.2);
   };
 
+  // Function to play notification sound when all users have voted
+  const playAllVotedSound = () => {
+    const audioContext = new AudioContext();
+    
+    // Play a triple beep sound to indicate all users have voted
+    [600, 750, 900].forEach((freq, index) => {
+      setTimeout(() => {
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.frequency.value = freq;
+        oscillator.type = 'sine';
+        
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+        
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.2);
+      }, index * 100);
+    });
+  };
+
   useEffect(() => {
     if (!sessionId) return;
 
@@ -147,6 +173,13 @@ export default function AdminLiveControl() {
         (payload) => {
           const updatedSession = payload.new as SessionData;
           console.log("Session updated:", updatedSession);
+          
+          // Reset sound flag when photo changes
+          if (session && updatedSession.current_photo !== session.current_photo) {
+            setAllVotedSoundPlayed(false);
+            setResultsShownForPhoto(null);
+          }
+          
           setSession(updatedSession);
           // Buscar stats com a sessão atualizada
           fetchStats(updatedSession);
@@ -200,13 +233,25 @@ export default function AdminLiveControl() {
     const can = allVoted && timeRemaining > 0;
 
     setCanEarlyAdvance(can);
+    
+    // Play sound and show toast when all users vote (only once per photo)
+    if (can && !allVotedSoundPlayed) {
+      setAllVotedSoundPlayed(true);
+      playAllVotedSound();
+      toast({
+        title: "✓ Todos votaram!",
+        description: "Você pode liberar a próxima foto agora.",
+        duration: 5000,
+      });
+    }
+    
     console.log('Early-advance eligibility:', {
       responses: stats.responses_current_photo,
       online: onlineParticipants,
       timeRemaining,
       can,
     });
-  }, [stats.responses_current_photo, onlineParticipants, session, timeRemaining]);
+  }, [stats.responses_current_photo, onlineParticipants, session, timeRemaining, allVotedSoundPlayed, toast]);
 
   useEffect(() => {
     if (!session || session.session_status !== 'active' || !session.photo_start_time) return;
