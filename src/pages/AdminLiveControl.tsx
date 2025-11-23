@@ -11,6 +11,17 @@ import { getImageByPage } from "@/data/images";
 import { Progress } from "@/components/ui/progress";
 import { format } from "date-fns";
 import { Header } from '@/components/Header';
+import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface SessionData {
   id: string;
@@ -62,6 +73,8 @@ export default function AdminLiveControl() {
   const [savingAdminVote, setSavingAdminVote] = useState(false);
   const [canEarlyAdvance, setCanEarlyAdvance] = useState(false);
   const [resultsShownForPhoto, setResultsShownForPhoto] = useState<number | null>(null);
+  const [showNextPhotoDialog, setShowNextPhotoDialog] = useState(false);
+  const [showCompleteSessionDialog, setShowCompleteSessionDialog] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !adminLoading) {
@@ -361,6 +374,8 @@ export default function AdminLiveControl() {
   };
 
   const handleCompleteSession = async () => {
+    setShowCompleteSessionDialog(false);
+
     const { error } = await supabase
       .from("sessions")
       .update({ session_status: 'completed' })
@@ -384,8 +399,10 @@ export default function AdminLiveControl() {
   const handleNextPhoto = async () => {
     if (!session) return;
 
+    setShowNextPhotoDialog(false);
+
     if (session.current_photo >= 30) {
-      await handleCompleteSession();
+      setShowCompleteSessionDialog(true);
       return;
     }
 
@@ -1010,7 +1027,7 @@ export default function AdminLiveControl() {
               )}
               {session.session_status === 'showing_results' && session.current_photo < 30 && (
                 <div className="flex gap-2">
-                  <Button onClick={handleNextPhoto} size="lg" className="gap-2">
+                  <Button onClick={() => setShowNextPhotoDialog(true)} size="lg" className="gap-2">
                     <SkipForward className="w-5 h-5" />
                     Próxima Foto
                   </Button>
@@ -1027,10 +1044,15 @@ export default function AdminLiveControl() {
                     <div className="text-sm text-muted-foreground">Tempo Restante</div>
                   </div>
                   {canEarlyAdvance && (
-                    <Button onClick={handleNextPhoto} size="lg" className="gap-2">
-                      <SkipForward className="w-5 h-5" />
-                      Liberar próxima foto
-                    </Button>
+                    <div className="flex flex-col items-center gap-2">
+                      <Badge variant="default" className="bg-green-600 hover:bg-green-700 text-white animate-pulse">
+                        ✓ Todos votaram
+                      </Badge>
+                      <Button onClick={() => setShowNextPhotoDialog(true)} size="lg" className="gap-2">
+                        <SkipForward className="w-5 h-5" />
+                        Liberar próxima foto
+                      </Button>
+                    </div>
                   )}
                   <Button onClick={handleShowResults} variant="outline" className="gap-2">
                     <BarChart3 className="w-5 h-5" />
@@ -1229,6 +1251,41 @@ export default function AdminLiveControl() {
           </div>
         )}
       </div>
+
+      {/* Confirmation Dialogs */}
+      <AlertDialog open={showNextPhotoDialog} onOpenChange={setShowNextPhotoDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Avançar para próxima foto?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {session && session.current_photo >= 30 
+                ? "Esta é a última foto. Ao confirmar, a sessão será finalizada."
+                : "Tem certeza que deseja liberar a próxima foto para os participantes?"
+              }
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleNextPhoto}>Confirmar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showCompleteSessionDialog} onOpenChange={setShowCompleteSessionDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Finalizar sessão?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Todas as 30 fotos foram avaliadas. Tem certeza que deseja finalizar a sessão?
+              Esta ação marcará a sessão como concluída.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleCompleteSession}>Finalizar Sessão</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
     </>
   );
