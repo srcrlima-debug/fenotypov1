@@ -167,6 +167,14 @@ export default function SessionTraining() {
     return () => { supabase.removeChannel(channel); };
   }, [sessionId, navigate, toast, sessionData?.session_status]);
 
+  useEffect(() => {
+    if (!sessionData || !sessionData.current_photo || sessionData.session_status !== 'active') return;
+    
+    // Reset start time when photo changes
+    console.log('Foto mudou para:', sessionData.current_photo, 'resetando startTime');
+    setStartTime(Date.now());
+  }, [sessionData?.current_photo]);
+
   // Track participants using Realtime Presence
   useEffect(() => {
     if (!sessionId || !user) return;
@@ -241,7 +249,8 @@ export default function SessionTraining() {
   const saveAvaliacao = async (resposta: string): Promise<boolean> => {
     if (!user || !sessionData) return false;
 
-    console.log("Saving avaliacao for user:", user.id);
+    const tempoDecorrido = Date.now() - startTime;
+    console.log("Saving avaliacao for user:", user.id, "tempo desde início:", tempoDecorrido, "ms");
 
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
@@ -277,13 +286,13 @@ export default function SessionTraining() {
       user_id: user.id,
       foto_id: sessionData.current_photo,
       resposta,
-      tempo_gasto: Date.now() - startTime,
+      tempo_gasto: Math.max(0, Date.now() - startTime),
       genero: profile.genero,
       faixa_etaria: profile.faixa_etaria,
       regiao: profile.regiao || profile.estado,
     };
 
-    console.log("Inserting avaliacao:", avaliacaoData);
+    console.log("Inserting avaliacao with tempo_gasto (ms):", avaliacaoData.tempo_gasto);
 
     const { error } = await supabase.from("avaliacoes").insert(avaliacaoData);
 
