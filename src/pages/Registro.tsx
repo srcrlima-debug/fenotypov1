@@ -179,7 +179,7 @@ const Registro = () => {
             disabled={loading}
             type="button"
           >
-            <Chrome className="w-9 h-9 mr-3 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12" />
+            <Chrome className="w-10 h-10 mr-3 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12" />
             Continuar com Google
           </Button>
 

@@ -58,7 +58,7 @@ const Home = () => {
                 size="lg"
                 className="button-3d h-20 w-full sm:flex-1 text-xl font-bold bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-2xl rounded-xl border-4 border-green-700 transition-all duration-300 group"
               >
-                <BookOpenText className="inline-block mr-3 w-9 h-9 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-12" />
+                <BookOpenText className="inline-block mr-3 w-11 h-11 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-12" />
                 Como Funciona
               </Button>
               {user && (
@@ -67,7 +67,7 @@ const Home = () => {
                   size="lg"
                   className="button-3d h-20 w-full sm:flex-1 text-xl font-bold bg-gradient-to-r from-[#5a4a42] to-[#4a3a32] hover:from-[#4a3a32] hover:to-[#3a2a22] text-white shadow-2xl rounded-xl border-4 border-[#5a4a42] transition-all duration-300 group"
                 >
-                  <LayoutDashboard className="inline-block mr-3 w-9 h-9 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12" />
+                  <LayoutDashboard className="inline-block mr-3 w-11 h-11 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12" />
                   Acessar Dashboard
                 </Button>
               )}
@@ -85,7 +85,7 @@ const Home = () => {
                   size="lg"
                   className="h-14 px-12 text-lg font-semibold bg-gradient-to-r from-[#a0755f] to-[#8a6350] hover:from-[#8a6350] hover:to-[#75533f] text-white shadow-xl rounded-lg w-full sm:w-auto transition-all duration-300 group"
                 >
-                  <UserPlus className="inline-block mr-3 w-7 h-7 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-12" />
+                  <UserPlus className="inline-block mr-3 w-8 h-8 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-12" />
                   Cadastre-se
                 </Button>
                 <Button
@@ -93,7 +93,7 @@ const Home = () => {
                   size="lg"
                   className="h-14 px-12 text-lg font-semibold bg-gradient-to-r from-[#c9a588] to-[#b8936f] hover:from-[#b8936f] hover:to-[#a77d5e] text-white shadow-xl rounded-lg w-full sm:w-auto transition-all duration-300 group"
                 >
-                  <LogIn className="inline-block mr-3 w-7 h-7 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12" />
+                  <LogIn className="inline-block mr-3 w-8 h-8 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12" />
                   Entrar
                 </Button>
               </div>
