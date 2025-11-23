@@ -460,103 +460,189 @@ const AdminAnalytics = () => {
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
-      let yPosition = 20;
+      let yPosition = 15;
+      const margin = 15;
+      const contentWidth = pageWidth - (margin * 2);
 
-      // Title
-      pdf.setFontSize(20);
+      // Helper function to add page footer
+      const addFooter = (pageNum: number) => {
+        const footerY = pageHeight - 10;
+        pdf.setFontSize(8);
+        pdf.setTextColor(128, 128, 128);
+        pdf.text(`Página ${pageNum}`, pageWidth / 2, footerY, { align: 'center' });
+        pdf.text(`FENOTYPO - Análise Demográfica`, margin, footerY);
+        pdf.text(new Date().toLocaleDateString('pt-BR'), pageWidth - margin, footerY, { align: 'right' });
+      };
+
+      // Header with background
+      pdf.setFillColor(160, 117, 95); // Primary color from app
+      pdf.rect(0, 0, pageWidth, 35, 'F');
+      
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(22);
       pdf.setFont('helvetica', 'bold');
-      pdf.text('Relatório de Análise Demográfica', pageWidth / 2, yPosition, { align: 'center' });
-      yPosition += 10;
-
-      pdf.setFontSize(12);
+      pdf.text('Relatório de Análise Demográfica', pageWidth / 2, 15, { align: 'center' });
+      
+      pdf.setFontSize(14);
       pdf.setFont('helvetica', 'normal');
-      pdf.text(session?.nome || 'Sessão', pageWidth / 2, yPosition, { align: 'center' });
-      yPosition += 15;
+      pdf.text(session?.nome || 'Sessão', pageWidth / 2, 25, { align: 'center' });
+      
+      yPosition = 45;
+      pdf.setTextColor(0, 0, 0);
 
-      // Summary Statistics
+      // Summary Statistics Card
+      pdf.setFillColor(245, 241, 235); // Background color
+      pdf.roundedRect(margin, yPosition, contentWidth, 30, 3, 3, 'F');
+      
+      yPosition += 8;
       pdf.setFontSize(14);
       pdf.setFont('helvetica', 'bold');
-      pdf.text('Estatísticas Gerais', 15, yPosition);
+      pdf.text('📊 Estatísticas Gerais', margin + 5, yPosition);
+      
       yPosition += 8;
-
-      pdf.setFontSize(10);
+      pdf.setFontSize(11);
       pdf.setFont('helvetica', 'normal');
       
       const totalParticipantes = generoStats.reduce((sum, item) => sum + item.total, 0);
       const totalAvaliacoes = generoStats.reduce((sum, item) => sum + item.deferido + item.indeferido, 0);
+      const taxaDeferimento = totalAvaliacoes > 0 ? ((generoStats.reduce((sum, item) => sum + item.deferido, 0) / totalAvaliacoes) * 100).toFixed(1) : '0';
       
-      pdf.text(`Total de Participantes: ${totalParticipantes}`, 15, yPosition);
+      pdf.text(`Total de Participantes: ${totalParticipantes}`, margin + 5, yPosition);
       yPosition += 6;
-      pdf.text(`Total de Avaliações: ${totalAvaliacoes}`, 15, yPosition);
-      yPosition += 10;
+      pdf.text(`Total de Avaliações: ${totalAvaliacoes}`, margin + 5, yPosition);
+      yPosition += 6;
+      pdf.setTextColor(16, 185, 129); // Success color
+      pdf.text(`Taxa Geral de Deferimento: ${taxaDeferimento}%`, margin + 5, yPosition);
+      pdf.setTextColor(0, 0, 0);
+      
+      yPosition += 15;
 
       // Bias Alerts
       if (biasAlerts.length > 0) {
+        if (yPosition > pageHeight - 80) {
+          addFooter(1);
+          pdf.addPage();
+          yPosition = 15;
+        }
+
+        pdf.setFillColor(254, 242, 242); // Light red background
+        const alertHeight = Math.min(biasAlerts.length * 20 + 15, 80);
+        pdf.roundedRect(margin, yPosition, contentWidth, alertHeight, 3, 3, 'F');
+        
+        yPosition += 8;
         pdf.setFontSize(14);
         pdf.setFont('helvetica', 'bold');
-        pdf.setTextColor(220, 38, 38); // red
-        pdf.text('⚠ Alertas de Possível Viés Inconsciente', 15, yPosition);
+        pdf.setTextColor(220, 38, 38);
+        pdf.text('⚠ Alertas de Possível Viés Inconsciente', margin + 5, yPosition);
         pdf.setTextColor(0, 0, 0);
+        
         yPosition += 8;
-
         pdf.setFontSize(9);
         pdf.setFont('helvetica', 'normal');
 
-        biasAlerts.slice(0, 5).forEach((alert, index) => {
-          if (yPosition > pageHeight - 40) {
-            pdf.addPage();
-            yPosition = 20;
-          }
-
+        biasAlerts.slice(0, 3).forEach((alert, index) => {
           const severity = alert.severity === 'high' ? 'ALTA' : alert.severity === 'medium' ? 'MÉDIA' : 'BAIXA';
-          pdf.text(`${index + 1}. [${severity}] ${alert.category}`, 15, yPosition);
-          yPosition += 5;
+          const severityColor: [number, number, number] = alert.severity === 'high' ? [220, 38, 38] : alert.severity === 'medium' ? [234, 179, 8] : [59, 130, 246];
           
-          const descLines = pdf.splitTextToSize(alert.description, pageWidth - 30);
-          pdf.text(descLines, 20, yPosition);
-          yPosition += descLines.length * 5 + 3;
+          pdf.setTextColor(severityColor[0], severityColor[1], severityColor[2]);
+          pdf.text(`[${severity}]`, margin + 5, yPosition);
+          pdf.setTextColor(0, 0, 0);
+          pdf.text(`${alert.category}`, margin + 20, yPosition);
+          yPosition += 4;
+          
+          const descLines = pdf.splitTextToSize(alert.description, contentWidth - 15);
+          pdf.setFontSize(8);
+          pdf.text(descLines, margin + 8, yPosition);
+          yPosition += descLines.length * 3.5 + 4;
+          pdf.setFontSize(9);
         });
         
-        yPosition += 5;
+        yPosition += 10;
       }
 
-      // Demographic breakdown
-      pdf.addPage();
-      yPosition = 20;
-
-      pdf.setFontSize(14);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('Análise por Identidade de Gênero', 15, yPosition);
-      yPosition += 10;
-
-      pdf.setFontSize(9);
-      pdf.setFont('helvetica', 'normal');
-      generoStats.forEach(item => {
-        if (yPosition > pageHeight - 20) {
+      // Helper function to create demographic table
+      const createDemographicTable = (title: string, data: DemographicStats[], startY: number) => {
+        let currentY = startY;
+        
+        if (currentY > pageHeight - 60) {
+          addFooter(Math.floor(currentY / pageHeight) + 1);
           pdf.addPage();
-          yPosition = 20;
+          currentY = 15;
         }
-        pdf.text(`${item.value}: ${item.total} participantes (${item.percentDeferido.toFixed(1)}% deferimento)`, 15, yPosition);
-        yPosition += 5;
-      });
 
-      yPosition += 10;
+        // Section title
+        pdf.setFillColor(201, 165, 136); // Accent color
+        pdf.rect(margin, currentY, contentWidth, 10, 'F');
+        pdf.setTextColor(255, 255, 255);
+        pdf.setFontSize(12);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(title, margin + 5, currentY + 7);
+        pdf.setTextColor(0, 0, 0);
+        
+        currentY += 15;
 
-      pdf.setFontSize(14);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('Análise por Pertencimento Racial', 15, yPosition);
-      yPosition += 10;
+        // Table header
+        pdf.setFillColor(240, 240, 240);
+        pdf.rect(margin, currentY, contentWidth, 8, 'F');
+        pdf.setFontSize(9);
+        pdf.setFont('helvetica', 'bold');
+        
+        const col1Width = contentWidth * 0.40;
+        const col2Width = contentWidth * 0.15;
+        const col3Width = contentWidth * 0.15;
+        const col4Width = contentWidth * 0.15;
+        const col5Width = contentWidth * 0.15;
+        
+        pdf.text('Categoria', margin + 2, currentY + 5);
+        pdf.text('Total', margin + col1Width, currentY + 5, { align: 'center' });
+        pdf.text('Deferido', margin + col1Width + col2Width, currentY + 5, { align: 'center' });
+        pdf.text('Indeferido', margin + col1Width + col2Width + col3Width, currentY + 5, { align: 'center' });
+        pdf.text('% Defer.', margin + col1Width + col2Width + col3Width + col4Width, currentY + 5, { align: 'center' });
+        
+        currentY += 8;
+        pdf.setFont('helvetica', 'normal');
 
-      pdf.setFontSize(9);
-      pdf.setFont('helvetica', 'normal');
-      racaStats.forEach(item => {
-        if (yPosition > pageHeight - 20) {
-          pdf.addPage();
-          yPosition = 20;
-        }
-        pdf.text(`${item.value}: ${item.total} participantes (${item.percentDeferido.toFixed(1)}% deferimento)`, 15, yPosition);
-        yPosition += 5;
-      });
+        // Table rows
+        data.forEach((item, index) => {
+          if (currentY > pageHeight - 20) {
+            addFooter(Math.floor(currentY / pageHeight) + 1);
+            pdf.addPage();
+            currentY = 15;
+          }
+
+          // Alternating row colors
+          if (index % 2 === 0) {
+            pdf.setFillColor(249, 249, 249);
+            pdf.rect(margin, currentY, contentWidth, 6, 'F');
+          }
+
+          pdf.setTextColor(0, 0, 0);
+          pdf.text(item.value.substring(0, 35), margin + 2, currentY + 4);
+          pdf.text(String(item.total), margin + col1Width, currentY + 4, { align: 'center' });
+          
+          pdf.setTextColor(16, 185, 129); // Green
+          pdf.text(String(item.deferido), margin + col1Width + col2Width, currentY + 4, { align: 'center' });
+          
+          pdf.setTextColor(239, 68, 68); // Red
+          pdf.text(String(item.indeferido), margin + col1Width + col2Width + col3Width, currentY + 4, { align: 'center' });
+          
+          pdf.setTextColor(0, 0, 0);
+          pdf.text(`${item.percentDeferido.toFixed(1)}%`, margin + col1Width + col2Width + col3Width + col4Width, currentY + 4, { align: 'center' });
+          
+          currentY += 6;
+        });
+
+        return currentY + 10;
+      };
+
+      // Add demographic tables
+      yPosition = createDemographicTable('👤 Análise por Identidade de Gênero', generoStats, yPosition);
+      yPosition = createDemographicTable('🎨 Análise por Pertencimento Racial', racaStats, yPosition);
+      yPosition = createDemographicTable('🗺️ Análise por Região', regiaoStats, yPosition);
+      yPosition = createDemographicTable('📚 Análise por Experiência', experienciaStats, yPosition);
+
+      // Add footer to last page
+      addFooter(Math.floor(yPosition / pageHeight) + 1);
 
       // Save PDF
       pdf.save(`analise-demografica-${session?.nome || 'sessao'}.pdf`);
