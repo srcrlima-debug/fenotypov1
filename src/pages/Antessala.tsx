@@ -109,105 +109,135 @@ export default function Antessala() {
     }
   };
 
-  // Check authentication and profile completion
+  // Extract username from profile
   useEffect(() => {
-    const checkAuthAndProfile = async () => {
-      if (!user) {
-        toast({
-          title: "Autenticação necessária",
-          description: "Faça login para participar da sessão",
-          variant: "destructive",
-        });
-        const redirectUrl = trainingId 
-          ? `/training/${trainingId}/login?redirect=/training/${trainingId}/session/${sessionId}/antessala`
-          : `/login?redirect=/antessala/${sessionId}`;
-        navigate(redirectUrl);
-        return;
-      }
+    const extractUserName = async () => {
+      if (!user) return;
 
-      // Check if profile is complete
       const { data: profile } = await supabase
         .from("profiles")
-        .select("email, genero, faixa_etaria, estado, pertencimento_racial, regiao, experiencia_bancas")
+        .select("email")
         .eq("user_id", user.id)
         .maybeSingle();
 
-      if (!profile || !profile.genero || !profile.faixa_etaria || !profile.estado || 
-          !profile.pertencimento_racial || !profile.regiao || !profile.experiencia_bancas) {
-        toast({
-          title: "Complete seu perfil",
-          description: "Complete seu perfil antes de participar da sessão",
-          variant: "destructive",
-        });
-        navigate(`/complete-profile?redirect=/antessala/${sessionId}`);
-        return;
-      }
-
       if (profile?.email) {
-        // Extract name from email (part before @) and capitalize
         const emailName = profile.email.split("@")[0];
         const capitalized = emailName.charAt(0).toUpperCase() + emailName.slice(1);
         setUserName(capitalized);
       }
     };
 
-    checkAuthAndProfile();
-  }, [user, navigate, sessionId, toast]);
+    extractUserName();
+  }, [user]);
 
   // Load session data and setup realtime
   useEffect(() => {
-    if (!sessionId || !user) {
+    if (!sessionId) {
       navigate("/");
       return;
     }
 
     const loadSession = async () => {
+      // Try to fetch session normally (will be blocked by RLS if not authorized)
       const { data: session, error } = await supabase
         .from("sessions")
         .select("*")
         .eq("id", sessionId)
-        .single();
+        .maybeSingle();
 
-      if (error || !session) {
-        toast({
-          title: "Sessão não encontrada",
-          description: "Esta sessão não existe.",
-          variant: "destructive",
-        });
-        navigate("/");
-        return;
-      }
+      // If session not found (blocked by RLS or doesn't exist)
+      if (!session) {
+        console.log("Session not found via normal query, checking access...");
 
-      // If trainingId is provided, validate user is participant
-      if (trainingId) {
-        // Check if session belongs to the training
-        if (session.training_id !== trainingId) {
-          toast({
-            title: "Sessão inválida",
-            description: "Esta sessão não pertence ao treinamento especificado.",
-            variant: "destructive",
-          });
-          navigate("/");
+        // If trainingId not in URL, fetch it via edge function
+        if (!trainingId) {
+          console.log("No trainingId in URL, fetching via edge function...");
+          const { data: sessionInfo, error: functionError } = await supabase.functions.invoke(
+            'get-session-training',
+            { body: { sessionId } }
+          );
+
+          if (functionError || !sessionInfo?.training_id) {
+            toast({
+              title: "Sessão não encontrada",
+              description: "Esta sessão não existe.",
+              variant: "destructive",
+            });
+            navigate("/");
+            return;
+          }
+
+          // Redirect to full route with trainingId
+          const fullUrl = `/training/${sessionInfo.training_id}/session/${sessionId}/antessala`;
+          console.log("Redirecting to full route:", fullUrl);
+          navigate(fullUrl, { replace: true });
           return;
         }
 
-        // Check if user is participant of this training
-        const { data: participant, error: participantError } = await supabase
+        // If trainingId is present but session not found, check authentication
+        if (!user) {
+          toast({
+            title: "Login necessário",
+            description: "Faça login para acessar esta sessão",
+          });
+          navigate(`/training/${trainingId}/login?redirect=/training/${trainingId}/session/${sessionId}/antessala`);
+          return;
+        }
+
+        // Check if user is participant
+        const { data: participant } = await supabase
           .from("training_participants")
           .select("*")
           .eq("training_id", trainingId)
           .eq("user_id", user.id)
           .maybeSingle();
 
-        if (participantError || !participant) {
+        if (!participant) {
           toast({
-            title: "Acesso negado",
-            description: "Você não está cadastrado neste treinamento.",
-            variant: "destructive",
+            title: "Cadastro necessário",
+            description: "Você precisa se cadastrar neste treinamento",
           });
           navigate(`/training/${trainingId}/register`);
           return;
         }
+
+        // Check profile completion only after confirming participation
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("genero, faixa_etaria, estado, pertencimento_racial, regiao, experiencia_bancas")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (!profile || !profile.genero || !profile.faixa_etaria || !profile.estado || 
+            !profile.pertencimento_racial || !profile.regiao || !profile.experiencia_bancas) {
+          toast({
+            title: "Complete seu perfil",
+            description: "Complete seu perfil antes de participar da sessão",
+            variant: "destructive",
+          });
+          navigate(`/complete-profile?redirect=/training/${trainingId}/session/${sessionId}/antessala`);
+          return;
+        }
+
+        // If we get here, something else is wrong
+        toast({
+          title: "Erro ao carregar sessão",
+          description: "Não foi possível carregar os dados da sessão.",
+          variant: "destructive",
+        });
+        navigate("/");
+        return;
+      }
+
+      // Session found successfully - validate it belongs to the training if trainingId provided
+      if (trainingId && session.training_id !== trainingId) {
+        toast({
+          title: "Sessão inválida",
+          description: "Esta sessão não pertence ao treinamento especificado.",
+          variant: "destructive",
+        });
+        navigate("/");
+        return;
       }
 
       setSessionData(session);

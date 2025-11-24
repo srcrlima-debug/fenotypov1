@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.audit-log]
 verify_jwt = true
+
+[functions.get-session-training]
+verify_jwt = false
