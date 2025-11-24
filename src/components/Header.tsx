@@ -48,12 +48,13 @@ export const Header = () => {
 
             {isAdmin && (
               <Button 
-                variant="ghost" 
+                variant="default" 
                 size="sm"
                 onClick={() => navigate("/admin")}
+                className="bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20"
               >
                 <Shield className="mr-2 h-4 w-4" />
-                <span className="hidden sm:inline">Admin</span>
+                <span className="hidden sm:inline">Painel Admin</span>
               </Button>
             )}
 
