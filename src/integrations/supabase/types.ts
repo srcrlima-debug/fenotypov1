@@ -66,13 +66,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "avaliacoes_session_id_fkey"
-            columns: ["session_id"]
-            isOneToOne: false
-            referencedRelation: "sessions_public"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "avaliacoes_training_id_fkey"
             columns: ["training_id"]
             isOneToOne: false
@@ -255,13 +248,6 @@ export type Database = {
             referencedRelation: "sessions"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "training_feedback_session_id_fkey"
-            columns: ["session_id"]
-            isOneToOne: false
-            referencedRelation: "sessions_public"
-            referencedColumns: ["id"]
-          },
         ]
       }
       training_participants: {
@@ -384,13 +370,6 @@ export type Database = {
             referencedRelation: "sessions"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "user_badges_session_id_fkey"
-            columns: ["session_id"]
-            isOneToOne: false
-            referencedRelation: "sessions_public"
-            referencedColumns: ["id"]
-          },
         ]
       }
       user_roles: {
@@ -416,42 +395,7 @@ export type Database = {
       }
     }
     Views: {
-      sessions_public: {
-        Row: {
-          created_at: string | null
-          current_photo: number | null
-          data: string | null
-          id: string | null
-          nome: string | null
-          photo_duration: number | null
-          photo_start_time: string | null
-          session_status: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          current_photo?: number | null
-          data?: string | null
-          id?: string | null
-          nome?: string | null
-          photo_duration?: number | null
-          photo_start_time?: string | null
-          session_status?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          current_photo?: number | null
-          data?: string | null
-          id?: string | null
-          nome?: string | null
-          photo_duration?: number | null
-          photo_start_time?: string | null
-          session_status?: string | null
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       check_and_award_badges: {
