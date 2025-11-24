@@ -82,48 +82,32 @@ export const Header = () => {
           </Link>
 
           <nav className="flex items-center gap-2">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button 
-                    variant="default" 
-                    size="sm"
-                    onClick={() => setProfessorModalOpen(true)}
-                    className="bg-amber-900 hover:bg-amber-800 text-white border border-amber-800 hover:border-amber-700 transition-all duration-300 hover:scale-105 hover:shadow-lg active:scale-95 w-10 h-10 p-0 sm:w-auto sm:h-9 sm:px-3 justify-center sm:justify-start"
-                  >
-                    <BookOpenText className="h-4 w-4 sm:mr-2" />
-                    <span className="hidden sm:inline">Sobre o Professor</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="sm:hidden">
-                  <p>Sobre o Professor</p>
-                </TooltipContent>
-              </Tooltip>
+            <Button 
+              variant="default" 
+              size="sm"
+              onClick={() => setProfessorModalOpen(true)}
+              className="bg-amber-900 hover:bg-amber-800 text-white border border-amber-800 hover:border-amber-700 transition-all duration-300 hover:scale-105 hover:shadow-lg active:scale-95 h-9 px-2 sm:px-3"
+            >
+              <BookOpenText className="h-4 w-4 mr-1.5 sm:mr-2 flex-shrink-0" />
+              <span className="text-xs sm:text-sm whitespace-nowrap">Professor</span>
+            </Button>
 
-              {isAdmin && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button 
-                      variant="default" 
-                      size="sm"
-                      onClick={() => navigate("/admin")}
-                      className={`bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 hover:border-primary/30 transition-all duration-300 hover:scale-105 hover:shadow-lg active:scale-95 w-10 h-10 p-0 sm:w-auto sm:h-9 sm:px-3 justify-center sm:justify-start ${
-                        hasNotifications ? "animate-pulse" : ""
-                      }`}
-                    >
-                      <Shield className="h-4 w-4 sm:mr-2" />
-                      <span className="hidden sm:inline">Painel Admin</span>
-                      {hasNotifications && (
-                        <span className="absolute -top-1 -right-1 h-3 w-3 bg-destructive rounded-full animate-pulse sm:hidden" />
-                      )}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom" className="sm:hidden">
-                    <p>Painel Admin{hasNotifications ? " (Sessões ativas)" : ""}</p>
-                  </TooltipContent>
-                </Tooltip>
-              )}
-            </TooltipProvider>
+            {isAdmin && (
+              <Button 
+                variant="default" 
+                size="sm"
+                onClick={() => navigate("/admin")}
+                className={`bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 hover:border-primary/30 transition-all duration-300 hover:scale-105 hover:shadow-lg active:scale-95 h-9 px-2 sm:px-3 relative ${
+                  hasNotifications ? "animate-pulse" : ""
+                }`}
+              >
+                <Shield className="h-4 w-4 mr-1.5 sm:mr-2 flex-shrink-0" />
+                <span className="text-xs sm:text-sm whitespace-nowrap">Admin</span>
+                {hasNotifications && (
+                  <span className="absolute -top-1 -right-1 h-3 w-3 bg-destructive rounded-full animate-pulse" />
+                )}
+              </Button>
+            )}
 
             {!user && (
               <Button 
