@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { CheckCircle, Timer, Image, Keyboard, AlertCircle, Loader2, Monitor, UserCheck, KeyRound, Calendar, Link2 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { VotingFooter } from "@/components/VotingFooter";
@@ -132,12 +132,84 @@ export default function Antessala() {
 
   // Load session data and setup realtime
   useEffect(() => {
-    if (!sessionId) {
-      navigate("/");
-      return;
-    }
-
     const loadSession = async () => {
+      // Se não tem sessionId mas tem trainingId, buscar sessão ativa do treinamento
+      if (!sessionId && trainingId) {
+        console.log("No sessionId in URL, searching for active session in training:", trainingId);
+        
+        // Verificar autenticação
+        if (!user) {
+          toast({
+            title: "Login necessário",
+            description: "Faça login para acessar este treinamento",
+          });
+          navigate(`/training/${trainingId}/login`);
+          return;
+        }
+
+        // Verificar participação
+        const { data: participant } = await supabase
+          .from("training_participants")
+          .select("*")
+          .eq("training_id", trainingId)
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (!participant) {
+          toast({
+            title: "Cadastro necessário",
+            description: "Você precisa se cadastrar neste treinamento",
+          });
+          navigate(`/training/${trainingId}/register`);
+          return;
+        }
+
+        // Buscar sessão waiting ou active do treinamento
+        const { data: activeSession } = await supabase
+          .from("sessions")
+          .select("*")
+          .eq("training_id", trainingId)
+          .in("session_status", ["waiting", "active"])
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (activeSession) {
+          // Atualizar URL sem reload
+          console.log("Active session found, updating URL:", activeSession.id);
+          window.history.replaceState(
+            null,
+            "",
+            `/training/${trainingId}/session/${activeSession.id}/antessala`
+          );
+          setSessionData(activeSession);
+          setLoading(false);
+
+          // Se já está ativa, redirecionar
+          if (activeSession.session_status === "active") {
+            playStartSound();
+            setTimeout(() => {
+              navigate(`/treino/${activeSession.id}`);
+            }, 1000);
+          }
+          return;
+        } else {
+          // Não há sessão ativa - mostrar mensagem de aguardo
+          console.log("No active session found, showing waiting screen");
+          setSessionData(null);
+          setLoading(false);
+          return;
+        }
+      }
+
+      // Se não tem sessionId nem trainingId, erro
+      if (!sessionId) {
+        console.error("No sessionId or trainingId provided");
+        navigate("/");
+        return;
+      }
+
+      // Fluxo normal com sessionId na URL
       // Try to fetch session normally (will be blocked by RLS if not authorized)
       const { data: session, error } = await supabase
         .from("sessions")
@@ -254,38 +326,76 @@ export default function Antessala() {
 
     loadSession();
 
-    // Setup realtime subscription
-    const channel = supabase
-      .channel(`session-${sessionId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "sessions",
-          filter: `id=eq.${sessionId}`,
-        },
-        (payload) => {
-          const updatedSession = payload.new as SessionData;
-          setSessionData(updatedSession);
+    // Setup realtime subscription for session updates (if we have sessionId)
+    let sessionUpdateChannel: any = null;
+    if (sessionId) {
+      sessionUpdateChannel = supabase
+        .channel(`session-${sessionId}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "sessions",
+            filter: `id=eq.${sessionId}`,
+          },
+          (payload) => {
+            const updatedSession = payload.new as SessionData;
+            setSessionData(updatedSession);
 
-          // Play sound and redirect when session becomes active
-          if (updatedSession.session_status === "active") {
-            playStartSound();
-            toast({
-              title: "🎯 Sessão Iniciada!",
-              description: "O treinamento foi liberado. Redirecionando...",
-            });
-            setTimeout(() => {
-              navigate(`/treino/${sessionId}`);
-            }, 1500);
+            // Play sound and redirect when session becomes active
+            if (updatedSession.session_status === "active") {
+              playStartSound();
+              toast({
+                title: "🎯 Sessão Iniciada!",
+                description: "O treinamento foi liberado. Redirecionando...",
+              });
+              setTimeout(() => {
+                navigate(`/treino/${sessionId}`);
+              }, 1500);
+            }
           }
-        }
-      )
-      .subscribe();
+        )
+        .subscribe();
+    }
+
+    // Setup realtime subscription for new sessions (if we don't have sessionId but have trainingId)
+    let sessionCreationChannel: any = null;
+    if (!sessionId && trainingId) {
+      console.log("Setting up realtime for new session creation");
+      sessionCreationChannel = supabase
+        .channel(`training-${trainingId}-sessions`)
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "sessions",
+            filter: `training_id=eq.${trainingId}`,
+          },
+          (payload) => {
+            const newSession = payload.new as SessionData;
+            console.log("New session detected:", newSession);
+            if (newSession.session_status === "waiting" || newSession.session_status === "active") {
+              toast({
+                title: "Sessão iniciada!",
+                description: "Redirecionando para a sessão...",
+              });
+              // Redirecionar para a nova sessão
+              window.location.href = `/training/${trainingId}/session/${newSession.id}/antessala`;
+            }
+          }
+        )
+        .subscribe();
+    }
 
     return () => {
-      supabase.removeChannel(channel);
+      if (sessionUpdateChannel) {
+        supabase.removeChannel(sessionUpdateChannel);
+      }
+      if (sessionCreationChannel) {
+        supabase.removeChannel(sessionCreationChannel);
+      }
     };
   }, [sessionId, trainingId, user, navigate, toast]);
 
@@ -295,6 +405,73 @@ export default function Antessala() {
         <Header />
         <div className="flex-1 flex items-center justify-center bg-gradient-to-b from-background to-muted/20">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+        <VotingFooter />
+      </div>
+    );
+  }
+
+  // Se não há sessionData, mostrar mensagem de aguardando criação de sessão
+  if (!sessionData) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        <div className="flex-1 container max-w-4xl py-8 px-4">
+          <Card className="max-w-2xl mx-auto mt-12">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-center">
+                <Timer className="w-6 h-6 text-primary animate-pulse mx-auto" />
+                <span className="flex-1">Aguardando Início do Treinamento</span>
+              </CardTitle>
+              <CardDescription className="text-center">
+                Você está cadastrado no treinamento
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="bg-muted/50 rounded-lg p-6 text-center space-y-3">
+                <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
+                <p className="text-lg font-medium">
+                  O organizador ainda não iniciou a sessão ao vivo.
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Esta página atualizará automaticamente quando a sessão for iniciada.
+                  <br />
+                  <strong>Não é necessário recarregar.</strong>
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <h4 className="font-semibold flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-primary" />
+                  O que fazer enquanto espera:
+                </h4>
+                <ul className="space-y-2 text-sm text-muted-foreground ml-6">
+                  <li className="flex items-start gap-2">
+                    <span className="text-primary font-bold">•</span>
+                    <span>Mantenha esta página aberta</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-primary font-bold">•</span>
+                    <span>Certifique-se de ter conexão estável de internet</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-primary font-bold">•</span>
+                    <span>Aguarde o organizador iniciar a sessão</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-primary font-bold">•</span>
+                    <span>Você será redirecionado automaticamente quando a sessão começar</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+                <p className="text-sm text-center">
+                  🔔 <strong>Dica:</strong> Mantenha o som do dispositivo ligado para ser alertado quando a sessão iniciar
+                </p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
         <VotingFooter />
       </div>

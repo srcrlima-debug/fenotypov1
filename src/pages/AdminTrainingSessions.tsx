@@ -214,15 +214,6 @@ export default function AdminTrainingSessions() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => copySessionLink(session.id, session.nome)}
-                      className="border-green-500/50 hover:bg-green-50 dark:hover:bg-green-950"
-                    >
-                      <Link2 className="w-4 h-4 mr-2 text-green-600" />
-                      Copiar Link
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
                       onClick={() => navigate(`/admin/live/${session.id}`)}
                     >
                       <Play className="w-4 h-4 mr-2" />

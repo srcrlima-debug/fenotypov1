@@ -67,28 +67,14 @@ export default function TrainingLogin() {
         return;
       }
 
-      // Check for active session
-      const { data: sessionData } = await supabase
-        .from('sessions')
-        .select('*')
-        .eq('training_id', trainingId)
-        .in('session_status', ['waiting', 'active'])
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
       // If there's a redirect URL, use it
       if (redirectUrl) {
         navigate(redirectUrl);
         return;
       }
 
-      // Otherwise, check for active session
-      if (sessionData) {
-        navigate(`/training/${trainingId}/session/${sessionData.id}/antessala`);
-      } else {
-        toast.info('Aguardando início do treinamento');
-      }
+      // Sempre redireciona para antessala - ela cuidará da sessão
+      navigate(`/training/${trainingId}/antessala`);
     } catch (error) {
       console.error('Error checking participation:', error);
     }

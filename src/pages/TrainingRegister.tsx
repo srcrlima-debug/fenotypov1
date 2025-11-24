@@ -307,27 +307,8 @@ export default function TrainingRegister() {
 
       toast.success('Cadastro realizado com sucesso!');
       
-      // Buscar sessão ativa/waiting para redirecionar direto para antessala
-      const { data: activeSessions, error: sessionError } = await supabase
-        .from('sessions')
-        .select('id')
-        .eq('training_id', trainingId)
-        .in('session_status', ['waiting', 'active'])
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (sessionError) {
-        console.error('Error fetching active sessions:', sessionError);
-      }
-
-      // Se há sessão waiting/active, redireciona direto para antessala
-      if (activeSessions) {
-        navigate(`/training/${trainingId}/session/${activeSessions.id}/antessala`);
-      } else {
-        // Se não há sessão ativa, vai para página de boas-vindas
-        navigate(`/training/${trainingId}/welcome`);
-      }
+      // Sempre redireciona para antessala - ela cuidará da sessão
+      navigate(`/training/${trainingId}/antessala`);
     } catch (error: any) {
       console.error('Error during registration:', error);
       toast.error(error.message || 'Erro ao realizar cadastro');
