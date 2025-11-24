@@ -5,11 +5,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle, Timer, Image, Keyboard, AlertCircle, Loader2, Monitor, UserCheck, KeyRound, Calendar, Link2 } from "lucide-react";
 import { Header } from "@/components/Header";
-import { WelcomeModal } from "@/components/WelcomeModal";
 import { VotingFooter } from "@/components/VotingFooter";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCardTilt } from "@/hooks/useCardTilt";
-import { useWelcomeModal } from "@/hooks/useWelcomeModal";
 import { useToast } from "@/hooks/use-toast";
 import fistIcon from "@/assets/fist-icon.png";
 
@@ -25,7 +23,6 @@ export default function Antessala() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
-  const { shouldShowModal, markAsViewed } = useWelcomeModal(user?.id);
   const [sessionData, setSessionData] = useState<SessionData | null>(null);
   const [userName, setUserName] = useState<string>("");
   const [loading, setLoading] = useState(true);
@@ -276,7 +273,6 @@ export default function Antessala() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <WelcomeModal open={shouldShowModal} onAccept={markAsViewed} />
       <Header />
       
       <div className="flex-1 container max-w-4xl py-8 px-4 page-transition">

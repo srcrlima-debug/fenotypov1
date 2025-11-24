@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
 import { 
   CheckCircle, 
   Calendar, 
@@ -26,6 +27,7 @@ export default function TrainingWelcome() {
   const { trainingId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { toast } = useToast();
   const [training, setTraining] = useState<any>(null);
   const [participantCount, setParticipantCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -63,6 +65,38 @@ export default function TrainingWelcome() {
       console.error('Error loading data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const checkForActiveSession = async () => {
+    try {
+      const { data: session, error } = await supabase
+        .from('sessions')
+        .select('id')
+        .eq('training_id', trainingId)
+        .in('session_status', ['waiting', 'active'])
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      if (error) throw error;
+      
+      if (session) {
+        navigate(`/training/${trainingId}/session/${session.id}/antessala`);
+      } else {
+        toast({
+          title: "Nenhuma sessão disponível",
+          description: "Aguarde o organizador criar uma sessão para este treinamento.",
+          variant: "default",
+        });
+      }
+    } catch (error) {
+      console.error('Error checking for active session:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível verificar sessões disponíveis.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -293,7 +327,7 @@ export default function TrainingWelcome() {
 
         {/* Support Section */}
         <Card className="bg-muted/30">
-          <CardContent className="pt-6 text-center">
+          <CardContent className="pt-6 text-center space-y-4">
             <p className="text-sm text-muted-foreground mb-4">
               Guarde este link de acesso para fazer login posteriormente:
             </p>
@@ -314,6 +348,20 @@ export default function TrainingWelcome() {
                   <Home className="w-4 h-4 mr-2" />
                   Voltar para Início
                 </Link>
+              </Button>
+            </div>
+            
+            <div className="pt-4 border-t">
+              <p className="text-sm text-muted-foreground mb-3">
+                Ou verifique se há uma sessão disponível agora:
+              </p>
+              <Button 
+                variant="secondary"
+                onClick={checkForActiveSession}
+                className="w-full sm:w-auto"
+              >
+                <ArrowRight className="w-4 h-4 mr-2" />
+                Verificar Sessão Disponível
               </Button>
             </div>
           </CardContent>
