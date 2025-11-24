@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Header } from "@/components/Header";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useAuth } from "@/contexts/AuthContext";
-import { BookOpenText, LayoutDashboard, UserPlus, LogIn } from "lucide-react";
+import { BookOpenText, LayoutDashboard } from "lucide-react";
 import logoVertical from "@/assets/logo-fenotypo-vert-2.png";
 import fistIcon from "@/assets/fist-icon.png";
 
@@ -74,34 +74,6 @@ const Home = () => {
             </div>
           </div>
 
-          {/* Login/Register Buttons for Non-Authenticated Users */}
-          {!user && (
-            <div 
-              className={`pt-4 space-y-3 scroll-reveal ${ctaVisible ? 'revealed' : ''}`}
-            >
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                <Button
-                  onClick={() => navigate("/registro")}
-                  size="lg"
-                  className="h-14 px-12 text-lg font-semibold bg-gradient-to-r from-[#a0755f] to-[#8a6350] hover:from-[#8a6350] hover:to-[#75533f] text-white shadow-xl rounded-lg w-full sm:w-auto transition-all duration-300 group"
-                >
-                  <UserPlus className="inline-block mr-3 w-8 h-8 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-12" />
-                  Cadastre-se
-                </Button>
-                <Button
-                  onClick={() => navigate("/login")}
-                  size="lg"
-                  className="h-14 px-12 text-lg font-semibold bg-gradient-to-r from-[#c9a588] to-[#b8936f] hover:from-[#b8936f] hover:to-[#a77d5e] text-white shadow-xl rounded-lg w-full sm:w-auto transition-all duration-300 group"
-                >
-                  <LogIn className="inline-block mr-3 w-8 h-8 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12" />
-                  Entrar
-                </Button>
-              </div>
-              <p className="text-sm text-center text-muted-foreground">
-                (se já cadastrado, clique em Entrar)
-              </p>
-            </div>
-          )}
 
           {/* Features */}
           <div 
