@@ -41,9 +41,9 @@ export const Header = () => {
               variant="default" 
               size="sm"
               onClick={() => setProfessorModalOpen(true)}
-              className="bg-amber-800/10 hover:bg-amber-800/20 text-amber-800 dark:text-amber-600 border border-amber-800/20 hover:border-amber-800/30 transition-all duration-300 hover:scale-105 hover:shadow-md active:scale-95 sm:w-auto w-10 justify-center sm:justify-start"
+              className="bg-amber-800/10 hover:bg-amber-800/20 text-amber-800 dark:text-amber-600 border border-amber-800/20 hover:border-amber-800/30 transition-all duration-300 hover:scale-105 hover:shadow-md active:scale-95 w-10 h-10 p-0 sm:w-auto sm:h-9 sm:px-3 justify-center sm:justify-start"
             >
-              <BookOpenText className="mr-2 h-4 w-4" />
+              <BookOpenText className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">Sobre o Professor</span>
             </Button>
 
@@ -52,9 +52,9 @@ export const Header = () => {
                 variant="default" 
                 size="sm"
                 onClick={() => navigate("/admin")}
-                className="bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 hover:border-primary/30 transition-all duration-300 hover:scale-105 hover:shadow-md active:scale-95 sm:w-auto w-10 justify-center sm:justify-start"
+                className="bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 hover:border-primary/30 transition-all duration-300 hover:scale-105 hover:shadow-md active:scale-95 w-10 h-10 p-0 sm:w-auto sm:h-9 sm:px-3 justify-center sm:justify-start"
               >
-                <Shield className="mr-2 h-4 w-4" />
+                <Shield className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Painel Admin</span>
               </Button>
             )}
