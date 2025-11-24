@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { CheckCircle, Timer, Image, Keyboard, AlertCircle, Loader2, Monitor, UserCheck, KeyRound, Calendar, Link2 } from "lucide-react";
+import { CheckCircle, Timer, Image, Keyboard, AlertCircle, Loader2, Monitor, UserCheck, KeyRound, Calendar, Link2, Users } from "lucide-react";
 import { Header } from "@/components/Header";
 import { VotingFooter } from "@/components/VotingFooter";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
@@ -26,6 +26,7 @@ export default function Antessala() {
   const [sessionData, setSessionData] = useState<SessionData | null>(null);
   const [userName, setUserName] = useState<string>("");
   const [loading, setLoading] = useState(true);
+  const [onlineParticipants, setOnlineParticipants] = useState(0);
   const [hasPlayedSound, setHasPlayedSound] = useState(false);
 
   const { ref: card1Ref, isVisible: card1Visible } = useScrollReveal();
@@ -389,7 +390,39 @@ export default function Antessala() {
         .subscribe();
     }
 
+    // Track presence when in antessala
+    let presenceChannel: any = null;
+    const activeSessionId = sessionData?.id || sessionId;
+    if (activeSessionId && user) {
+      presenceChannel = supabase.channel(`antessala-${activeSessionId}`)
+        .on('presence', { event: 'sync' }, () => {
+          const state = presenceChannel.presenceState();
+          const onlineCount = Object.keys(state).length;
+          setOnlineParticipants(onlineCount);
+        })
+        .on('presence', { event: 'join' }, ({ newPresences }) => {
+          console.log('Participante entrou:', newPresences);
+        })
+        .on('presence', { event: 'leave' }, ({ leftPresences }) => {
+          console.log('Participante saiu:', leftPresences);
+        });
+
+      presenceChannel.subscribe(async (status: string) => {
+        if (status === 'SUBSCRIBED') {
+          await presenceChannel.track({
+            user_id: user.id,
+            name: userName || user.email?.split('@')[0] || 'Anônimo',
+            joined_at: new Date().toISOString(),
+          });
+        }
+      });
+    }
+
     return () => {
+      if (presenceChannel) {
+        presenceChannel.untrack();
+        supabase.removeChannel(presenceChannel);
+      }
       if (sessionUpdateChannel) {
         supabase.removeChannel(sessionUpdateChannel);
       }
@@ -397,7 +430,7 @@ export default function Antessala() {
         supabase.removeChannel(sessionCreationChannel);
       }
     };
-  }, [sessionId, trainingId, user, navigate, toast]);
+  }, [sessionId, trainingId, user, navigate, toast, userName]);
 
   if (loading) {
     return (
@@ -416,8 +449,22 @@ export default function Antessala() {
     return (
       <div className="min-h-screen flex flex-col">
         <Header />
-        <div className="flex-1 container max-w-4xl py-8 px-4">
-          <Card className="max-w-2xl mx-auto mt-12">
+        <div className="flex-1 container max-w-4xl py-8 px-4 space-y-4">
+          {onlineParticipants > 0 && (
+            <Card className="max-w-2xl mx-auto">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-center gap-3">
+                  <Users className="w-5 h-5 text-green-500" />
+                  <span className="text-lg">
+                    <strong>{onlineParticipants}</strong> participante(s) online aguardando
+                  </span>
+                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          
+          <Card className="max-w-2xl mx-auto">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-center">
                 <Timer className="w-6 h-6 text-primary animate-pulse mx-auto" />
