@@ -99,8 +99,37 @@ export default function TrainingLogin() {
         return;
       }
 
+      // Get session to confirm user
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session?.user || !trainingId) {
+        toast.error('Erro ao obter sessão');
+        return;
+      }
+
       toast.success('Login realizado com sucesso!');
-      // checkParticipation will be called by useEffect
+
+      // Check participation directly
+      const { data: participant } = await supabase
+        .from('training_participants')
+        .select('*')
+        .eq('training_id', trainingId)
+        .eq('user_id', session.user.id)
+        .maybeSingle();
+
+      if (!participant) {
+        toast.info('Você precisa se cadastrar neste treinamento primeiro');
+        navigate(`/training/${trainingId}/register`);
+        return;
+      }
+
+      // Redirect directly
+      if (redirectUrl) {
+        navigate(redirectUrl);
+      } else {
+        navigate(`/training/${trainingId}/antessala`);
+      }
+      
     } catch (error: any) {
       console.error('Error during login:', error);
       toast.error(error.message || 'Erro ao fazer login');
