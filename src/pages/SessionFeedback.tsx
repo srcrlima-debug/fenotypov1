@@ -15,6 +15,7 @@ import { feedbackSchema, FeedbackFormData } from '@/lib/feedbackValidation';
 import { z } from 'zod';
 import { BadgeNotification } from '@/components/BadgeNotification';
 import { BadgeDisplay } from '@/components/BadgeDisplay';
+import { checkRateLimit } from '@/lib/rateLimiter';
 
 export default function SessionFeedback() {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -127,6 +128,23 @@ export default function SessionFeedback() {
     try {
       // Validate form data
       feedbackSchema.parse(formData);
+
+      // Rate limiting check: max 5 feedbacks por minuto
+      const rateLimitResult = await checkRateLimit({
+        endpoint: 'submit-feedback',
+        maxRequests: 5,
+        windowMinutes: 1,
+      });
+
+      if (!rateLimitResult.allowed) {
+        console.warn('Rate limit exceeded:', rateLimitResult);
+        toast({
+          title: "Muitas requisições",
+          description: rateLimitResult.message || "Por favor, aguarde alguns instantes antes de tentar novamente.",
+          variant: "destructive",
+        });
+        return;
+      }
 
       setSubmitting(true);
 

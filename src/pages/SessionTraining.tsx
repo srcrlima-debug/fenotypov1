@@ -8,6 +8,7 @@ import { CountdownCircleTimer } from "react-countdown-circle-timer";
 import { getImageByPage } from "@/data/images";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { checkRateLimit } from "@/lib/rateLimiter";
 import { 
   Users, 
   Clock, 
@@ -262,6 +263,23 @@ export default function SessionTraining() {
 
   const saveAvaliacao = async (resposta: string): Promise<boolean> => {
     if (!user || !sessionData) return false;
+
+    // Rate limiting check: max 30 submissões por minuto (uma por foto)
+    const rateLimitResult = await checkRateLimit({
+      endpoint: 'submit-avaliacao',
+      maxRequests: 30,
+      windowMinutes: 1,
+    });
+
+    if (!rateLimitResult.allowed) {
+      console.warn('Rate limit exceeded:', rateLimitResult);
+      toast({
+        title: "Muitas requisições",
+        description: rateLimitResult.message || "Por favor, aguarde alguns instantes antes de tentar novamente.",
+        variant: "destructive",
+      });
+      return false;
+    }
 
     const tempoDecorrido = Date.now() - startTime;
     console.log("Saving avaliacao for user:", user.id, "tempo desde início:", tempoDecorrido, "ms");
