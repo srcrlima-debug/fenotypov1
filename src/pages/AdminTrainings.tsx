@@ -254,66 +254,17 @@ export default function AdminTrainings() {
                         variant="outline"
                         size="sm"
                         onClick={() => copyRegistrationLink(training.id)}
-                        className="border-blue-500/50 hover:bg-blue-50 dark:hover:bg-blue-950"
+                        className="border-primary/50 hover:bg-primary/10"
                       >
-                        <UserPlus className="w-4 h-4 mr-2 text-blue-600" />
-                        Link de Pré-cadastro
-                        <Badge variant="outline" className="ml-2 bg-blue-100 text-blue-700 border-blue-300">
-                          Antes
-                        </Badge>
+                        <UserPlus className="w-4 h-4 mr-2 text-primary" />
+                        Link de Acesso
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Enviar antes do treinamento para cadastro de participantes</p>
+                      <p>Link único para cadastro e acesso ao treinamento</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
-
-                {sessions[training.id]?.length > 0 && (
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="border-green-500/50 hover:bg-green-50 dark:hover:bg-green-950"
-                            >
-                              <PlayCircle className="w-4 h-4 mr-2 text-green-600" />
-                              Link da Sessão
-                              <Badge variant="outline" className="ml-2 bg-green-100 text-green-700 border-green-300">
-                                Ao Vivo
-                              </Badge>
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="start" className="w-56">
-                            <DropdownMenuLabel>Selecione a sessão</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            {sessions[training.id].map((session) => (
-                              <DropdownMenuItem
-                                key={session.id}
-                                onClick={() => copySessionLink(training.id, session.id, session.nome)}
-                                className="cursor-pointer"
-                              >
-                                <Link2 className="w-4 h-4 mr-2" />
-                                <div className="flex flex-col">
-                                  <span className="font-medium">{session.nome}</span>
-                                  <span className="text-xs text-muted-foreground">
-                                    {new Date(session.data).toLocaleDateString('pt-BR')}
-                                  </span>
-                                </div>
-                              </DropdownMenuItem>
-                            ))}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Enviar no dia do treinamento - apenas para participantes cadastrados</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                )}
                 <Button
                   variant="outline"
                   size="sm"

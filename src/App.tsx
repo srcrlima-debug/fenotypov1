@@ -66,6 +66,18 @@ const App = () => (
                   <Route path="/training/:trainingId/register" element={<TrainingRegister />} />
                   <Route path="/training/:trainingId/welcome" element={<TrainingWelcome />} />
                   <Route path="/training/:trainingId/login" element={<TrainingLogin />} />
+                  
+                  {/* New unified antessala route (without sessionId) */}
+                  <Route 
+                    path="/training/:trainingId/antessala" 
+                    element={
+                      <ProtectedRoute>
+                        <Antessala />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  
+                  {/* Legacy antessala routes for backwards compatibility */}
                   <Route 
                     path="/training/:trainingId/session/:sessionId/antessala" 
                     element={
@@ -74,8 +86,6 @@ const App = () => (
                       </ProtectedRoute>
                     } 
                   />
-                  
-                  {/* Legacy antessala route for backwards compatibility */}
                   <Route 
                     path="/antessala/:sessionId" 
                     element={

@@ -37,8 +37,9 @@ export default function TrainingWelcome() {
       navigate(`/training/${trainingId}/login`);
       return;
     }
-    loadData();
-  }, [trainingId, user]);
+    // Redireciona automaticamente para antessala
+    navigate(`/training/${trainingId}/antessala`, { replace: true });
+  }, [trainingId, user, navigate]);
 
   const loadData = async () => {
     try {
