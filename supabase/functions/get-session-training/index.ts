@@ -1,9 +1,14 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.81.1';
+import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+const requestSchema = z.object({
+  sessionId: z.string().uuid({ message: 'Invalid session ID format' })
+});
 
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
@@ -12,17 +17,51 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { sessionId } = await req.json();
+    // Rate limiting check
+    const ipAddress = req.headers.get('x-forwarded-for')?.split(',')[0].trim() || 'unknown';
+    
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const supabaseClient = createClient(supabaseUrl, supabaseKey);
+    
+    const rateLimitResponse = await supabaseClient.functions.invoke('check-rate-limit', {
+      body: {
+        endpoint: 'get-session-training',
+        maxRequests: 10,
+        windowMinutes: 1
+      }
+    });
 
-    if (!sessionId) {
+    if (rateLimitResponse.error || !rateLimitResponse.data?.allowed) {
+      console.warn(`Rate limit exceeded for IP: ${ipAddress}`);
       return new Response(
-        JSON.stringify({ error: 'sessionId is required' }),
+        JSON.stringify({ error: 'Rate limit exceeded. Please try again later.' }),
         { 
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          status: 429, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         }
       );
     }
+
+    // Input validation
+    const body = await req.json();
+    const validation = requestSchema.safeParse(body);
+    
+    if (!validation.success) {
+      console.error('Validation error:', validation.error.errors);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid request', 
+          details: validation.error.errors 
+        }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    const { sessionId } = validation.data;
 
     // Create admin client with service role to bypass RLS
     const supabaseAdmin = createClient(
