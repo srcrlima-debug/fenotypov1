@@ -16,13 +16,13 @@ export const WelcomeModal = ({ open, onAccept }: WelcomeModalProps) => {
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold text-center mb-4">
+          <DialogTitle className="text-2xl font-bold text-center mb-4 animate-fade-in">
             🎯 Bem-vindo ao Treinamento FENOTYPO
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6">
-          <div className="bg-destructive/10 border-l-4 border-destructive p-4 rounded">
+          <div className="bg-destructive/10 border-l-4 border-destructive p-4 rounded animate-fade-in" style={{ animationDelay: '0.1s', animationFillMode: 'backwards' }}>
             <div className="flex items-start gap-3">
               <AlertCircle className="w-6 h-6 text-destructive flex-shrink-0 mt-1" />
               <div>
@@ -36,7 +36,7 @@ export const WelcomeModal = ({ open, onAccept }: WelcomeModalProps) => {
 
           <div className="space-y-4">
             {/* Regra 1 */}
-            <div className="flex gap-4 p-4 bg-card rounded-lg border">
+            <div className="flex gap-4 p-4 bg-card rounded-lg border shadow-sm hover:shadow-md transition-all animate-fade-in" style={{ animationDelay: '0.2s', animationFillMode: 'backwards' }}>
               <LinkIcon className="w-6 h-6 text-primary flex-shrink-0 mt-1" />
               <div className="flex-1">
                 <h4 className="font-bold mb-2">1. ACESSO EXCLUSIVO VIA LINK</h4>
@@ -49,7 +49,7 @@ export const WelcomeModal = ({ open, onAccept }: WelcomeModalProps) => {
             </div>
 
             {/* Regra 2 */}
-            <div className="flex gap-4 p-4 bg-card rounded-lg border">
+            <div className="flex gap-4 p-4 bg-card rounded-lg border shadow-sm hover:shadow-md transition-all animate-fade-in" style={{ animationDelay: '0.35s', animationFillMode: 'backwards' }}>
               <Clock className="w-6 h-6 text-primary flex-shrink-0 mt-1" />
               <div className="flex-1">
                 <h4 className="font-bold mb-2">2. TEMPO LIMITADO</h4>
@@ -62,7 +62,7 @@ export const WelcomeModal = ({ open, onAccept }: WelcomeModalProps) => {
             </div>
 
             {/* Regra 3 */}
-            <div className="flex gap-4 p-4 bg-card rounded-lg border">
+            <div className="flex gap-4 p-4 bg-card rounded-lg border shadow-sm hover:shadow-md transition-all animate-fade-in" style={{ animationDelay: '0.5s', animationFillMode: 'backwards' }}>
               <Keyboard className="w-6 h-6 text-primary flex-shrink-0 mt-1" />
               <div className="flex-1">
                 <h4 className="font-bold mb-2">3. ATALHOS DE TECLADO</h4>
@@ -74,7 +74,7 @@ export const WelcomeModal = ({ open, onAccept }: WelcomeModalProps) => {
             </div>
 
             {/* Regra 4 */}
-            <div className="flex gap-4 p-4 bg-card rounded-lg border">
+            <div className="flex gap-4 p-4 bg-card rounded-lg border shadow-sm hover:shadow-md transition-all animate-fade-in" style={{ animationDelay: '0.65s', animationFillMode: 'backwards' }}>
               <BarChart3 className="w-6 h-6 text-primary flex-shrink-0 mt-1" />
               <div className="flex-1">
                 <h4 className="font-bold mb-2">4. TOTAL DE AVALIAÇÕES</h4>
@@ -86,7 +86,7 @@ export const WelcomeModal = ({ open, onAccept }: WelcomeModalProps) => {
             </div>
 
             {/* Regra 5 */}
-            <div className="flex gap-4 p-4 bg-card rounded-lg border">
+            <div className="flex gap-4 p-4 bg-card rounded-lg border shadow-sm hover:shadow-md transition-all animate-fade-in" style={{ animationDelay: '0.8s', animationFillMode: 'backwards' }}>
               <Monitor className="w-6 h-6 text-primary flex-shrink-0 mt-1" />
               <div className="flex-1">
                 <h4 className="font-bold mb-2">5. DISPOSITIVOS RECOMENDADOS</h4>
@@ -98,10 +98,10 @@ export const WelcomeModal = ({ open, onAccept }: WelcomeModalProps) => {
             </div>
           </div>
 
-          <div className="pt-4">
+          <div className="pt-4 animate-fade-in" style={{ animationDelay: '0.95s', animationFillMode: 'backwards' }}>
             <Button 
               onClick={onAccept}
-              className="w-full h-12 text-lg"
+              className="w-full h-12 text-lg hover:scale-105 transition-transform"
               size="lg"
             >
               Entendi e Aceito as Regras
