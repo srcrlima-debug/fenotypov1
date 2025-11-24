@@ -58,6 +58,17 @@ export const Header = () => {
               </Button>
             )}
 
+            {!user && (
+              <Button 
+                variant="default" 
+                size="sm"
+                onClick={() => navigate("/login")}
+              >
+                <CircleUser className="mr-2 h-4 w-4" />
+                <span>Entrar</span>
+              </Button>
+            )}
+
             {user && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
