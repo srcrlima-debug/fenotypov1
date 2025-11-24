@@ -4,7 +4,7 @@ import logo from "@/assets/logo-fenotypo-horiz-2.png";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdmin } from "@/hooks/useAdmin";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ProfessorModal } from "@/components/ProfessorModal";
 import {
   DropdownMenu,
@@ -12,12 +12,57 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Header = () => {
   const { user, logout } = useAuth();
   const { isAdmin } = useAdmin();
   const navigate = useNavigate();
   const [professorModalOpen, setProfessorModalOpen] = useState(false);
+  const [hasNotifications, setHasNotifications] = useState(false);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+
+    const checkNotifications = async () => {
+      // Verificar se há sessões ativas ou treinamentos pendentes
+      const { data: activeSessions } = await supabase
+        .from("sessions")
+        .select("id")
+        .eq("session_status", "active")
+        .limit(1);
+
+      setHasNotifications(!!activeSessions && activeSessions.length > 0);
+    };
+
+    checkNotifications();
+
+    // Verificar notificações em tempo real
+    const channel = supabase
+      .channel("admin-notifications")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "sessions",
+        },
+        () => {
+          checkNotifications();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [isAdmin]);
 
   const handleLogout = async () => {
     await logout();
@@ -37,27 +82,48 @@ export const Header = () => {
           </Link>
 
           <nav className="flex items-center gap-2">
-            <Button 
-              variant="default" 
-              size="sm"
-              onClick={() => setProfessorModalOpen(true)}
-              className="bg-amber-800/10 hover:bg-amber-800/20 text-amber-800 dark:text-amber-600 border border-amber-800/20 hover:border-amber-800/30 transition-all duration-300 hover:scale-105 hover:shadow-md active:scale-95 w-10 h-10 p-0 sm:w-auto sm:h-9 sm:px-3 justify-center sm:justify-start"
-            >
-              <BookOpenText className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Sobre o Professor</span>
-            </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="default" 
+                    size="sm"
+                    onClick={() => setProfessorModalOpen(true)}
+                    className="bg-amber-900 hover:bg-amber-800 text-white border border-amber-800 hover:border-amber-700 transition-all duration-300 hover:scale-105 hover:shadow-lg active:scale-95 w-10 h-10 p-0 sm:w-auto sm:h-9 sm:px-3 justify-center sm:justify-start"
+                  >
+                    <BookOpenText className="h-4 w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Sobre o Professor</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="sm:hidden">
+                  <p>Sobre o Professor</p>
+                </TooltipContent>
+              </Tooltip>
 
-            {isAdmin && (
-              <Button 
-                variant="default" 
-                size="sm"
-                onClick={() => navigate("/admin")}
-                className="bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 hover:border-primary/30 transition-all duration-300 hover:scale-105 hover:shadow-md active:scale-95 w-10 h-10 p-0 sm:w-auto sm:h-9 sm:px-3 justify-center sm:justify-start"
-              >
-                <Shield className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Painel Admin</span>
-              </Button>
-            )}
+              {isAdmin && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      variant="default" 
+                      size="sm"
+                      onClick={() => navigate("/admin")}
+                      className={`bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 hover:border-primary/30 transition-all duration-300 hover:scale-105 hover:shadow-lg active:scale-95 w-10 h-10 p-0 sm:w-auto sm:h-9 sm:px-3 justify-center sm:justify-start ${
+                        hasNotifications ? "animate-pulse" : ""
+                      }`}
+                    >
+                      <Shield className="h-4 w-4 sm:mr-2" />
+                      <span className="hidden sm:inline">Painel Admin</span>
+                      {hasNotifications && (
+                        <span className="absolute -top-1 -right-1 h-3 w-3 bg-destructive rounded-full animate-pulse sm:hidden" />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="sm:hidden">
+                    <p>Painel Admin{hasNotifications ? " (Sessões ativas)" : ""}</p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
+            </TooltipProvider>
 
             {!user && (
               <Button 
