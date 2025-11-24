@@ -8,11 +8,13 @@ interface UserBadge {
   badge_descricao: string;
   badge_icone: string;
   earned_at: string;
+  visible_after_completion?: boolean;
 }
 
 interface BadgeDisplayProps {
   badges: UserBadge[];
   variant?: 'compact' | 'detailed';
+  sessionCompleted?: boolean;
 }
 
 const iconMap: Record<string, any> = {
@@ -23,14 +25,23 @@ const iconMap: Record<string, any> = {
   Star,
 };
 
-export function BadgeDisplay({ badges, variant = 'compact' }: BadgeDisplayProps) {
-  if (badges.length === 0) return null;
+export function BadgeDisplay({ badges, variant = 'compact', sessionCompleted = true }: BadgeDisplayProps) {
+  // Filter badges based on visibility rules
+  const visibleBadges = badges.filter(badge => {
+    // If badge requires session completion and session is not completed, hide it
+    if (badge.visible_after_completion && !sessionCompleted) {
+      return false;
+    }
+    return true;
+  });
+
+  if (visibleBadges.length === 0) return null;
 
   if (variant === 'compact') {
     return (
       <TooltipProvider>
         <div className="flex flex-wrap gap-2">
-          {badges.map((badge) => {
+          {visibleBadges.map((badge) => {
             const Icon = iconMap[badge.badge_icone] || Award;
             return (
               <Tooltip key={badge.badge_id}>
@@ -57,7 +68,7 @@ export function BadgeDisplay({ badges, variant = 'compact' }: BadgeDisplayProps)
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-      {badges.map((badge) => {
+      {visibleBadges.map((badge) => {
         const Icon = iconMap[badge.badge_icone] || Award;
         return (
           <div

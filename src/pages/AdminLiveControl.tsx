@@ -13,6 +13,7 @@ import { format } from "date-fns";
 import { Header } from '@/components/Header';
 import { Badge } from "@/components/ui/badge";
 import { RealtimeMetricsDashboard } from '@/components/RealtimeMetricsDashboard';
+import { logSessionAction } from '@/lib/auditLogger';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -433,6 +434,11 @@ export default function AdminLiveControl() {
       return;
     }
 
+    // Log audit action
+    await logSessionAction('start_session', sessionId, {
+      session_name: session?.nome,
+    });
+
     toast({
       title: "Sessão Iniciada",
       description: "A primeira foto foi liberada para os participantes",
@@ -494,6 +500,12 @@ export default function AdminLiveControl() {
       return;
     }
 
+    // Log audit action
+    await logSessionAction('next_photo', sessionId, {
+      from_photo: session.current_photo,
+      to_photo: session.current_photo + 1,
+    });
+
     toast({
       title: "Próxima Foto",
       description: `Foto ${session.current_photo + 1} liberada`,
@@ -513,7 +525,13 @@ export default function AdminLiveControl() {
         description: "Não foi possível exibir resultados",
         variant: "destructive",
       });
+      return;
     }
+
+    // Log audit action
+    await logSessionAction('show_results', sessionId, {
+      photo_number: session?.current_photo,
+    });
   };
 
   const handleRestartPhoto = async () => {
@@ -531,6 +549,11 @@ export default function AdminLiveControl() {
       });
       return;
     }
+
+    // Log audit action
+    await logSessionAction('restart_photo', sessionId, {
+      photo_number: session.current_photo,
+    });
 
     toast({
       title: "Foto Reiniciada",
