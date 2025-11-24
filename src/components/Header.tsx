@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { CircleUser, Settings, LogOut, BookOpenText, Shield } from "lucide-react";
+import { CircleUser, Settings, LogOut, BookOpenText, Shield, Menu } from "lucide-react";
 import logo from "@/assets/logo-fenotypo-horiz-2.png";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -13,11 +13,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Header = () => {
@@ -26,6 +27,7 @@ export const Header = () => {
   const navigate = useNavigate();
   const [professorModalOpen, setProfessorModalOpen] = useState(false);
   const [hasNotifications, setHasNotifications] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -82,75 +84,136 @@ export const Header = () => {
           </Link>
 
           <nav className="flex items-center gap-2">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button 
-                    variant="default" 
-                    size="sm"
-                    onClick={() => setProfessorModalOpen(true)}
-                    className="bg-amber-900 hover:bg-amber-800 text-white border border-amber-800 hover:border-amber-700 transition-all duration-300 hover:scale-105 hover:shadow-lg active:scale-95 w-10 h-10 p-0 sm:w-auto sm:h-9 sm:px-3 justify-center sm:justify-start"
+            {/* Mobile Menu */}
+            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+              <SheetTrigger asChild className="sm:hidden">
+                <Button variant="ghost" size="sm" className="relative">
+                  <Menu className="h-5 w-5" />
+                  {hasNotifications && (
+                    <span className="absolute -top-1 -right-1 h-3 w-3 bg-destructive rounded-full animate-pulse" />
+                  )}
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-[280px]">
+                <SheetHeader>
+                  <SheetTitle>Menu</SheetTitle>
+                </SheetHeader>
+                <div className="flex flex-col gap-4 mt-6">
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start bg-amber-900 hover:bg-amber-800 text-white border-amber-800 hover:border-amber-700"
+                    onClick={() => {
+                      setProfessorModalOpen(true);
+                      setMobileMenuOpen(false);
+                    }}
                   >
-                    <BookOpenText className="h-4 w-4 sm:mr-2" />
-                    <span className="hidden sm:inline">Sobre o Professor</span>
+                    <BookOpenText className="mr-2 h-4 w-4" />
+                    Sobre o Professor
                   </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="sm:hidden">
-                  <p>Sobre o Professor</p>
-                </TooltipContent>
-              </Tooltip>
 
-              {isAdmin && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button 
-                      variant="default" 
-                      size="sm"
-                      onClick={() => navigate("/admin")}
-                      className={`bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 hover:border-primary/30 transition-all duration-300 hover:scale-105 hover:shadow-lg active:scale-95 w-10 h-10 p-0 sm:w-auto sm:h-9 sm:px-3 justify-center sm:justify-start ${
+                  {isAdmin && (
+                    <Button
+                      variant="outline"
+                      className={`w-full justify-start ${
                         hasNotifications ? "animate-pulse" : ""
                       }`}
+                      onClick={() => {
+                        navigate("/admin");
+                        setMobileMenuOpen(false);
+                      }}
                     >
-                      <Shield className="h-4 w-4 sm:mr-2" />
-                      <span className="hidden sm:inline">Painel Admin</span>
+                      <Shield className="mr-2 h-4 w-4" />
+                      Painel Admin
                       {hasNotifications && (
-                        <span className="absolute -top-1 -right-1 h-3 w-3 bg-destructive rounded-full animate-pulse sm:hidden" />
+                        <span className="ml-auto h-2 w-2 bg-destructive rounded-full" />
                       )}
                     </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom" className="sm:hidden">
-                    <p>Painel Admin{hasNotifications ? " (Sessões ativas)" : ""}</p>
-                  </TooltipContent>
-                </Tooltip>
-              )}
-            </TooltipProvider>
+                  )}
 
-            {!user && (
+                  {!user && (
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start"
+                      onClick={() => {
+                        navigate("/login");
+                        setMobileMenuOpen(false);
+                      }}
+                    >
+                      <CircleUser className="mr-2 h-4 w-4" />
+                      Admin
+                    </Button>
+                  )}
+
+                  {user && (
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start"
+                      onClick={() => {
+                        handleLogout();
+                        setMobileMenuOpen(false);
+                      }}
+                    >
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Sair
+                    </Button>
+                  )}
+                </div>
+              </SheetContent>
+            </Sheet>
+
+            {/* Desktop Menu */}
+            <div className="hidden sm:flex items-center gap-2">
               <Button 
                 variant="default" 
                 size="sm"
-                onClick={() => navigate("/login")}
+                onClick={() => setProfessorModalOpen(true)}
+                className="bg-amber-900 hover:bg-amber-800 text-white border border-amber-800 hover:border-amber-700 transition-all duration-300 hover:scale-105 hover:shadow-lg active:scale-95"
               >
-                <CircleUser className="mr-2 h-4 w-4" />
-                <span>Admin</span>
+                <BookOpenText className="mr-2 h-4 w-4" />
+                Sobre o Professor
               </Button>
-            )}
 
-            {user && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm">
-                    <CircleUser className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={handleLogout}>
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Sair
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
+              {isAdmin && (
+                <Button 
+                  variant="default" 
+                  size="sm"
+                  onClick={() => navigate("/admin")}
+                  className={`bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 hover:border-primary/30 transition-all duration-300 hover:scale-105 hover:shadow-lg active:scale-95 ${
+                    hasNotifications ? "animate-pulse" : ""
+                  }`}
+                >
+                  <Shield className="mr-2 h-4 w-4" />
+                  Painel Admin
+                </Button>
+              )}
+
+              {!user && (
+                <Button 
+                  variant="default" 
+                  size="sm"
+                  onClick={() => navigate("/login")}
+                >
+                  <CircleUser className="mr-2 h-4 w-4" />
+                  Admin
+                </Button>
+              )}
+
+              {user && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm">
+                      <CircleUser className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={handleLogout}>
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Sair
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </div>
           </nav>
         </div>
       </header>
