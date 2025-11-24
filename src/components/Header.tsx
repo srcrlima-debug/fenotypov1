@@ -28,6 +28,16 @@ export const Header = () => {
   const [professorModalOpen, setProfessorModalOpen] = useState(false);
   const [hasNotifications, setHasNotifications] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 20);
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -73,13 +83,19 @@ export const Header = () => {
 
   return (
     <>
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-16 items-center justify-between px-4">
+      <header className={`sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-all duration-300 ${
+        isScrolled ? "shadow-md" : ""
+      }`}>
+        <div className={`container flex items-center justify-between px-4 transition-all duration-300 ${
+          isScrolled ? "h-14" : "h-16"
+        }`}>
           <Link to="/" className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
             <img 
               src={logo} 
               alt="Fenotypo Logo" 
-              className="h-10 transition-all" 
+              className={`transition-all duration-300 ${
+                isScrolled ? "h-8" : "h-10"
+              }`} 
             />
           </Link>
 
