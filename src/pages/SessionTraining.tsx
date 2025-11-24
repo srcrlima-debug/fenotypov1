@@ -21,10 +21,8 @@ import {
   Send
 } from "lucide-react";
 import { Header } from "@/components/Header";
-import { WelcomeModal } from "@/components/WelcomeModal";
 import { VotingFooter } from "@/components/VotingFooter";
 import { VotingStats } from "@/components/VotingStats";
-import { useWelcomeModal } from "@/hooks/useWelcomeModal";
 
 interface SessionData {
   id: string;
@@ -41,7 +39,6 @@ export default function SessionTraining() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
-  const { shouldShowModal, markAsViewed } = useWelcomeModal(user?.id);
 
   const [sessionData, setSessionData] = useState<SessionData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -371,7 +368,6 @@ export default function SessionTraining() {
   if (sessionData.session_status === "waiting") {
     return (
       <div className="min-h-screen flex flex-col">
-        <WelcomeModal open={shouldShowModal} onAccept={markAsViewed} />
         <Header />
         <div className="flex-1 flex items-center justify-center p-4 bg-gradient-to-b from-background to-muted/20">
           <Card className="max-w-2xl w-full p-8 space-y-6 text-center animate-fade-in">

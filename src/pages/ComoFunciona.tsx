@@ -3,16 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CircleCheck, Timer, Image, Keyboard, TriangleAlert, Monitor, UserCheck, KeyRound, Calendar, Link2, AlertCircle } from "lucide-react";
 import { Header } from "@/components/Header";
-import { WelcomeModal } from "@/components/WelcomeModal";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCardTilt } from "@/hooks/useCardTilt";
-import { useWelcomeModal } from "@/hooks/useWelcomeModal";
-import { useAuth } from "@/contexts/AuthContext";
 
 const ComoFunciona = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const { shouldShowModal, markAsViewed } = useWelcomeModal(user?.id);
   const { ref: card1Ref, isVisible: card1Visible } = useScrollReveal();
   const { ref: card2Ref, isVisible: card2Visible } = useScrollReveal();
   const { ref: card3Ref, isVisible: card3Visible } = useScrollReveal();
@@ -33,7 +28,6 @@ const ComoFunciona = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
-      <WelcomeModal open={shouldShowModal} onAccept={markAsViewed} />
       <Header />
       
       <div className="container max-w-4xl py-8 px-4 page-transition">
