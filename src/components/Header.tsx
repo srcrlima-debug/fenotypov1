@@ -1,10 +1,9 @@
-import { Link } from "react-router-dom";
-import { CircleUser, Settings, LogOut, BookOpenText } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { CircleUser, Settings, LogOut, BookOpenText, Shield } from "lucide-react";
 import logo from "@/assets/logo-fenotypo-horiz-2.png";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdmin } from "@/hooks/useAdmin";
-import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { ProfessorModal } from "@/components/ProfessorModal";
 import {
@@ -47,6 +46,17 @@ export const Header = () => {
               <span className="hidden sm:inline">Sobre o Professor</span>
             </Button>
 
+            {isAdmin && (
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => navigate("/admin")}
+              >
+                <Shield className="mr-2 h-4 w-4" />
+                <span className="hidden sm:inline">Admin</span>
+              </Button>
+            )}
+
             {user && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -55,14 +65,6 @@ export const Header = () => {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  {isAdmin && (
-                    <DropdownMenuItem asChild>
-                      <Link to="/admin">
-                        <Settings className="mr-2 h-4 w-4" />
-                        Admin
-                      </Link>
-                    </DropdownMenuItem>
-                  )}
                   <DropdownMenuItem onClick={handleLogout}>
                     <LogOut className="mr-2 h-4 w-4" />
                     Sair
