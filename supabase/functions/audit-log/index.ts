@@ -1,16 +1,17 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.81.1';
+import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface AuditLogRequest {
-  action: string;
-  resource_type: string;
-  resource_id?: string;
-  details?: Record<string, any>;
-}
+const auditLogSchema = z.object({
+  action: z.string().min(1).max(100),
+  resource_type: z.string().min(1).max(100),
+  resource_id: z.string().uuid().optional(),
+  details: z.record(z.any()).optional()
+});
 
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
@@ -51,7 +52,25 @@ Deno.serve(async (req) => {
       throw new Error('Forbidden: Admin role required');
     }
 
-    const body: AuditLogRequest = await req.json();
+    // Input validation
+    const rawBody = await req.json();
+    const validation = auditLogSchema.safeParse(rawBody);
+    
+    if (!validation.success) {
+      console.error('Validation error:', validation.error.errors);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid request', 
+          details: validation.error.errors 
+        }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    const body = validation.data;
     
     // Extract IP address and user agent
     const ip_address = req.headers.get('x-forwarded-for')?.split(',')[0].trim() || 
