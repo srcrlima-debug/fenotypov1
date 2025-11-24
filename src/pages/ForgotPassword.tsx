@@ -5,8 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Mail, ArrowLeft } from 'lucide-react';
+import { Mail, ArrowLeft, Loader2 } from 'lucide-react';
+import { z } from 'zod';
 import logoHorizontal from '@/assets/logo-fenotypo-horiz.png';
+
+const emailSchema = z.object({
+  email: z.string().email({ message: 'Email inválido' }),
+});
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('');
@@ -18,19 +23,30 @@ export default function ForgotPassword() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!email) {
-      toast({
-        title: "Email obrigatório",
-        description: "Por favor, insira seu email.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setLoading(true);
-
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      // Validar email com zod
+      const validatedData = emailSchema.parse({ email: email.trim() });
+      setLoading(true);
+
+      // Verificar se o email existe no sistema
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('email')
+        .eq('email', validatedData.email)
+        .maybeSingle();
+
+      if (!profile) {
+        toast({
+          title: "Email não encontrado",
+          description: "Este email não está cadastrado no sistema. Verifique o email digitado ou crie uma conta.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
+      // Enviar email de recuperação
+      const { error } = await supabase.auth.resetPasswordForEmail(validatedData.email, {
         redirectTo: `${window.location.origin}/redefinir-senha`,
       });
 
@@ -39,15 +55,23 @@ export default function ForgotPassword() {
       setEmailSent(true);
       toast({
         title: "Email enviado!",
-        description: "Verifique sua caixa de entrada para redefinir sua senha.",
+        description: "Verifique sua caixa de entrada e spam para redefinir sua senha. O link expira em 1 hora.",
       });
     } catch (error: any) {
-      console.error('Error sending reset email:', error);
-      toast({
-        title: "Erro ao enviar email",
-        description: error.message || "Ocorreu um erro ao enviar o email de recuperação.",
-        variant: "destructive",
-      });
+      if (error instanceof z.ZodError) {
+        toast({
+          title: "Email inválido",
+          description: error.errors[0].message,
+          variant: "destructive",
+        });
+      } else {
+        console.error('Error sending reset email:', error);
+        toast({
+          title: "Erro ao enviar email",
+          description: error.message || "Ocorreu um erro ao enviar o email de recuperação. Tente novamente.",
+          variant: "destructive",
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -69,9 +93,19 @@ export default function ForgotPassword() {
               </div>
               <h1 className="text-2xl font-bold text-foreground">Email Enviado!</h1>
               <p className="text-muted-foreground">
-                Enviamos um link de recuperação para <strong>{email}</strong>. 
-                Verifique sua caixa de entrada e siga as instruções para redefinir sua senha.
+                Enviamos um link de recuperação para <strong>{email}</strong>.
               </p>
+              <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 text-left">
+                <p className="text-sm text-amber-800 dark:text-amber-200 font-medium mb-2">
+                  Instruções importantes:
+                </p>
+                <ul className="text-xs text-amber-700 dark:text-amber-300 space-y-1">
+                  <li>• Verifique sua caixa de entrada <strong>e pasta de spam</strong></li>
+                  <li>• O link expira em <strong>1 hora</strong></li>
+                  <li>• Clique no link para criar uma nova senha</li>
+                  <li>• Se não receber, tente reenviar</li>
+                </ul>
+              </div>
             </div>
             <div className="space-y-3">
               <Button 
@@ -112,19 +146,24 @@ export default function ForgotPassword() {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6" autoComplete="on">
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">Email cadastrado</Label>
             <Input
               id="email"
+              name="email"
               type="email"
               placeholder="seu@email.com"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => setEmail(e.target.value.trim())}
               disabled={loading}
               required
+              autoComplete="email"
               className="w-full"
             />
+            <p className="text-xs text-muted-foreground">
+              Digite o email que você usou para criar sua conta
+            </p>
           </div>
 
           <Button 
@@ -132,7 +171,14 @@ export default function ForgotPassword() {
             className="w-full" 
             disabled={loading}
           >
-            {loading ? 'Enviando...' : 'Enviar Link de Recuperação'}
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Verificando...
+              </>
+            ) : (
+              'Enviar Link de Recuperação'
+            )}
           </Button>
 
           <div className="text-center">

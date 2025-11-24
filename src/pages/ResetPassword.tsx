@@ -144,12 +144,13 @@ export default function ResetPassword() {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6" autoComplete="on">
           <div className="space-y-2">
             <Label htmlFor="password">Nova Senha</Label>
             <div className="relative">
               <Input
                 id="password"
+                name="new-password"
                 type={showPassword ? "text" : "password"}
                 placeholder="••••••••"
                 value={password}
@@ -157,6 +158,7 @@ export default function ResetPassword() {
                 disabled={loading}
                 required
                 minLength={6}
+                autoComplete="new-password"
                 className="pr-10"
               />
               <button
@@ -177,6 +179,7 @@ export default function ResetPassword() {
             <div className="relative">
               <Input
                 id="confirmPassword"
+                name="confirm-password"
                 type={showConfirmPassword ? "text" : "password"}
                 placeholder="••••••••"
                 value={confirmPassword}
@@ -184,6 +187,7 @@ export default function ResetPassword() {
                 disabled={loading}
                 required
                 minLength={6}
+                autoComplete="new-password"
                 className="pr-10"
               />
               <button

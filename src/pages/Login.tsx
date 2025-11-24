@@ -7,7 +7,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
-import { Chrome } from 'lucide-react';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Email inválido' }),
@@ -84,40 +83,6 @@ const Login = () => {
     }
   };
 
-  const handleGoogleLogin = async () => {
-    try {
-      setLoading(true);
-      
-      // Construir URL de redirecionamento incluindo o destino final
-      let redirectUrl = `${window.location.origin}/complete-profile`;
-      if (from !== '/') {
-        redirectUrl += `?redirect=${encodeURIComponent(from)}`;
-      }
-      
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: redirectUrl,
-        },
-      });
-
-      if (error) {
-        toast({
-          title: 'Erro ao fazer login',
-          description: error.message,
-          variant: 'destructive',
-        });
-      }
-    } catch (error) {
-      toast({
-        title: 'Erro ao fazer login',
-        description: 'Não foi possível conectar com o Google',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
@@ -125,30 +90,10 @@ const Login = () => {
         <div className="bg-card rounded-lg shadow-soft p-8">
           <h1 className="text-3xl font-bold text-center mb-2">Login</h1>
           <p className="text-muted-foreground text-center mb-8">
-            Entre com sua conta
+            Entre com seu email e senha
           </p>
 
-          <Button 
-            onClick={handleGoogleLogin}
-            variant="outline" 
-            className="w-full mb-6 group" 
-            disabled={loading}
-            type="button"
-          >
-            <Chrome className="w-10 h-10 mr-3 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12" />
-            Continuar com Google
-          </Button>
-
-          <div className="relative mb-6">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-card px-2 text-muted-foreground">Ou</span>
-            </div>
-          </div>
-
-          <form onSubmit={handleLogin} className="space-y-4">
+          <form onSubmit={handleLogin} className="space-y-4" autoComplete="on">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
