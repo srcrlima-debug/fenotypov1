@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ArrowLeft, Plus, Play, BarChart3, Trash2, Link2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { logSessionAction } from '@/lib/auditLogger';
 
 export default function AdminTrainingSessions() {
   const { trainingId } = useParams<{ trainingId: string }>();
@@ -53,15 +54,21 @@ export default function AdminTrainingSessions() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       
-      const { error } = await supabase.from('sessions').insert({
+      const { data: newSessionData, error } = await supabase.from('sessions').insert({
         nome: newSession.nome,
         data: newSession.data,
         training_id: trainingId,
         created_by: user?.id,
         session_status: 'waiting'
-      });
+      }).select().single();
 
       if (error) throw error;
+
+      // Log audit action
+      await logSessionAction('create_session', newSessionData.id, {
+        session_name: newSession.nome,
+        training_id: trainingId,
+      });
 
       toast.success('Session criada com sucesso!');
       setCreateDialogOpen(false);
@@ -79,6 +86,11 @@ export default function AdminTrainingSessions() {
     try {
       const { error } = await supabase.from('sessions').delete().eq('id', sessionId);
       if (error) throw error;
+
+      // Log audit action
+      await logSessionAction('delete_session', sessionId, {
+        training_id: trainingId,
+      });
 
       toast.success('Session deletada com sucesso!');
       loadData();
