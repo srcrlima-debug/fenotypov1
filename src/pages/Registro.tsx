@@ -8,7 +8,6 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
-import { Chrome } from 'lucide-react';
 
 const registroSchema = z.object({
   email: z.string().email({ message: 'Email inválido' }),
@@ -143,33 +142,6 @@ const Registro = () => {
     }
   };
 
-  const handleGoogleSignup = async () => {
-    try {
-      setLoading(true);
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/complete-profile`,
-        },
-      });
-
-      if (error) {
-        toast({
-          title: 'Erro ao criar conta',
-          description: error.message,
-          variant: 'destructive',
-        });
-      }
-    } catch (error) {
-      toast({
-        title: 'Erro ao criar conta',
-        description: 'Não foi possível conectar com o Google',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4 py-8">
@@ -180,27 +152,7 @@ const Registro = () => {
             Preencha os dados para começar
           </p>
 
-          <Button 
-            onClick={handleGoogleSignup}
-            variant="outline" 
-            className="w-full mb-6 group" 
-            disabled={loading}
-            type="button"
-          >
-            <Chrome className="w-10 h-10 mr-3 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12" />
-            Continuar com Google
-          </Button>
-
-          <div className="relative mb-6">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-card px-2 text-muted-foreground">Ou</span>
-            </div>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4" autoComplete="on">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input

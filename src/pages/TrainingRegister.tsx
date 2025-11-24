@@ -436,16 +436,18 @@ export default function TrainingRegister() {
               </div>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4" autoComplete="on">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
+                name="email"
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 required
                 disabled={!!user}
+                autoComplete="email"
               />
             </div>
 
@@ -455,10 +457,12 @@ export default function TrainingRegister() {
                   <Label htmlFor="password">Senha</Label>
                   <Input
                     id="password"
+                    name="password"
                     type="password"
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                     required
+                    autoComplete="new-password"
                   />
                 </div>
 
@@ -466,10 +470,12 @@ export default function TrainingRegister() {
                   <Label htmlFor="confirmPassword">Confirmar Senha</Label>
                   <Input
                     id="confirmPassword"
+                    name="confirm-password"
                     type="password"
                     value={formData.confirmPassword}
                     onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
                     required
+                    autoComplete="new-password"
                   />
                 </div>
               </>
