@@ -4,6 +4,7 @@ export type AuditAction =
   | 'create_session'
   | 'update_session'
   | 'delete_session'
+  | 'duplicate_session'
   | 'start_session'
   | 'next_photo'
   | 'restart_photo'
@@ -61,7 +62,7 @@ export async function logAuditAction({
  * Helper function to log session-related actions
  */
 export async function logSessionAction(
-  action: Extract<AuditAction, 'create_session' | 'update_session' | 'delete_session' | 'start_session' | 'next_photo' | 'restart_photo' | 'show_results'>,
+  action: Extract<AuditAction, 'create_session' | 'update_session' | 'delete_session' | 'duplicate_session' | 'start_session' | 'next_photo' | 'restart_photo' | 'show_results'>,
   sessionId: string,
   details?: Record<string, any>
 ): Promise<void> {

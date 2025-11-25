@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, Plus, Play, BarChart3, Trash2, Link2, Edit, GitCompare } from 'lucide-react';
+import { ArrowLeft, Plus, Play, BarChart3, Trash2, Link2, Edit, GitCompare, Copy, Search, Filter } from 'lucide-react';
 import { toast } from 'sonner';
 import { logSessionAction } from '@/lib/auditLogger';
 
@@ -25,6 +25,9 @@ export default function AdminTrainingSessions() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingSessionId, setDeletingSessionId] = useState<string | null>(null);
   const [deletePassword, setDeletePassword] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [dateFilter, setDateFilter] = useState<string>('');
 
   useEffect(() => {
     loadData();
@@ -152,6 +155,41 @@ export default function AdminTrainingSessions() {
     setDeleteDialogOpen(true);
   };
 
+  const handleDuplicateSession = async (session: any) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      const { data: duplicatedSession, error } = await supabase.from('sessions').insert({
+        nome: `${session.nome} (Cópia)`,
+        data: session.data,
+        training_id: trainingId,
+        created_by: user?.id,
+        session_status: 'waiting'
+      }).select().single();
+
+      if (error) throw error;
+
+      await logSessionAction('duplicate_session', duplicatedSession.id, {
+        original_session_id: session.id,
+        session_name: duplicatedSession.nome,
+        training_id: trainingId,
+      });
+
+      toast.success('Sessão duplicada com sucesso!');
+      loadData();
+    } catch (error) {
+      console.error('Error duplicating session:', error);
+      toast.error('Erro ao duplicar sessão');
+    }
+  };
+
+  const filteredSessions = sessions.filter((session) => {
+    const matchesSearch = session.nome.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || session.session_status === statusFilter;
+    const matchesDate = !dateFilter || session.data === dateFilter;
+    return matchesSearch && matchesStatus && matchesDate;
+  });
+
   const copySessionLink = (sessionId: string, sessionName: string) => {
     const link = `${window.location.origin}/training/${trainingId}/session/${sessionId}/antessala`;
     navigator.clipboard.writeText(link);
@@ -237,8 +275,47 @@ export default function AdminTrainingSessions() {
         </Dialog>
       </div>
 
+      {/* Search and Filters */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por nome..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <div className="relative">
+              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="w-full h-10 pl-9 pr-4 rounded-md border border-input bg-background text-sm"
+              >
+                <option value="all">Todos os Status</option>
+                <option value="waiting">Aguardando</option>
+                <option value="active">Ativa</option>
+                <option value="showing_results">Mostrando Resultados</option>
+                <option value="completed">Concluída</option>
+              </select>
+            </div>
+            <div>
+              <Input
+                type="date"
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value)}
+                placeholder="Filtrar por data"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="grid gap-4">
-        {sessions.length === 0 ? (
+        {filteredSessions.length === 0 && sessions.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
               <p className="text-muted-foreground mb-4">Nenhuma session criada ainda</p>
@@ -248,8 +325,14 @@ export default function AdminTrainingSessions() {
               </Button>
             </CardContent>
           </Card>
+        ) : filteredSessions.length === 0 ? (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <p className="text-muted-foreground">Nenhuma sessão encontrada com os filtros aplicados</p>
+            </CardContent>
+          </Card>
         ) : (
-          sessions.map((session) => (
+          filteredSessions.map((session) => (
             <Card key={session.id}>
               <CardHeader>
                 <div className="flex justify-between items-start">
@@ -294,6 +377,13 @@ export default function AdminTrainingSessions() {
                     >
                       <GitCompare className="w-4 h-4 mr-2" />
                       Comparar
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDuplicateSession(session)}
+                    >
+                      <Copy className="w-4 h-4" />
                     </Button>
                     <Button
                       variant="outline"
