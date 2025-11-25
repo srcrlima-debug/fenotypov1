@@ -9,9 +9,10 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Link2, BarChart3, GitCompare, Play, Edit, Trash2, Copy, Search, Filter } from "lucide-react";
+import { Plus, Link2, BarChart3, GitCompare, Play, Edit, Trash2, Copy, Search, Filter, FileDown, FileSpreadsheet, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { logSessionAction } from "@/lib/auditLogger";
+import { exportSessionsToPDF, exportSessionsToExcel } from "@/lib/reportExport";
 
 interface Session {
   id: string;
@@ -26,6 +27,7 @@ interface Session {
 export default function AdminSessions() {
   const navigate = useNavigate();
   const [sessions, setSessions] = useState<Session[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [newSession, setNewSession] = useState({ nome: "", data: "", descricao: "" });
@@ -38,23 +40,47 @@ export default function AdminSessions() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingSessionId, setDeletingSessionId] = useState<string | null>(null);
   const [deletePassword, setDeletePassword] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isExporting, setIsExporting] = useState(false);
+  const itemsPerPage = 12;
 
   useEffect(() => {
     loadSessions();
-  }, []);
+  }, [currentPage, statusFilter, dateFilter, searchQuery]);
 
   const loadSessions = async () => {
     try {
-      const { data, error } = await supabase
+      // Aplicar filtros na query
+      let query = supabase
         .from("sessions")
         .select(`
           *,
           participants:training_participants(count)
-        `)
-        .order("created_at", { ascending: false });
+        `, { count: 'exact' });
+
+      // Filtros
+      if (statusFilter !== "all") {
+        query = query.eq("session_status", statusFilter);
+      }
+      if (dateFilter) {
+        query = query.eq("data", dateFilter);
+      }
+      if (searchQuery) {
+        query = query.ilike("nome", `%${searchQuery}%`);
+      }
+
+      // Paginação
+      const from = (currentPage - 1) * itemsPerPage;
+      const to = from + itemsPerPage - 1;
+
+      const { data, error, count } = await query
+        .order("created_at", { ascending: false })
+        .range(from, to);
 
       if (error) throw error;
+      
       setSessions(data || []);
+      setTotalCount(count || 0);
     } catch (error) {
       console.error("Error loading sessions:", error);
       toast.error("Erro ao carregar sessions");
@@ -236,12 +262,72 @@ export default function AdminSessions() {
     setDeleteDialogOpen(true);
   };
 
-  const filteredSessions = sessions.filter((session) => {
-    const matchesSearch = session.nome.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === "all" || session.session_status === statusFilter;
-    const matchesDate = !dateFilter || session.data === dateFilter;
-    return matchesSearch && matchesStatus && matchesDate;
-  });
+  const handleExportPDF = async () => {
+    setIsExporting(true);
+    try {
+      // Buscar todas as sessões (sem paginação) para exportar
+      const { data, error } = await supabase
+        .from("sessions")
+        .select(`
+          *,
+          participants:training_participants(count)
+        `)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      const sessionsForExport = (data || []).map(session => ({
+        ...session,
+        participant_count: session.participants?.[0]?.count || 0
+      }));
+
+      await exportSessionsToPDF(sessionsForExport);
+      toast.success("Relatório PDF gerado com sucesso!");
+    } catch (error) {
+      console.error("Error exporting PDF:", error);
+      toast.error("Erro ao gerar relatório PDF");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleExportExcel = async () => {
+    setIsExporting(true);
+    try {
+      // Buscar todas as sessões (sem paginação) para exportar
+      const { data, error } = await supabase
+        .from("sessions")
+        .select(`
+          *,
+          participants:training_participants(count)
+        `)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      const sessionsForExport = (data || []).map(session => ({
+        ...session,
+        participant_count: session.participants?.[0]?.count || 0
+      }));
+
+      await exportSessionsToExcel(sessionsForExport);
+      toast.success("Relatório Excel gerado com sucesso!");
+    } catch (error) {
+      console.error("Error exporting Excel:", error);
+      toast.error("Erro ao gerar relatório Excel");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const totalPages = Math.ceil(totalCount / itemsPerPage);
+
+  const goToPage = (page: number) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -286,18 +372,40 @@ export default function AdminSessions() {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center flex-wrap gap-4">
         <div>
           <h1 className="text-3xl font-bold">Gestão de Sessões</h1>
-          <p className="text-muted-foreground">Crie e gerencie sessões de treinamento</p>
+          <p className="text-muted-foreground">
+            {totalCount} {totalCount === 1 ? 'sessão' : 'sessões'} cadastrada{totalCount !== 1 ? 's' : ''}
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={handleExportPDF}
+            disabled={isExporting || sessions.length === 0}
+            className="gap-2"
+          >
+            <FileDown className="w-4 h-4" />
+            Exportar PDF
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleExportExcel}
+            disabled={isExporting || sessions.length === 0}
+            className="gap-2"
+          >
+            <FileSpreadsheet className="w-4 h-4" />
+            Exportar Excel
+          </Button>
         </div>
         <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
-              Nova Sessão
-            </Button>
-          </DialogTrigger>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="w-4 h-4 mr-2" />
+                Nova Sessão
+              </Button>
+            </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Criar Nova Sessão</DialogTitle>
@@ -387,7 +495,7 @@ export default function AdminSessions() {
       </Card>
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredSessions.length === 0 && sessions.length === 0 ? (
+        {sessions.length === 0 && !loading ? (
           <Card className="col-span-full">
             <CardContent className="flex flex-col items-center justify-center py-12">
               <p className="text-muted-foreground mb-4">Nenhuma session criada ainda</p>
@@ -397,14 +505,8 @@ export default function AdminSessions() {
               </Button>
             </CardContent>
           </Card>
-        ) : filteredSessions.length === 0 ? (
-          <Card className="col-span-full">
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <p className="text-muted-foreground">Nenhuma sessão encontrada com os filtros aplicados</p>
-            </CardContent>
-          </Card>
         ) : (
-          filteredSessions.map((session) => (
+          sessions.map((session) => (
             <Card key={session.id}>
               <CardHeader>
                 <div className="flex justify-between items-start">
@@ -495,6 +597,68 @@ export default function AdminSessions() {
           ))
         )}
       </div>
+
+      {/* Paginação */}
+      {totalPages > 1 && (
+        <Card className="mt-6">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-muted-foreground">
+                Página {currentPage} de {totalPages} ({totalCount} {totalCount === 1 ? 'resultado' : 'resultados'})
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => goToPage(currentPage - 1)}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  Anterior
+                </Button>
+                
+                {/* Páginas numeradas */}
+                <div className="flex gap-1">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum;
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (currentPage <= 3) {
+                      pageNum = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = currentPage - 2 + i;
+                    }
+                    
+                    return (
+                      <Button
+                        key={pageNum}
+                        variant={currentPage === pageNum ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => goToPage(pageNum)}
+                        className="w-10"
+                      >
+                        {pageNum}
+                      </Button>
+                    );
+                  })}
+                </div>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => goToPage(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                >
+                  Próximo
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Edit Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
