@@ -261,6 +261,7 @@ export type Database = {
           created_by: string
           current_photo: number | null
           data: string
+          descricao: string | null
           id: string
           nome: string
           photo_duration: number | null
@@ -274,6 +275,7 @@ export type Database = {
           created_by: string
           current_photo?: number | null
           data: string
+          descricao?: string | null
           id?: string
           nome: string
           photo_duration?: number | null
@@ -287,6 +289,7 @@ export type Database = {
           created_by?: string
           current_photo?: number | null
           data?: string
+          descricao?: string | null
           id?: string
           nome?: string
           photo_duration?: number | null
