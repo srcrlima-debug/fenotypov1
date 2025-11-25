@@ -219,6 +219,42 @@ export type Database = {
         }
         Relationships: []
       }
+      rls_policy_backup: {
+        Row: {
+          backup_timestamp: string | null
+          cmd: string | null
+          permissive: string | null
+          policyname: unknown
+          qual: string | null
+          roles: unknown[] | null
+          schemaname: unknown
+          tablename: unknown
+          with_check: string | null
+        }
+        Insert: {
+          backup_timestamp?: string | null
+          cmd?: string | null
+          permissive?: string | null
+          policyname?: unknown
+          qual?: string | null
+          roles?: unknown[] | null
+          schemaname?: unknown
+          tablename?: unknown
+          with_check?: string | null
+        }
+        Update: {
+          backup_timestamp?: string | null
+          cmd?: string | null
+          permissive?: string | null
+          policyname?: unknown
+          qual?: string | null
+          roles?: unknown[] | null
+          schemaname?: unknown
+          tablename?: unknown
+          with_check?: string | null
+        }
+        Relationships: []
+      }
       sessions: {
         Row: {
           created_at: string
@@ -268,6 +304,54 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      sessions_pre_migration_backup: {
+        Row: {
+          backup_reason: string | null
+          backup_timestamp: string | null
+          created_at: string | null
+          created_by: string | null
+          current_photo: number | null
+          data: string | null
+          id: string | null
+          nome: string | null
+          photo_duration: number | null
+          photo_start_time: string | null
+          session_status: string | null
+          training_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          backup_reason?: string | null
+          backup_timestamp?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          current_photo?: number | null
+          data?: string | null
+          id?: string | null
+          nome?: string | null
+          photo_duration?: number | null
+          photo_start_time?: string | null
+          session_status?: string | null
+          training_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          backup_reason?: string | null
+          backup_timestamp?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          current_photo?: number | null
+          data?: string | null
+          id?: string | null
+          nome?: string | null
+          photo_duration?: number | null
+          photo_start_time?: string | null
+          session_status?: string | null
+          training_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       training_feedback: {
         Row: {
