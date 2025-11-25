@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,8 +23,13 @@ interface SessionData {
 }
 
 export default function Antessala() {
-  const { sessionId, trainingId } = useParams();
+  const { sessionId: sessionIdParam, trainingId: trainingIdParam } = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  
+  // Priorizar query params sobre URL params
+  const sessionId = searchParams.get('sessionId') || sessionIdParam;
+  const trainingId = searchParams.get('trainingId') || trainingIdParam;
   const { user } = useAuth();
   const { toast } = useToast();
   const [sessionData, setSessionData] = useState<SessionData | null>(null);

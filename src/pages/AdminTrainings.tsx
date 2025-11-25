@@ -1,3 +1,7 @@
+/**
+ * @deprecated Esta página está sendo substituída por AdminSessions (/admin/sessions)
+ * Mantida apenas para compatibilidade com links antigos
+ */
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -112,7 +116,7 @@ export default function AdminTrainings() {
   };
 
   const copySessionLink = (trainingId: string, sessionId: string, sessionName: string) => {
-    const link = `${window.location.origin}/training/${trainingId}/session/${sessionId}/antessala`;
+    const link = `${window.location.origin}/session/${sessionId}/acesso`;
     navigator.clipboard.writeText(link);
     toast.success(`Link da sessão "${sessionName}" copiado!`);
   };
