@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Users, Calendar, TrendingUp, Activity, Download, ArrowUp, ArrowDown } from "lucide-react";
+import { toast } from "sonner";
 import html2canvas from "html2canvas";
 import {
   LineChart,
@@ -21,7 +22,6 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import { toast } from "sonner";
 
 interface SessionStats {
   totalSessions: number;
