@@ -1,9 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Users, Calendar, TrendingUp, Activity } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ArrowLeft, Users, Calendar, TrendingUp, Activity, Download, ArrowUp, ArrowDown } from "lucide-react";
+import html2canvas from "html2canvas";
 import {
   LineChart,
   Line,
@@ -35,6 +37,19 @@ interface SessionStats {
   }>;
 }
 
+interface ComparisonStats {
+  current: SessionStats;
+  previous: SessionStats;
+  changes: {
+    totalSessions: number;
+    totalParticipants: number;
+    avgParticipants: number;
+    activeSessions: number;
+  };
+}
+
+type ComparisonPeriod = 'month' | 'year';
+
 const COLORS = {
   waiting: '#eab308',
   active: '#10b981',
@@ -45,15 +60,84 @@ const COLORS = {
 export default function AdminSessionsDashboard() {
   const navigate = useNavigate();
   const [stats, setStats] = useState<SessionStats | null>(null);
+  const [comparison, setComparison] = useState<ComparisonStats | null>(null);
+  const [comparisonPeriod, setComparisonPeriod] = useState<ComparisonPeriod>('month');
   const [loading, setLoading] = useState(true);
+  
+  const lineChartRef = useRef<HTMLDivElement>(null);
+  const pieChartRef = useRef<HTMLDivElement>(null);
+  const barChartRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadStats();
-  }, []);
+  }, [comparisonPeriod]);
+
+  const calculateStatsForPeriod = (sessionsData: any[], startDate: Date, endDate: Date): SessionStats => {
+    const periodSessions = sessionsData.filter(session => {
+      const sessionDate = new Date(session.data);
+      return sessionDate >= startDate && sessionDate <= endDate;
+    });
+
+    const totalSessions = periodSessions.length;
+    const totalParticipants = periodSessions.reduce(
+      (sum, s) => sum + (s.participants?.[0]?.count || 0),
+      0
+    );
+    const avgParticipantsPerSession = totalSessions > 0 
+      ? totalParticipants / totalSessions 
+      : 0;
+
+    const sessionsByStatus: Record<string, number> = {};
+    periodSessions.forEach((session) => {
+      const status = session.session_status || 'waiting';
+      sessionsByStatus[status] = (sessionsByStatus[status] || 0) + 1;
+    });
+
+    const monthsMap = new Map<string, { count: number; participants: number }>();
+    const now = new Date();
+    
+    for (let i = 5; i >= 0; i--) {
+      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthKey = date.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
+      monthsMap.set(monthKey, { count: 0, participants: 0 });
+    }
+
+    periodSessions.forEach((session) => {
+      const sessionDate = new Date(session.data);
+      const monthKey = sessionDate.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
+      
+      if (monthsMap.has(monthKey)) {
+        const current = monthsMap.get(monthKey)!;
+        current.count += 1;
+        current.participants += session.participants?.[0]?.count || 0;
+      }
+    });
+
+    const sessionsByMonth = Array.from(monthsMap.entries()).map(([month, data]) => ({
+      month,
+      count: data.count,
+      participants: data.participants,
+    }));
+
+    const recentSessions = periodSessions.slice(0, 5).map((session) => ({
+      nome: session.nome,
+      data: new Date(session.data).toLocaleDateString('pt-BR'),
+      participants: session.participants?.[0]?.count || 0,
+      status: session.session_status || 'waiting',
+    }));
+
+    return {
+      totalSessions,
+      totalParticipants,
+      avgParticipantsPerSession,
+      sessionsByStatus,
+      sessionsByMonth,
+      recentSessions,
+    };
+  };
 
   const loadStats = async () => {
     try {
-      // Buscar todas as sessões com participantes
       const { data: sessions, error } = await supabase
         .from("sessions")
         .select(`
@@ -65,73 +149,91 @@ export default function AdminSessionsDashboard() {
       if (error) throw error;
 
       const sessionsData = sessions || [];
-      
-      // Calcular estatísticas
-      const totalSessions = sessionsData.length;
-      const totalParticipants = sessionsData.reduce(
-        (sum, s) => sum + (s.participants?.[0]?.count || 0),
-        0
-      );
-      const avgParticipantsPerSession = totalSessions > 0 
-        ? totalParticipants / totalSessions 
-        : 0;
-
-      // Sessões por status
-      const sessionsByStatus: Record<string, number> = {};
-      sessionsData.forEach((session) => {
-        const status = session.session_status || 'waiting';
-        sessionsByStatus[status] = (sessionsByStatus[status] || 0) + 1;
-      });
-
-      // Sessões por mês (últimos 6 meses)
-      const monthsMap = new Map<string, { count: number; participants: number }>();
       const now = new Date();
-      
-      for (let i = 5; i >= 0; i--) {
-        const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        const monthKey = date.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
-        monthsMap.set(monthKey, { count: 0, participants: 0 });
+
+      let currentStart: Date, currentEnd: Date, previousStart: Date, previousEnd: Date;
+
+      if (comparisonPeriod === 'month') {
+        // Período atual: mês atual
+        currentStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        currentEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+        
+        // Período anterior: mês anterior
+        previousStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        previousEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+      } else {
+        // Período atual: ano atual
+        currentStart = new Date(now.getFullYear(), 0, 1);
+        currentEnd = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
+        
+        // Período anterior: ano anterior
+        previousStart = new Date(now.getFullYear() - 1, 0, 1);
+        previousEnd = new Date(now.getFullYear() - 1, 11, 31, 23, 59, 59);
       }
 
-      sessionsData.forEach((session) => {
-        const sessionDate = new Date(session.data);
-        const monthKey = sessionDate.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
-        
-        if (monthsMap.has(monthKey)) {
-          const current = monthsMap.get(monthKey)!;
-          current.count += 1;
-          current.participants += session.participants?.[0]?.count || 0;
-        }
+      const currentStats = calculateStatsForPeriod(sessionsData, currentStart, currentEnd);
+      const previousStats = calculateStatsForPeriod(sessionsData, previousStart, previousEnd);
+
+      const calculateChange = (current: number, previous: number) => {
+        if (previous === 0) return current > 0 ? 100 : 0;
+        return ((current - previous) / previous) * 100;
+      };
+
+      setComparison({
+        current: currentStats,
+        previous: previousStats,
+        changes: {
+          totalSessions: calculateChange(currentStats.totalSessions, previousStats.totalSessions),
+          totalParticipants: calculateChange(currentStats.totalParticipants, previousStats.totalParticipants),
+          avgParticipants: calculateChange(currentStats.avgParticipantsPerSession, previousStats.avgParticipantsPerSession),
+          activeSessions: calculateChange(
+            currentStats.sessionsByStatus.active || 0,
+            previousStats.sessionsByStatus.active || 0
+          ),
+        },
       });
 
-      const sessionsByMonth = Array.from(monthsMap.entries()).map(([month, data]) => ({
-        month,
-        count: data.count,
-        participants: data.participants,
-      }));
-
-      // Sessões recentes (últimas 5)
-      const recentSessions = sessionsData.slice(0, 5).map((session) => ({
-        nome: session.nome,
-        data: new Date(session.data).toLocaleDateString('pt-BR'),
-        participants: session.participants?.[0]?.count || 0,
-        status: session.session_status || 'waiting',
-      }));
-
-      setStats({
-        totalSessions,
-        totalParticipants,
-        avgParticipantsPerSession,
-        sessionsByStatus,
-        sessionsByMonth,
-        recentSessions,
-      });
+      setStats(currentStats);
     } catch (error) {
       console.error("Error loading stats:", error);
       toast.error("Erro ao carregar estatísticas");
     } finally {
       setLoading(false);
     }
+  };
+
+  const exportChartAsImage = async (chartRef: React.RefObject<HTMLDivElement>, filename: string) => {
+    if (!chartRef.current) return;
+
+    try {
+      const canvas = await html2canvas(chartRef.current, {
+        backgroundColor: '#ffffff',
+        scale: 2,
+      });
+      
+      const link = document.createElement('a');
+      link.download = `${filename}-${new Date().toISOString().split('T')[0]}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+      
+      toast.success('Gráfico exportado com sucesso!');
+    } catch (error) {
+      console.error('Error exporting chart:', error);
+      toast.error('Erro ao exportar gráfico');
+    }
+  };
+
+  const renderChangeIndicator = (change: number) => {
+    const isPositive = change >= 0;
+    const color = isPositive ? 'text-green-600' : 'text-red-600';
+    const Icon = isPositive ? ArrowUp : ArrowDown;
+    
+    return (
+      <div className={`flex items-center gap-1 text-sm ${color}`}>
+        <Icon className="w-4 h-4" />
+        <span>{Math.abs(change).toFixed(1)}%</span>
+      </div>
+    );
   };
 
   const getStatusLabel = (status: string) => {
@@ -190,6 +292,20 @@ export default function AdminSessionsDashboard() {
               Visão geral e estatísticas das sessões de treinamento
             </p>
           </div>
+          <div className="flex items-center gap-2">
+            <Select
+              value={comparisonPeriod}
+              onValueChange={(value) => setComparisonPeriod(value as ComparisonPeriod)}
+            >
+              <SelectTrigger className="w-[200px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="month">Mês Atual vs Anterior</SelectItem>
+                <SelectItem value="year">Ano Atual vs Anterior</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         {/* Cards de Métricas */}
@@ -200,10 +316,15 @@ export default function AdminSessionsDashboard() {
               <Calendar className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.totalSessions}</div>
-              <p className="text-xs text-muted-foreground">
-                Sessões cadastradas no sistema
-              </p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-2xl font-bold">{stats.totalSessions}</div>
+                  <p className="text-xs text-muted-foreground">
+                    {comparisonPeriod === 'month' ? 'No mês atual' : 'No ano atual'}
+                  </p>
+                </div>
+                {comparison && renderChangeIndicator(comparison.changes.totalSessions)}
+              </div>
             </CardContent>
           </Card>
 
@@ -213,10 +334,15 @@ export default function AdminSessionsDashboard() {
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.totalParticipants}</div>
-              <p className="text-xs text-muted-foreground">
-                Participantes em todas as sessões
-              </p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-2xl font-bold">{stats.totalParticipants}</div>
+                  <p className="text-xs text-muted-foreground">
+                    {comparisonPeriod === 'month' ? 'No mês atual' : 'No ano atual'}
+                  </p>
+                </div>
+                {comparison && renderChangeIndicator(comparison.changes.totalParticipants)}
+              </div>
             </CardContent>
           </Card>
 
@@ -226,12 +352,17 @@ export default function AdminSessionsDashboard() {
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {stats.avgParticipantsPerSession.toFixed(1)}
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-2xl font-bold">
+                    {stats.avgParticipantsPerSession.toFixed(1)}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Média {comparisonPeriod === 'month' ? 'do mês' : 'do ano'}
+                  </p>
+                </div>
+                {comparison && renderChangeIndicator(comparison.changes.avgParticipants)}
               </div>
-              <p className="text-xs text-muted-foreground">
-                Participantes por sessão
-              </p>
             </CardContent>
           </Card>
 
@@ -241,12 +372,17 @@ export default function AdminSessionsDashboard() {
               <Activity className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {stats.sessionsByStatus.active || 0}
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-2xl font-bold">
+                    {stats.sessionsByStatus.active || 0}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Ativas agora
+                  </p>
+                </div>
+                {comparison && renderChangeIndicator(comparison.changes.activeSessions)}
               </div>
-              <p className="text-xs text-muted-foreground">
-                Sessões em andamento
-              </p>
             </CardContent>
           </Card>
         </div>
@@ -256,10 +392,22 @@ export default function AdminSessionsDashboard() {
           {/* Sessões ao longo do tempo */}
           <Card className="col-span-2">
             <CardHeader>
-              <CardTitle>Sessões e Participantes ao Longo do Tempo</CardTitle>
-              <CardDescription>Últimos 6 meses</CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Sessões e Participantes ao Longo do Tempo</CardTitle>
+                  <CardDescription>Últimos 6 meses</CardDescription>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => exportChartAsImage(lineChartRef, 'sessoes-tempo')}
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Exportar PNG
+                </Button>
+              </div>
             </CardHeader>
-            <CardContent>
+            <CardContent ref={lineChartRef}>
               <ResponsiveContainer width="100%" height={300}>
                 <LineChart data={stats.sessionsByMonth}>
                   <CartesianGrid strokeDasharray="3 3" />
@@ -292,10 +440,22 @@ export default function AdminSessionsDashboard() {
           {/* Sessões por Status (Pizza) */}
           <Card>
             <CardHeader>
-              <CardTitle>Distribuição por Status</CardTitle>
-              <CardDescription>Sessões por status atual</CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Distribuição por Status</CardTitle>
+                  <CardDescription>Sessões por status atual</CardDescription>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => exportChartAsImage(pieChartRef, 'distribuicao-status')}
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Exportar PNG
+                </Button>
+              </div>
             </CardHeader>
-            <CardContent>
+            <CardContent ref={pieChartRef}>
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
                   <Pie
@@ -323,10 +483,22 @@ export default function AdminSessionsDashboard() {
           {/* Sessões por Status (Barras) */}
           <Card>
             <CardHeader>
-              <CardTitle>Sessões por Status</CardTitle>
-              <CardDescription>Comparativo de quantidade</CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Sessões por Status</CardTitle>
+                  <CardDescription>Comparativo de quantidade</CardDescription>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => exportChartAsImage(barChartRef, 'sessoes-status')}
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Exportar PNG
+                </Button>
+              </div>
             </CardHeader>
-            <CardContent>
+            <CardContent ref={barChartRef}>
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart
                   data={Object.entries(stats.sessionsByStatus).map(
