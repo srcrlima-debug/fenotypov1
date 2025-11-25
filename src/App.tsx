@@ -31,6 +31,7 @@ import AdminTrainingParticipants from "./pages/AdminTrainingParticipants";
 import AdminTrainingSessions from "./pages/AdminTrainingSessions";
 import AdminTrainingComparator from "./pages/AdminTrainingComparator";
 import AdminSessions from "./pages/AdminSessions";
+import AdminSessionsDashboard from "./pages/AdminSessionsDashboard";
 import SessionAccess from "./pages/SessionAccess";
 import TrainingRegister from "./pages/TrainingRegister";
 import TrainingLogin from "./pages/TrainingLogin";
@@ -126,6 +127,14 @@ const App = () => (
                     element={
                       <AdminRoute>
                         <AdminSessions />
+                      </AdminRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/sessions/dashboard"
+                    element={
+                      <AdminRoute>
+                        <AdminSessionsDashboard />
                       </AdminRoute>
                     }
                   />

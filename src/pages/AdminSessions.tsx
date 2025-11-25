@@ -9,7 +9,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Link2, BarChart3, GitCompare, Play, Edit, Trash2, Copy, Search, Filter, FileDown, FileSpreadsheet, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Link2, BarChart3, GitCompare, Play, Edit, Trash2, Copy, Search, Filter, FileDown, FileSpreadsheet, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 import { logSessionAction } from "@/lib/auditLogger";
 import { exportSessionsToPDF, exportSessionsToExcel } from "@/lib/reportExport";
@@ -42,11 +42,13 @@ export default function AdminSessions() {
   const [deletePassword, setDeletePassword] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [isExporting, setIsExporting] = useState(false);
+  const [sortBy, setSortBy] = useState<'nome' | 'data' | 'status' | 'participants'>('data');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const itemsPerPage = 12;
 
   useEffect(() => {
     loadSessions();
-  }, [currentPage, statusFilter, dateFilter, searchQuery]);
+  }, [currentPage, statusFilter, dateFilter, searchQuery, sortBy, sortOrder]);
 
   const loadSessions = async () => {
     try {
@@ -69,17 +71,34 @@ export default function AdminSessions() {
         query = query.ilike("nome", `%${searchQuery}%`);
       }
 
+      // Ordenação
+      let orderColumn = 'created_at';
+      if (sortBy === 'nome') orderColumn = 'nome';
+      else if (sortBy === 'data') orderColumn = 'data';
+      else if (sortBy === 'status') orderColumn = 'session_status';
+      
+      query = query.order(orderColumn, { ascending: sortOrder === 'asc' });
+
       // Paginação
       const from = (currentPage - 1) * itemsPerPage;
       const to = from + itemsPerPage - 1;
 
-      const { data, error, count } = await query
-        .order("created_at", { ascending: false })
-        .range(from, to);
+      const { data, error, count } = await query.range(from, to);
 
       if (error) throw error;
       
-      setSessions(data || []);
+      let sessionsData = data || [];
+      
+      // Ordenação por participantes (não pode ser feita no banco)
+      if (sortBy === 'participants') {
+        sessionsData = sessionsData.sort((a, b) => {
+          const countA = a.participants?.[0]?.count || 0;
+          const countB = b.participants?.[0]?.count || 0;
+          return sortOrder === 'asc' ? countA - countB : countB - countA;
+        });
+      }
+      
+      setSessions(sessionsData);
       setTotalCount(count || 0);
     } catch (error) {
       console.error("Error loading sessions:", error);
@@ -329,6 +348,21 @@ export default function AdminSessions() {
     }
   };
 
+  const handleSort = (column: typeof sortBy) => {
+    if (sortBy === column) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(column);
+      setSortOrder('asc');
+    }
+    setCurrentPage(1);
+  };
+
+  const getSortIcon = (column: typeof sortBy) => {
+    if (sortBy !== column) return <ArrowUpDown className="w-4 h-4 opacity-50" />;
+    return sortOrder === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />;
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "waiting":
@@ -379,7 +413,15 @@ export default function AdminSessions() {
             {totalCount} {totalCount === 1 ? 'sessão' : 'sessões'} cadastrada{totalCount !== 1 ? 's' : ''}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <Button
+            variant="outline"
+            onClick={() => navigate('/admin/sessions/dashboard')}
+            className="gap-2"
+          >
+            <TrendingUp className="w-4 h-4" />
+            Dashboard
+          </Button>
           <Button
             variant="outline"
             onClick={handleExportPDF}
@@ -456,6 +498,52 @@ export default function AdminSessions() {
         </Dialog>
       </div>
 
+      {/* Ordenação */}
+      <Card className="mb-4">
+        <CardContent className="pt-6">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm font-medium text-muted-foreground">Ordenar por:</span>
+            <Button
+              variant={sortBy === 'nome' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => handleSort('nome')}
+              className="gap-2"
+            >
+              Nome
+              {getSortIcon('nome')}
+            </Button>
+            <Button
+              variant={sortBy === 'data' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => handleSort('data')}
+              className="gap-2"
+            >
+              Data
+              {getSortIcon('data')}
+            </Button>
+            <Button
+              variant={sortBy === 'status' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => handleSort('status')}
+              className="gap-2"
+            >
+              Status
+              {getSortIcon('status')}
+            </Button>
+            <Button
+              variant={sortBy === 'participants' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => handleSort('participants')}
+              className="gap-2"
+            >
+              Participantes
+              {getSortIcon('participants')}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Filtros */}
       <Card className="mb-6">
         <CardContent className="pt-6">
           <div className="grid gap-4 md:grid-cols-3">
