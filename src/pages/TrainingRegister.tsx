@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams, Link } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams, Link } from 'react-router-dom';
 import { z } from 'zod';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -29,8 +29,13 @@ const registerSchema = z.object({
 });
 
 export default function TrainingRegister() {
-  const { trainingId } = useParams<{ trainingId: string }>();
+  const { trainingId: trainingIdParam } = useParams<{ trainingId: string }>();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  
+  // Priorizar query params sobre URL params
+  const trainingId = searchParams.get('trainingId') || trainingIdParam;
+  const sessionId = searchParams.get('sessionId');
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [training, setTraining] = useState<any>(null);
@@ -307,8 +312,12 @@ export default function TrainingRegister() {
 
       toast.success('Cadastro realizado com sucesso!');
       
-      // Sempre redireciona para antessala - ela cuidará da sessão
-      navigate(`/training/${trainingId}/antessala`);
+      // Redirecionar para antessala com sessionId se disponível
+      if (sessionId) {
+        navigate(`/antessala?sessionId=${sessionId}&trainingId=${trainingId}`);
+      } else {
+        navigate(`/training/${trainingId}/antessala`);
+      }
     } catch (error: any) {
       console.error('Error during registration:', error);
       toast.error(error.message || 'Erro ao realizar cadastro');

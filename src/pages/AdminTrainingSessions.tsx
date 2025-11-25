@@ -191,7 +191,7 @@ export default function AdminTrainingSessions() {
   });
 
   const copySessionLink = (sessionId: string, sessionName: string) => {
-    const link = `${window.location.origin}/training/${trainingId}/session/${sessionId}/antessala`;
+    const link = `${window.location.origin}/session/${sessionId}/acesso`;
     navigator.clipboard.writeText(link);
     toast.success(`Link da sessão "${sessionName}" copiado!`);
   };
@@ -227,7 +227,7 @@ export default function AdminTrainingSessions() {
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button variant="outline" size="icon" onClick={() => navigate('/admin/trainings')}>
+          <Button variant="outline" size="icon" onClick={() => navigate('/admin/sessions')}>
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <div>

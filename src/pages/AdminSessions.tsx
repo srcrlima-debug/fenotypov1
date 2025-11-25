@@ -1,42 +1,43 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
-import { toast } from 'sonner';
-import { Plus, Link2, Play, BarChart3, Copy, GitCompare, FileText, Edit, Trash2 } from 'lucide-react';
-import { logAuditAction } from '@/lib/auditLogger';
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Plus, Link2, BarChart3, GitCompare, Play, Edit, Trash2, Copy, Search, Filter } from "lucide-react";
+import { toast } from "sonner";
+import { logSessionAction } from "@/lib/auditLogger";
 
 interface Session {
   id: string;
   nome: string;
   data: string;
   descricao: string | null;
-  session_status: string | null;
-  created_at: string;
-  training_id: string | null;
-  participant_count?: number;
+  session_status: string;
+  training_id: string;
+  participants?: { count: number }[];
 }
 
 export default function AdminSessions() {
   const navigate = useNavigate();
-  const { user } = useAuth();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedSessions, setSelectedSessions] = useState<string[]>([]);
-  const [newSession, setNewSession] = useState({
-    nome: '',
-    data: '',
-    descricao: ''
-  });
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [newSession, setNewSession] = useState({ nome: "", data: "", descricao: "" });
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [dateFilter, setDateFilter] = useState<string>("");
+  const [selectedForComparison, setSelectedForComparison] = useState<string[]>([]);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingSession, setEditingSession] = useState<Session | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletingSessionId, setDeletingSessionId] = useState<string | null>(null);
+  const [deletePassword, setDeletePassword] = useState("");
 
   useEffect(() => {
     loadSessions();
@@ -44,322 +45,540 @@ export default function AdminSessions() {
 
   const loadSessions = async () => {
     try {
-      setLoading(true);
-      
-      // Busca sessões com contagem de participantes
-      const { data: sessionsData, error: sessionsError } = await supabase
-        .from('sessions')
-        .select('*')
-        .order('data', { ascending: false });
+      const { data, error } = await supabase
+        .from("sessions")
+        .select(`
+          *,
+          participants:training_participants(count)
+        `)
+        .order("created_at", { ascending: false });
 
-      if (sessionsError) throw sessionsError;
-
-      // Para cada sessão, conta participantes via training_id
-      const sessionsWithCounts = await Promise.all(
-        (sessionsData || []).map(async (session) => {
-          if (session.training_id) {
-            const { count } = await supabase
-              .from('training_participants')
-              .select('*', { count: 'exact', head: true })
-              .eq('training_id', session.training_id);
-            
-            return { ...session, participant_count: count || 0 };
-          }
-          return { ...session, participant_count: 0 };
-        })
-      );
-
-      setSessions(sessionsWithCounts);
-    } catch (error: any) {
-      console.error('Error loading sessions:', error);
-      toast.error('Erro ao carregar sessões');
+      if (error) throw error;
+      setSessions(data || []);
+    } catch (error) {
+      console.error("Error loading sessions:", error);
+      toast.error("Erro ao carregar sessions");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCreateSession = async () => {
-    if (!user || !newSession.nome || !newSession.data) {
-      toast.error('Preencha todos os campos obrigatórios');
-      return;
-    }
+  const handleCreateSession = async (e: React.FormEvent) => {
+    e.preventDefault();
 
     try {
-      // 1. Cria training automaticamente em background
+      const { data: { user } } = await supabase.auth.getUser();
+
+      // First, create the training
       const { data: training, error: trainingError } = await supabase
-        .from('trainings')
+        .from("trainings")
         .insert({
           nome: newSession.nome,
           data: newSession.data,
-          descricao: newSession.descricao,
-          created_by: user.id,
-          status: 'active'
+          descricao: newSession.descricao || null,
+          created_by: user?.id,
+          status: "active",
         })
         .select()
         .single();
 
       if (trainingError) throw trainingError;
 
-      // 2. Cria sessão vinculada
-      const { error: sessionError } = await supabase
-        .from('sessions')
+      // Then create the session linked to the training
+      const { data: session, error: sessionError } = await supabase
+        .from("sessions")
         .insert({
           nome: newSession.nome,
           data: newSession.data,
-          descricao: newSession.descricao,
+          descricao: newSession.descricao || null,
           training_id: training.id,
-          created_by: user.id
-        });
+          created_by: user?.id,
+          session_status: "waiting",
+        })
+        .select()
+        .single();
 
       if (sessionError) throw sessionError;
 
-      // Log audit
-      await logAuditAction({
-        action: 'create_session',
-        resourceType: 'session',
-        resourceId: training.id,
-        details: { session_name: newSession.nome }
+      // Log audit action (usar session.id correto)
+      await logSessionAction("create_session", session.id, {
+        session_name: newSession.nome,
+        training_id: training.id,
       });
 
-      toast.success('Sessão criada com sucesso!');
-      setIsCreateDialogOpen(false);
-      setNewSession({ nome: '', data: '', descricao: '' });
+      toast.success("Session criada com sucesso!");
+      setCreateDialogOpen(false);
+      setNewSession({ nome: "", data: "", descricao: "" });
       loadSessions();
-    } catch (error: any) {
-      console.error('Error creating session:', error);
-      toast.error('Erro ao criar sessão');
+    } catch (error) {
+      console.error("Error creating session:", error);
+      toast.error("Erro ao criar session");
     }
   };
 
-  const copySessionLink = (sessionId: string) => {
+  const copySessionLink = (sessionId: string, sessionName: string) => {
     const link = `${window.location.origin}/session/${sessionId}/acesso`;
     navigator.clipboard.writeText(link);
-    toast.success('Link copiado!');
+    toast.success(`Link da sessão "${sessionName}" copiado!`);
   };
 
   const toggleComparison = (sessionId: string) => {
-    setSelectedSessions(prev =>
+    setSelectedForComparison((prev) =>
       prev.includes(sessionId)
-        ? prev.filter(id => id !== sessionId)
+        ? prev.filter((id) => id !== sessionId)
         : [...prev, sessionId]
     );
   };
 
   const navigateToComparison = () => {
-    if (selectedSessions.length < 2) {
-      toast.error('Selecione pelo menos 2 sessões para comparar');
+    if (selectedForComparison.length < 2) {
+      toast.error("Selecione pelo menos 2 sessões para comparar");
       return;
     }
-    navigate(`/admin/session-comparison?sessions=${selectedSessions.join(',')}`);
+    navigate(`/admin/session-comparison`);
   };
 
-  const getStatusColor = (status: string | null) => {
-    switch (status) {
-      case 'active':
-        return 'bg-green-500';
-      case 'waiting':
-        return 'bg-yellow-500';
-      case 'showing_results':
-        return 'bg-blue-500';
-      case 'finished':
-        return 'bg-gray-500';
-      default:
-        return 'bg-gray-400';
+  const handleEditSession = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingSession) return;
+
+    try {
+      const { error } = await supabase
+        .from("sessions")
+        .update({
+          nome: editingSession.nome,
+          data: editingSession.data,
+          descricao: editingSession.descricao,
+        })
+        .eq("id", editingSession.id);
+
+      if (error) throw error;
+
+      await logSessionAction("update_session", editingSession.id, {
+        session_name: editingSession.nome,
+      });
+
+      toast.success("Sessão atualizada com sucesso!");
+      setEditDialogOpen(false);
+      setEditingSession(null);
+      loadSessions();
+    } catch (error) {
+      console.error("Error updating session:", error);
+      toast.error("Erro ao atualizar sessão");
     }
   };
 
-  const getStatusLabel = (status: string | null) => {
-    switch (status) {
-      case 'active':
-        return 'Ativa';
-      case 'waiting':
-        return 'Aguardando';
-      case 'showing_results':
-        return 'Mostrando Resultados';
-      case 'finished':
-        return 'Finalizada';
-      default:
-        return 'Aguardando';
+  const handleDeleteSession = async () => {
+    if (deletePassword !== "CONFIRMAR") {
+      toast.error('Digite "CONFIRMAR" para excluir');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from("sessions")
+        .delete()
+        .eq("id", deletingSessionId);
+
+      if (error) throw error;
+
+      await logSessionAction("delete_session", deletingSessionId!, {});
+
+      toast.success("Sessão deletada com sucesso!");
+      setDeleteDialogOpen(false);
+      setDeletingSessionId(null);
+      setDeletePassword("");
+      loadSessions();
+    } catch (error) {
+      console.error("Error deleting session:", error);
+      toast.error("Erro ao deletar sessão");
     }
   };
 
-  const filteredSessions = sessions.filter(session =>
-    session.nome.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const handleDuplicateSession = async (session: Session) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+
+      const { data: duplicated, error } = await supabase
+        .from("sessions")
+        .insert({
+          nome: `${session.nome} (Cópia)`,
+          data: session.data,
+          descricao: session.descricao,
+          training_id: session.training_id,
+          created_by: user?.id,
+          session_status: "waiting",
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      await logSessionAction("duplicate_session", duplicated.id, {
+        original_session_id: session.id,
+      });
+
+      toast.success("Sessão duplicada com sucesso!");
+      loadSessions();
+    } catch (error) {
+      console.error("Error duplicating session:", error);
+      toast.error("Erro ao duplicar sessão");
+    }
+  };
+
+  const openEditDialog = (session: Session) => {
+    setEditingSession({ ...session });
+    setEditDialogOpen(true);
+  };
+
+  const openDeleteDialog = (sessionId: string) => {
+    setDeletingSessionId(sessionId);
+    setDeleteDialogOpen(true);
+  };
+
+  const filteredSessions = sessions.filter((session) => {
+    const matchesSearch = session.nome.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = statusFilter === "all" || session.session_status === statusFilter;
+    const matchesDate = !dateFilter || session.data === dateFilter;
+    return matchesSearch && matchesStatus && matchesDate;
+  });
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "waiting":
+        return "bg-yellow-500";
+      case "active":
+        return "bg-green-500";
+      case "showing_results":
+        return "bg-blue-500";
+      case "completed":
+        return "bg-gray-500";
+      default:
+        return "bg-gray-500";
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case "waiting":
+        return "Aguardando";
+      case "active":
+        return "Ativa";
+      case "showing_results":
+        return "Mostrando Resultados";
+      case "completed":
+        return "Concluída";
+      default:
+        return status;
+    }
+  };
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-muted-foreground">Carregando sessões...</p>
+          <p className="text-muted-foreground">Carregando...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground mb-2">Gestão de Sessões</h1>
-            <p className="text-muted-foreground">Crie e gerencie sessões de treinamento</p>
-          </div>
-          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="gap-2">
-                <Plus className="w-4 h-4" />
-                Nova Sessão
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Criar Nova Sessão</DialogTitle>
-                <DialogDescription>
-                  Preencha os dados da sessão de treinamento
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="nome">Nome da Sessão *</Label>
-                  <Input
-                    id="nome"
-                    value={newSession.nome}
-                    onChange={(e) => setNewSession({ ...newSession, nome: e.target.value })}
-                    placeholder="Ex: Treinamento Bancas 2024"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="data">Data *</Label>
-                  <Input
-                    id="data"
-                    type="date"
-                    value={newSession.data}
-                    onChange={(e) => setNewSession({ ...newSession, data: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="descricao">Descrição</Label>
-                  <Textarea
-                    id="descricao"
-                    value={newSession.descricao}
-                    onChange={(e) => setNewSession({ ...newSession, descricao: e.target.value })}
-                    placeholder="Descreva o objetivo desta sessão..."
-                    rows={3}
-                  />
-                </div>
-                <Button onClick={handleCreateSession} className="w-full">
-                  Criar Sessão
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+    <div className="container mx-auto p-6 space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold">Gestão de Sessões</h1>
+          <p className="text-muted-foreground">Crie e gerencie sessões de treinamento</p>
         </div>
-
-        {/* Search and Actions */}
-        <div className="mb-6 flex gap-4">
-          <Input
-            placeholder="Buscar sessões..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="max-w-md"
-          />
-          {selectedSessions.length >= 2 && (
-            <Button onClick={navigateToComparison} variant="outline" className="gap-2">
-              <GitCompare className="w-4 h-4" />
-              Comparar Selecionadas ({selectedSessions.length})
+        <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="w-4 h-4 mr-2" />
+              Nova Sessão
             </Button>
-          )}
-        </div>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Criar Nova Sessão</DialogTitle>
+              <DialogDescription>
+                Preencha as informações da sessão de treinamento
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleCreateSession} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="nome">Nome da Session</Label>
+                <Input
+                  id="nome"
+                  value={newSession.nome}
+                  onChange={(e) =>
+                    setNewSession({ ...newSession, nome: e.target.value })
+                  }
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="data">Data</Label>
+                <Input
+                  id="data"
+                  type="date"
+                  value={newSession.data}
+                  onChange={(e) =>
+                    setNewSession({ ...newSession, data: e.target.value })
+                  }
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="descricao">Descrição (opcional)</Label>
+                <Textarea
+                  id="descricao"
+                  value={newSession.descricao}
+                  onChange={(e) =>
+                    setNewSession({ ...newSession, descricao: e.target.value })
+                  }
+                  rows={3}
+                />
+              </div>
+              <Button type="submit" className="w-full">
+                Criar Session
+              </Button>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
 
-        {/* Sessions Grid */}
-        {filteredSessions.length === 0 ? (
-          <Card>
-            <CardContent className="text-center py-12">
-              <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground mb-4">
-                {searchQuery ? 'Nenhuma sessão encontrada' : 'Nenhuma sessão criada ainda'}
-              </p>
-              {!searchQuery && (
-                <Button onClick={() => setIsCreateDialogOpen(true)}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Criar Primeira Sessão
-                </Button>
-              )}
+      <Card className="mb-6">
+        <CardContent className="pt-6">
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por nome..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <div className="relative">
+              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="w-full h-10 pl-9 pr-4 rounded-md border border-input bg-background text-sm"
+              >
+                <option value="all">Todos os Status</option>
+                <option value="waiting">Aguardando</option>
+                <option value="active">Ativa</option>
+                <option value="showing_results">Mostrando Resultados</option>
+                <option value="completed">Concluída</option>
+              </select>
+            </div>
+            <div>
+              <Input
+                type="date"
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value)}
+                placeholder="Filtrar por data"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredSessions.length === 0 && sessions.length === 0 ? (
+          <Card className="col-span-full">
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <p className="text-muted-foreground mb-4">Nenhuma session criada ainda</p>
+              <Button onClick={() => setCreateDialogOpen(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                Criar Primeira Session
+              </Button>
+            </CardContent>
+          </Card>
+        ) : filteredSessions.length === 0 ? (
+          <Card className="col-span-full">
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <p className="text-muted-foreground">Nenhuma sessão encontrada com os filtros aplicados</p>
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {filteredSessions.map((session) => (
-              <Card key={session.id} className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <div className="flex justify-between items-start mb-2">
-                    <CardTitle className="text-lg">{session.nome}</CardTitle>
-                    <Badge className={getStatusColor(session.session_status)}>
-                      {getStatusLabel(session.session_status)}
-                    </Badge>
+          filteredSessions.map((session) => (
+            <Card key={session.id}>
+              <CardHeader>
+                <div className="flex justify-between items-start">
+                  <div className="flex-1">
+                    <CardTitle className="flex items-center gap-2 mb-2">
+                      {session.nome}
+                      <Badge className={getStatusColor(session.session_status)}>
+                        {getStatusLabel(session.session_status)}
+                      </Badge>
+                    </CardTitle>
+                    <CardDescription>
+                      <p className="text-sm text-muted-foreground">
+                        {new Date(session.data).toLocaleDateString("pt-BR")} •{" "}
+                        {session.participants?.[0]?.count || 0} participantes
+                      </p>
+                      {session.descricao && (
+                        <p className="text-sm text-muted-foreground mt-2">{session.descricao}</p>
+                      )}
+                    </CardDescription>
                   </div>
-                  <CardDescription>
-                    {new Date(session.data).toLocaleDateString('pt-BR')}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {session.descricao && (
-                    <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
-                      {session.descricao}
-                    </p>
-                  )}
-                  <div className="flex items-center gap-2 mb-4">
-                    <span className="text-sm text-muted-foreground">
-                      {session.participant_count} participantes
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => copySessionLink(session.id)}
-                      className="gap-1"
-                    >
-                      <Link2 className="w-3 h-3" />
-                      Link
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => navigate(`/admin/live/${session.id}`)}
-                      className="gap-1"
-                    >
-                      <Play className="w-3 h-3" />
-                      Controlar
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => navigate(`/admin/dashboard/${session.id}`)}
-                      className="gap-1"
-                    >
-                      <BarChart3 className="w-3 h-3" />
-                      Dashboard
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant={selectedSessions.includes(session.id) ? 'default' : 'outline'}
-                      onClick={() => toggleComparison(session.id)}
-                      className="gap-1"
-                    >
-                      <GitCompare className="w-3 h-3" />
-                      {selectedSessions.includes(session.id) ? 'Selecionada' : 'Comparar'}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => copySessionLink(session.id, session.nome)}
+                  >
+                    <Link2 className="w-4 h-4 mr-2" />
+                    Link
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate(`/admin/live/${session.id}`)}
+                  >
+                    <Play className="w-4 h-4 mr-2" />
+                    Controlar
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate(`/admin/dashboard/${session.id}`)}
+                  >
+                    <BarChart3 className="w-4 h-4 mr-2" />
+                    Dashboard
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleDuplicateSession(session)}
+                  >
+                    <Copy className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => openEditDialog(session)}
+                  >
+                    <Edit className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => toggleComparison(session.id)}
+                    className={
+                      selectedForComparison.includes(session.id)
+                        ? "border-primary"
+                        : ""
+                    }
+                  >
+                    <GitCompare className="w-4 h-4 mr-2" />
+                    {selectedForComparison.includes(session.id)
+                      ? "Selecionado"
+                      : "Comparar"}
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => openDeleteDialog(session.id)}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))
         )}
       </div>
+
+      {/* Edit Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Sessão</DialogTitle>
+            <DialogDescription>Modifique as informações da sessão</DialogDescription>
+          </DialogHeader>
+          {editingSession && (
+            <form onSubmit={handleEditSession} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-nome">Nome da Sessão</Label>
+                <Input
+                  id="edit-nome"
+                  value={editingSession.nome}
+                  onChange={(e) =>
+                    setEditingSession({ ...editingSession, nome: e.target.value })
+                  }
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-data">Data</Label>
+                <Input
+                  id="edit-data"
+                  type="date"
+                  value={editingSession.data}
+                  onChange={(e) =>
+                    setEditingSession({ ...editingSession, data: e.target.value })
+                  }
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-descricao">Descrição (opcional)</Label>
+                <Textarea
+                  id="edit-descricao"
+                  value={editingSession.descricao || ""}
+                  onChange={(e) =>
+                    setEditingSession({ ...editingSession, descricao: e.target.value })
+                  }
+                  rows={3}
+                />
+              </div>
+              <Button type="submit" className="w-full">
+                Salvar Alterações
+              </Button>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação é irreversível. Digite <strong>CONFIRMAR</strong> para excluir:
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2 py-4">
+            <Input
+              placeholder="Digite CONFIRMAR"
+              value={deletePassword}
+              onChange={(e) => setDeletePassword(e.target.value)}
+              autoFocus
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                setDeletePassword("");
+                setDeletingSessionId(null);
+              }}
+            >
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteSession}>
+              Confirmar Exclusão
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

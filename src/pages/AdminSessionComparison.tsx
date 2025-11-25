@@ -225,7 +225,7 @@ export default function AdminSessionComparison() {
         <div className="mb-8">
           <Button
             variant="ghost"
-            onClick={() => navigate("/admin/trainings")}
+            onClick={() => navigate("/admin/sessions")}
             className="mb-4"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
