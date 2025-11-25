@@ -30,6 +30,8 @@ import AdminTrainings from "./pages/AdminTrainings";
 import AdminTrainingParticipants from "./pages/AdminTrainingParticipants";
 import AdminTrainingSessions from "./pages/AdminTrainingSessions";
 import AdminTrainingComparator from "./pages/AdminTrainingComparator";
+import AdminSessions from "./pages/AdminSessions";
+import SessionAccess from "./pages/SessionAccess";
 import TrainingRegister from "./pages/TrainingRegister";
 import TrainingLogin from "./pages/TrainingLogin";
 import TrainingWelcome from "./pages/TrainingWelcome";
@@ -68,9 +70,23 @@ const App = () => (
                   <Route path="/training/:trainingId/login" element={<TrainingLogin />} />
                   <Route path="/training/:trainingId/acesso" element={<TrainingAccess />} />
                   
+                  {/* Simplified session access route */}
+                  <Route path="/session/:sessionId/acesso" element={<SessionAccess />} />
+                  <Route path="/training/register" element={<TrainingRegister />} />
+                  
                   {/* New unified antessala route (without sessionId) */}
                   <Route 
                     path="/training/:trainingId/antessala" 
+                    element={
+                      <ProtectedRoute>
+                        <Antessala />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  
+                  {/* Antessala with query params support */}
+                  <Route 
+                    path="/antessala" 
                     element={
                       <ProtectedRoute>
                         <Antessala />
@@ -96,16 +112,20 @@ const App = () => (
                     } 
                   />
                   
-                  {/* Admin routes - Redirect old /admin to new /admin/trainings */}
+                  {/* Admin routes - Redirect to new /admin/sessions */}
                   <Route 
                     path="/admin" 
-                    element={<Navigate to="/admin/trainings" replace />} 
+                    element={<Navigate to="/admin/sessions" replace />} 
+                  />
+                  <Route 
+                    path="/admin/trainings" 
+                    element={<Navigate to="/admin/sessions" replace />} 
                   />
                   <Route
-                    path="/admin/trainings"
+                    path="/admin/sessions"
                     element={
                       <AdminRoute>
-                        <AdminTrainings />
+                        <AdminSessions />
                       </AdminRoute>
                     }
                   />
@@ -182,7 +202,7 @@ const App = () => (
                     }
                   />
                   <Route
-                    path="/admin/comparison"
+                    path="/admin/session-comparison"
                     element={
                       <AdminRoute>
                         <AdminSessionComparison />
