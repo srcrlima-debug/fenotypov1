@@ -1,21 +1,25 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { CheckCircle, Timer, Image, Keyboard, AlertCircle, Loader2, Monitor, UserCheck, KeyRound, Calendar, Link2, Users } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Clock, Eye, MessageSquare, Users } from "lucide-react";
 import { Header } from "@/components/Header";
-import { VotingFooter } from "@/components/VotingFooter";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCardTilt } from "@/hooks/useCardTilt";
-import { useToast } from "@/hooks/use-toast";
-import fistIcon from "@/assets/fist-icon.png";
+import { AntessalaParticipantsMonitor } from "@/components/AntessalaParticipantsMonitor";
 
 interface SessionData {
   id: string;
   nome: string;
+  data: string;
   session_status: string;
   current_photo: number;
+  training_id?: string;
+  created_by?: string;
 }
 
 export default function Antessala() {
@@ -29,24 +33,26 @@ export default function Antessala() {
   const [onlineParticipants, setOnlineParticipants] = useState(0);
   const [hasPlayedSound, setHasPlayedSound] = useState(false);
 
-  const { ref: card1Ref, isVisible: card1Visible } = useScrollReveal();
-  const { ref: card2Ref, isVisible: card2Visible } = useScrollReveal();
-  const { ref: card3Ref, isVisible: card3Visible } = useScrollReveal();
-  const { ref: card4Ref, isVisible: card4Visible } = useScrollReveal();
-  const { ref: card5Ref, isVisible: card5Visible } = useScrollReveal();
-  const { ref: card6Ref, isVisible: card6Visible } = useScrollReveal();
-  const { ref: card7Ref, isVisible: card7Visible } = useScrollReveal();
-  const { ref: card8Ref, isVisible: card8Visible } = useScrollReveal();
-  
-  const tilt1 = useCardTilt();
-  const tilt2 = useCardTilt();
-  const tilt3 = useCardTilt();
-  const tilt4 = useCardTilt();
-  const tilt5 = useCardTilt();
-  const tilt6 = useCardTilt();
-  const tilt7 = useCardTilt();
+  const { ref: ref1, isVisible: isVisible1 } = useScrollReveal();
+  const { ref: ref2, isVisible: isVisible2 } = useScrollReveal();
+  const { ref: ref3, isVisible: isVisible3 } = useScrollReveal();
+  const { ref: ref4, isVisible: isVisible4 } = useScrollReveal();
 
-  // Function to play notification sound when session starts
+  const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const cardTilts = [
+    useCardTilt(),
+    useCardTilt(),
+    useCardTilt(),
+  ];
+
+  const handleMouseMove = (index: number, e: React.MouseEvent<HTMLDivElement>) => {
+    // Simplified without tilt effect
+  };
+
+  const handleMouseLeave = (index: number) => {
+    // Simplified without tilt effect
+  };
+
   const playStartSound = () => {
     if (hasPlayedSound) return;
     
@@ -58,7 +64,6 @@ export default function Antessala() {
       oscillator.connect(gainNode);
       gainNode.connect(audioContext.destination);
       
-      // Create a pleasant notification sound (three beeps)
       oscillator.frequency.value = 800;
       oscillator.type = 'sine';
       
@@ -68,38 +73,28 @@ export default function Antessala() {
       oscillator.start(audioContext.currentTime);
       oscillator.stop(audioContext.currentTime + 0.3);
       
-      // Second beep
       setTimeout(() => {
         const oscillator2 = audioContext.createOscillator();
         const gainNode2 = audioContext.createGain();
-        
         oscillator2.connect(gainNode2);
         gainNode2.connect(audioContext.destination);
-        
         oscillator2.frequency.value = 1000;
         oscillator2.type = 'sine';
-        
         gainNode2.gain.setValueAtTime(0.3, audioContext.currentTime);
         gainNode2.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
-        
         oscillator2.start(audioContext.currentTime);
         oscillator2.stop(audioContext.currentTime + 0.3);
       }, 200);
 
-      // Third beep
       setTimeout(() => {
         const oscillator3 = audioContext.createOscillator();
         const gainNode3 = audioContext.createGain();
-        
         oscillator3.connect(gainNode3);
         gainNode3.connect(audioContext.destination);
-        
         oscillator3.frequency.value = 1200;
         oscillator3.type = 'sine';
-        
         gainNode3.gain.setValueAtTime(0.4, audioContext.currentTime);
         gainNode3.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-        
         oscillator3.start(audioContext.currentTime);
         oscillator3.stop(audioContext.currentTime + 0.5);
       }, 400);
@@ -110,7 +105,6 @@ export default function Antessala() {
     }
   };
 
-  // Extract username from profile
   useEffect(() => {
     const extractUserName = async () => {
       if (!user) return;
@@ -131,14 +125,11 @@ export default function Antessala() {
     extractUserName();
   }, [user]);
 
-  // Load session data and setup realtime
   useEffect(() => {
     const loadSession = async () => {
-      // Se não tem sessionId mas tem trainingId, buscar sessão ativa do treinamento
       if (!sessionId && trainingId) {
         console.log("No sessionId in URL, searching for active session in training:", trainingId);
         
-        // Verificar autenticação
         if (!user) {
           toast({
             title: "Login necessário",
@@ -148,7 +139,6 @@ export default function Antessala() {
           return;
         }
 
-        // Verificar participação
         const { data: participant } = await supabase
           .from("training_participants")
           .select("*")
@@ -165,7 +155,6 @@ export default function Antessala() {
           return;
         }
 
-        // Buscar sessão waiting ou active do treinamento
         const { data: activeSession } = await supabase
           .from("sessions")
           .select("*")
@@ -176,7 +165,6 @@ export default function Antessala() {
           .maybeSingle();
 
         if (activeSession) {
-          // Atualizar URL sem reload
           console.log("Active session found, updating URL:", activeSession.id);
           window.history.replaceState(
             null,
@@ -186,7 +174,6 @@ export default function Antessala() {
           setSessionData(activeSession);
           setLoading(false);
 
-          // Se já está ativa, redirecionar
           if (activeSession.session_status === "active") {
             playStartSound();
             setTimeout(() => {
@@ -195,7 +182,6 @@ export default function Antessala() {
           }
           return;
         } else {
-          // Não há sessão ativa - mostrar mensagem de aguardo
           console.log("No active session found, showing waiting screen");
           setSessionData(null);
           setLoading(false);
@@ -203,134 +189,74 @@ export default function Antessala() {
         }
       }
 
-      // Se não tem sessionId nem trainingId, erro
       if (!sessionId) {
         console.error("No sessionId or trainingId provided");
         navigate("/");
         return;
       }
 
-      // Fluxo normal com sessionId na URL
-      // Try to fetch session normally (will be blocked by RLS if not authorized)
+      // ✅ VALIDAÇÕES IMPLEMENTADAS (Etapa 3)
       const { data: session, error } = await supabase
         .from("sessions")
-        .select("*")
+        .select("*, training_id, created_by")
         .eq("id", sessionId)
         .maybeSingle();
 
-      // If session not found (blocked by RLS or doesn't exist)
+      // ✅ VALIDAÇÃO 1: Erro de query
+      if (error) {
+        console.error("❌ Erro ao buscar sessão:", error.message, error);
+        toast({
+          title: "Erro ao acessar sessão",
+          description: "Não foi possível carregar os dados da sessão. Tente novamente.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        navigate("/");
+        return;
+      }
+
+      // ✅ VALIDAÇÃO 2: Sessão não existe OU sem permissão (RLS bloqueou)
       if (!session) {
-        console.log("Session not found via normal query, checking access...");
-
-        // If trainingId not in URL, fetch it via edge function
-        if (!trainingId) {
-          console.log("No trainingId in URL, fetching via edge function...");
-          const { data: sessionInfo, error: functionError } = await supabase.functions.invoke(
-            'get-session-training',
-            { body: { sessionId } }
-          );
-
-          if (functionError || !sessionInfo?.training_id) {
-            toast({
-              title: "Sessão não encontrada",
-              description: "Esta sessão não existe.",
-              variant: "destructive",
-            });
-            navigate("/");
-            return;
-          }
-
-          // Redirect to full route with trainingId
-          const fullUrl = `/training/${sessionInfo.training_id}/session/${sessionId}/antessala`;
-          console.log("Redirecting to full route:", fullUrl);
-          navigate(fullUrl, { replace: true });
-          return;
-        }
-
-        // If trainingId is present but session not found, check authentication
-        if (!user) {
-          toast({
-            title: "Login necessário",
-            description: "Faça login para acessar esta sessão",
-          });
-          navigate(`/training/${trainingId}/login?redirect=/training/${trainingId}/session/${sessionId}/antessala`);
-          return;
-        }
-
-        // Check if user is participant
-        const { data: participant } = await supabase
-          .from("training_participants")
-          .select("*")
-          .eq("training_id", trainingId)
-          .eq("user_id", user.id)
-          .maybeSingle();
-
-        if (!participant) {
-          toast({
-            title: "Cadastro necessário",
-            description: "Você precisa se cadastrar neste treinamento",
-          });
-          navigate(`/training/${trainingId}/register`);
-          return;
-        }
-
-        // Check profile completion only after confirming participation
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("genero, faixa_etaria, estado, pertencimento_racial, regiao, experiencia_bancas")
-          .eq("user_id", user.id)
-          .maybeSingle();
-
-        if (!profile || !profile.genero || !profile.faixa_etaria || !profile.estado || 
-            !profile.pertencimento_racial || !profile.regiao || !profile.experiencia_bancas) {
-          toast({
-            title: "Complete seu perfil",
-            description: "Complete seu perfil antes de participar da sessão",
-            variant: "destructive",
-          });
-          navigate(`/complete-profile?redirect=/training/${trainingId}/session/${sessionId}/antessala`);
-          return;
-        }
-
-        // If we get here, something else is wrong
+        console.error("❌ Sessão não encontrada ou acesso negado:", sessionId);
         toast({
-          title: "Erro ao carregar sessão",
-          description: "Não foi possível carregar os dados da sessão.",
+          title: "Acesso Negado",
+          description: "Esta sessão não existe ou você não tem permissão para acessá-la.",
           variant: "destructive",
         });
+        setLoading(false);
         navigate("/");
         return;
       }
 
-      // Session found successfully - validate it belongs to the training if trainingId provided
-      if (trainingId && session.training_id !== trainingId) {
+      // ✅ VALIDAÇÃO 3: ALERTA se órfã (não deveria mais existir)
+      if (!session.training_id) {
+        console.error("⚠️ ALERTA CRÍTICO: Sessão órfã detectada:", {
+          sessionId: session.id,
+          sessionName: session.nome,
+          createdBy: session.created_by,
+          createdAt: session.created_at
+        });
+
         toast({
-          title: "Sessão inválida",
-          description: "Esta sessão não pertence ao treinamento especificado.",
+          title: "⚠️ Sessão sem Treinamento",
+          description: "Esta sessão não está vinculada a um treinamento. Contate o suporte.",
           variant: "destructive",
         });
-        navigate("/");
-        return;
       }
 
+      // Continuar fluxo normal...
       setSessionData(session);
       setLoading(false);
 
-      // If session is already active, redirect immediately
       if (session.session_status === "active") {
         playStartSound();
         setTimeout(() => {
-          navigate(`/treino/${sessionId}`);
+          navigate(`/treino/${session.id}`);
         }, 1000);
+        return;
       }
-    };
 
-    loadSession();
-
-    // Setup realtime subscription for session updates (if we have sessionId)
-    let sessionUpdateChannel: any = null;
-    if (sessionId) {
-      sessionUpdateChannel = supabase
+      const channel = supabase
         .channel(`session-${sessionId}`)
         .on(
           "postgres_changes",
@@ -341,471 +267,296 @@ export default function Antessala() {
             filter: `id=eq.${sessionId}`,
           },
           (payload) => {
+            console.log("Session updated:", payload);
             const updatedSession = payload.new as SessionData;
             setSessionData(updatedSession);
 
-            // Play sound and redirect when session becomes active
             if (updatedSession.session_status === "active") {
               playStartSound();
-              toast({
-                title: "🎯 Sessão Iniciada!",
-                description: "O treinamento foi liberado. Redirecionando...",
-              });
               setTimeout(() => {
                 navigate(`/treino/${sessionId}`);
-              }, 1500);
+              }, 1000);
             }
           }
         )
         .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    };
+
+    if (loading || !user) {
+      return;
     }
 
-    // Setup realtime subscription for new sessions (if we don't have sessionId but have trainingId)
-    let sessionCreationChannel: any = null;
-    if (!sessionId && trainingId) {
-      console.log("Setting up realtime for new session creation");
-      sessionCreationChannel = supabase
-        .channel(`training-${trainingId}-sessions`)
-        .on(
-          "postgres_changes",
-          {
-            event: "INSERT",
-            schema: "public",
-            table: "sessions",
-            filter: `training_id=eq.${trainingId}`,
-          },
-          (payload) => {
-            const newSession = payload.new as SessionData;
-            console.log("New session detected:", newSession);
-            if (newSession.session_status === "waiting" || newSession.session_status === "active") {
-              toast({
-                title: "Sessão iniciada!",
-                description: "Redirecionando para a sessão...",
-              });
-              // Redirecionar para a nova sessão
-              window.location.href = `/training/${trainingId}/session/${newSession.id}/antessala`;
-            }
-          }
-        )
-        .subscribe();
-    }
+    loadSession();
+  }, [sessionId, trainingId, user, navigate, playStartSound, loading]);
 
-    // Track presence when in antessala
-    let presenceChannel: any = null;
-    const activeSessionId = sessionData?.id || sessionId;
-    if (activeSessionId && user) {
-      presenceChannel = supabase.channel(`antessala-${activeSessionId}`)
-        .on('presence', { event: 'sync' }, () => {
-          const state = presenceChannel.presenceState();
-          const onlineCount = Object.keys(state).length;
-          setOnlineParticipants(onlineCount);
-        })
-        .on('presence', { event: 'join' }, ({ newPresences }) => {
-          console.log('Participante entrou:', newPresences);
-        })
-        .on('presence', { event: 'leave' }, ({ leftPresences }) => {
-          console.log('Participante saiu:', leftPresences);
-        });
+  useEffect(() => {
+    if (!sessionId || !userName) return;
 
-      presenceChannel.subscribe(async (status: string) => {
-        if (status === 'SUBSCRIBED') {
+    const presenceChannel = supabase.channel(`antessala-${sessionId}`, {
+      config: {
+        presence: {
+          key: userName,
+        },
+      },
+    });
+
+    presenceChannel
+      .on("presence", { event: "sync" }, () => {
+        const state = presenceChannel.presenceState();
+        const participants = Object.keys(state).length;
+        setOnlineParticipants(participants);
+      })
+      .subscribe(async (status) => {
+        if (status === "SUBSCRIBED") {
           await presenceChannel.track({
-            user_id: user.id,
-            name: userName || user.email?.split('@')[0] || 'Anônimo',
-            joined_at: new Date().toISOString(),
+            user: userName,
+            online_at: new Date().toISOString(),
           });
         }
       });
-    }
 
     return () => {
-      if (presenceChannel) {
-        presenceChannel.untrack();
-        supabase.removeChannel(presenceChannel);
-      }
-      if (sessionUpdateChannel) {
-        supabase.removeChannel(sessionUpdateChannel);
-      }
-      if (sessionCreationChannel) {
-        supabase.removeChannel(sessionCreationChannel);
-      }
+      supabase.removeChannel(presenceChannel);
     };
-  }, [sessionId, trainingId, user, navigate, toast, userName]);
+  }, [sessionId, userName]);
 
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col">
-        <Header />
-        <div className="flex-1 flex items-center justify-center bg-gradient-to-b from-background to-muted/20">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground">Carregando...</p>
         </div>
-        <VotingFooter />
       </div>
     );
   }
 
-  // Se não há sessionData, mostrar mensagem de aguardando criação de sessão
   if (!sessionData) {
     return (
-      <div className="min-h-screen flex flex-col">
-        <Header />
-        <div className="flex-1 container max-w-4xl py-8 px-4 space-y-4">
-          {onlineParticipants > 0 && (
-            <Card className="max-w-2xl mx-auto">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-center gap-3">
-                  <Users className="w-5 h-5 text-green-500" />
-                  <span className="text-lg">
-                    <strong>{onlineParticipants}</strong> participante(s) online aguardando
-                  </span>
-                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                </div>
-              </CardContent>
-            </Card>
-          )}
-          
-          <Card className="max-w-2xl mx-auto">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-center">
-                <Timer className="w-6 h-6 text-primary animate-pulse mx-auto" />
-                <span className="flex-1">Aguardando Início do Treinamento</span>
-              </CardTitle>
-              <CardDescription className="text-center">
-                Você está cadastrado no treinamento
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="bg-muted/50 rounded-lg p-6 text-center space-y-3">
-                <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
-                <p className="text-lg font-medium">
-                  O organizador ainda não iniciou a sessão ao vivo.
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Esta página atualizará automaticamente quando a sessão for iniciada.
-                  <br />
-                  <strong>Não é necessário recarregar.</strong>
-                </p>
-              </div>
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center p-4">
+        <Card className="w-full max-w-2xl shadow-2xl border-2">
+          <CardContent className="p-12 text-center space-y-6">
+            <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-primary/10 flex items-center justify-center">
+              <Clock className="w-10 h-10 text-primary animate-pulse" />
+            </div>
+            
+            <h1 className="text-3xl font-bold text-foreground">
+              Aguardando Início do Treinamento
+            </h1>
+            
+            <p className="text-lg text-muted-foreground">
+              O administrador ainda não criou a sessão de treinamento.
+            </p>
 
-              <div className="space-y-4">
-                <h4 className="font-semibold flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 text-primary" />
-                  O que fazer enquanto espera:
-                </h4>
-                <ul className="space-y-2 text-sm text-muted-foreground ml-6">
-                  <li className="flex items-start gap-2">
-                    <span className="text-primary font-bold">•</span>
-                    <span>Mantenha esta página aberta</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-primary font-bold">•</span>
-                    <span>Certifique-se de ter conexão estável de internet</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-primary font-bold">•</span>
-                    <span>Aguarde o organizador iniciar a sessão</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-primary font-bold">•</span>
-                    <span>Você será redirecionado automaticamente quando a sessão começar</span>
-                  </li>
-                </ul>
-              </div>
+            <div className="pt-6">
+              <p className="text-sm text-muted-foreground">
+                Você será redirecionado automaticamente quando a sessão estiver disponível.
+              </p>
+            </div>
 
-              <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
-                <p className="text-sm text-center">
-                  🔔 <strong>Dica:</strong> Mantenha o som do dispositivo ligado para ser alertado quando a sessão iniciar
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-        <VotingFooter />
+            <Button
+              variant="outline"
+              onClick={() => navigate("/")}
+              className="mt-6"
+            >
+              Voltar para Home
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
       <Header />
       
-      <div className="flex-1 container max-w-4xl py-8 px-4 page-transition">
-        {/* Welcome Section */}
-        <div className="text-center mb-12 animate-fade-slide-up">
-          <div className="mb-6">
-            <h1 className="text-4xl font-bold mb-4 text-[#5a4a42]">
-              Bem-vindo(a), {userName}! 👋
-            </h1>
-            <p className="text-xl text-[#a0755f] font-semibold mb-2">
-              {sessionData?.nome}
-            </p>
-            <div className="inline-flex items-center gap-3 px-6 py-3 bg-[#a0755f]/10 border-2 border-[#a0755f] rounded-xl">
-              <div className="h-3 w-3 rounded-full bg-yellow-500 animate-pulse" />
-              <span className="text-lg font-medium text-[#5a4a42]">
-                Aguardando início da sessão...
-              </span>
-            </div>
-          </div>
-          
-          <div className="max-w-2xl mx-auto bg-gradient-to-r from-[#a0755f]/20 to-[#8a6350]/20 border-2 border-[#a0755f] rounded-2xl p-8 shadow-xl">
-            <div className="flex items-center justify-center gap-3 mb-4">
-              <img 
-                src={fistIcon} 
-                alt="Punho cerrado" 
-                className="h-12 w-12 animate-pulse-zoom"
-              />
-              <h2 className="text-2xl font-bold text-[#5a4a42]">
-                Juntos na Luta Antirracista
-              </h2>
-              <img 
-                src={fistIcon} 
-                alt="Punho cerrado" 
-                className="h-12 w-12 animate-pulse-zoom"
-              />
-            </div>
-            <p className="text-lg text-[#5a4a42] leading-relaxed">
-              Seu compromisso com a construção de uma educação antirracista é fundamental. 
-              Este treinamento é mais um passo na nossa jornada por equidade racial e justiça social. 
-              Obrigado por estar conosco nesta missão transformadora!
-            </p>
-          </div>
-        </div>
-
-        {/* How It Works Section */}
-        <div className="text-center mb-8 animate-fade-slide-up" style={{ animationDelay: "0.2s" }}>
-          <h2 className="text-3xl font-bold mb-3 text-[#5a4a42]">Como Funciona o Treinamento</h2>
-          <p className="text-lg text-muted-foreground">
-            Entenda como realizar a avaliação das imagens de forma rápida e eficiente
+      <main className="container mx-auto px-4 py-8">
+        <div
+          ref={ref1}
+          className={`mb-12 text-center transition-all duration-1000 ${
+            isVisible1 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
+          }`}
+        >
+          <h1 className="text-4xl md:text-5xl font-bold mb-4 text-foreground">
+            Bem-vindo(a){userName && `, ${userName}`}!
+          </h1>
+          <p className="text-xl text-muted-foreground">
+            Prepare-se para uma experiência única de treinamento
           </p>
         </div>
 
-        <div className="grid gap-6 mb-8">
-          {/* Preparação Prévia */}
-          <div ref={card1Ref} className={card1Visible ? 'revealed' : ''}>
-            <Card ref={tilt1} className="card-3d-tilt bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 border-2 border-blue-500">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-blue-700 dark:text-blue-300">
-                  <Monitor className="h-6 w-6" />
-                  Preparação Prévia - Antes do Treinamento
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground font-semibold mb-3">
-                  Use preferencialmente <strong>computador, notebook ou tablet</strong> para melhor experiência:
-                </p>
-                <ol className="space-y-3">
-                  <li className="flex items-start gap-3 p-3 bg-white/50 dark:bg-black/20 rounded-lg">
-                    <span className="flex-shrink-0 w-7 h-7 flex items-center justify-center bg-blue-500 text-white rounded-full font-bold text-sm">1</span>
-                    <span>Acesse previamente o endereço: <a href="https://fenotypo.lovable.app" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline font-semibold">https://fenotypo.lovable.app</a></span>
-                  </li>
-                  <li className="flex items-start gap-3 p-3 bg-white/50 dark:bg-black/20 rounded-lg">
-                    <span className="flex-shrink-0 w-7 h-7 flex items-center justify-center bg-blue-500 text-white rounded-full font-bold text-sm">2</span>
-                    <span>Clique no botão Cadastre-se e crie seu usuário. Complete seu perfil com todas as informações solicitadas</span>
-                  </li>
-                  <li className="flex items-start gap-3 p-3 bg-white/50 dark:bg-black/20 rounded-lg">
-                    <span className="flex-shrink-0 w-7 h-7 flex items-center justify-center bg-blue-500 text-white rounded-full font-bold text-sm">3</span>
-                    <span>Certifique-se de que está funcionando fazendo login com suas credenciais</span>
-                  </li>
-                </ol>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div ref={card2Ref} className={card2Visible ? 'revealed' : ''}>
-            <Card ref={tilt2} className="card-3d-tilt bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950 dark:to-amber-900 border-2 border-amber-500">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-amber-700 dark:text-amber-300">
-                  <KeyRound className="h-6 w-6" />
-                  Guarde Suas Credenciais
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4 flex items-start gap-3">
-                  <AlertCircle className="h-6 w-6 text-amber-600 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="font-bold text-amber-800 dark:text-amber-200 mb-2">Importante!</p>
-                    <p className="text-amber-700 dark:text-amber-300">
-                      Anote ou salve seu <strong>e-mail e senha cadastrados</strong> em local seguro. Você precisará dessas informações no dia do treinamento.
+        <Card
+          ref={ref2}
+          className={`mb-12 shadow-xl border-2 transition-all duration-1000 delay-200 ${
+            isVisible2 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
+          }`}
+        >
+          <CardHeader className="bg-gradient-to-r from-primary/10 to-primary/5">
+            <CardTitle className="text-2xl flex items-center gap-3">
+              <Users className="w-6 h-6 text-primary" />
+              Informações do Treinamento
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Nome da Sessão</p>
+                  <p className="text-lg font-semibold text-foreground">{sessionData.nome}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Data</p>
+                  <p className="text-lg font-semibold text-foreground">
+                    {new Date(sessionData.data).toLocaleDateString("pt-BR")}
+                  </p>
+                </div>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Status</p>
+                  <Badge
+                    variant={
+                      sessionData.session_status === "waiting"
+                        ? "secondary"
+                        : "default"
+                    }
+                    className="text-sm px-3 py-1"
+                  >
+                    {sessionData.session_status === "waiting"
+                      ? "Aguardando Início"
+                      : "Em Andamento"}
+                  </Badge>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">
+                    Participantes Online
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse" />
+                    <p className="text-lg font-semibold text-foreground">
+                      {onlineParticipants} online
                     </p>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-          <div ref={card3Ref} className={card3Visible ? 'revealed' : ''}>
-            <Card ref={tilt3} className="card-3d-tilt bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 border-2 border-green-500">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-green-700 dark:text-green-300">
-                  <Calendar className="h-6 w-6" />
-                  No Dia do Treinamento
+        <div
+          ref={ref3}
+          className={`mb-8 transition-all duration-1000 delay-300 ${
+            isVisible3 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
+          }`}
+        >
+          <h2 className="text-3xl font-bold mb-8 text-center text-foreground">
+            Como Funciona?
+          </h2>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            <Card
+              ref={(el) => (cardRefs.current[0] = el)}
+              className="group hover:shadow-2xl transition-all duration-300 border-2 hover:border-primary/50"
+            >
+              <CardHeader className="bg-gradient-to-br from-primary/20 to-primary/5">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Eye className="w-8 h-8 text-primary" />
+                </div>
+                <CardTitle className="text-xl text-center">
+                  Observação de Fotos
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <ol className="space-y-3">
-                  <li className="flex items-start gap-3 p-3 bg-white/50 dark:bg-black/20 rounded-lg">
-                    <Link2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                    <span>Acesse a página <strong>apenas pelo link que será enviado</strong> pelo Prof. Cristhian no chat</span>
-                  </li>
-                  <li className="flex items-start gap-3 p-3 bg-white/50 dark:bg-black/20 rounded-lg">
-                    <UserCheck className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                    <span>Faça <strong>login</strong> com o e-mail e senha que você cadastrou</span>
-                  </li>
-                  <li className="flex items-start gap-3 p-3 bg-white/50 dark:bg-black/20 rounded-lg">
-                    <Timer className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                    <span>Aguarde o início da apresentação dos casos de avaliação fenotípica pelo Prof. Cristhian</span>
-                  </li>
-                </ol>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div ref={card4Ref} className={card4Visible ? 'revealed' : ''}>
-            <Card ref={tilt4} className="card-3d-tilt">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Image className="h-5 w-5 text-primary" />
-                  Visualização das Imagens
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  Você verá uma série de imagens, uma de cada vez. Para cada imagem, você terá um tempo
-                  limitado para fazer sua avaliação.
+              <CardContent className="p-6">
+                <p className="text-muted-foreground text-center leading-relaxed">
+                  Você verá uma série de fotografias, uma de cada vez. Observe
+                  cada imagem com atenção aos detalhes.
                 </p>
               </CardContent>
             </Card>
-          </div>
 
-          <div ref={card5Ref} className={card5Visible ? 'revealed' : ''}>
-            <Card ref={tilt5} className="card-3d-tilt">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Timer className="h-5 w-5 text-primary" />
-                  Tempo de Resposta
+            <Card
+              ref={(el) => (cardRefs.current[1] = el)}
+              className="group hover:shadow-2xl transition-all duration-300 border-2 hover:border-primary/50"
+            >
+              <CardHeader className="bg-gradient-to-br from-primary/20 to-primary/5">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <MessageSquare className="w-8 h-8 text-primary" />
+                </div>
+                <CardTitle className="text-xl text-center">
+                  Avaliação Rápida
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground mb-4">
-                  Cada imagem tem um cronômetro. Quando o tempo acabar, a resposta será automaticamente
-                  registrada como "Não Respondido".
+              <CardContent className="p-6">
+                <p className="text-muted-foreground text-center leading-relaxed">
+                  Para cada foto, você responderá a uma pergunta específica
+                  sobre a imagem. Seja preciso e rápido.
                 </p>
-                <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 flex items-start gap-2">
-                  <AlertCircle className="h-5 w-5 text-red-500 mt-0.5 flex-shrink-0" />
-                  <p className="text-sm text-red-700">
-                    <strong>Atenção:</strong> Nos últimos 10 segundos, o cronômetro ficará vermelho
-                    para alertá-lo sobre o tempo restante.
-                  </p>
-                </div>
               </CardContent>
             </Card>
-          </div>
 
-          <div ref={card6Ref} className={card6Visible ? 'revealed' : ''}>
-            <Card ref={tilt6} className="card-3d-tilt">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <CheckCircle className="h-5 w-5 text-primary" />
-                  Como Avaliar
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="font-semibold mb-2">Opções de Resposta:</h4>
-                    <ul className="space-y-2">
-                      <li className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-green-500" />
-                        <span><strong>Deferido:</strong> Quando você considera que a pessoa na foto se autodeclara e pode ser considerada negra</span>
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-red-500" />
-                        <span><strong>Indeferido:</strong> Quando você considera que a pessoa na foto não se autodeclara ou não pode ser considerada negra</span>
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-gray-400" />
-                        <span><strong>Não Respondido:</strong> Quando o tempo se esgota antes de você responder</span>
-                      </li>
-                    </ul>
-                  </div>
+            <Card
+              ref={(el) => (cardRefs.current[2] = el)}
+              className="group hover:shadow-2xl transition-all duration-300 border-2 hover:border-primary/50"
+            >
+              <CardHeader className="bg-gradient-to-br from-primary/20 to-primary/5">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Clock className="w-8 h-8 text-primary" />
                 </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div ref={card7Ref} className={card7Visible ? 'revealed' : ''}>
-            <Card ref={tilt7} className="card-3d-tilt">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Keyboard className="h-5 w-5 text-primary" />
-                  Atalhos de Teclado
+                <CardTitle className="text-xl text-center">
+                  Tempo Limitado
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground mb-4">
-                  Para agilizar suas respostas, você pode usar os seguintes atalhos:
+              <CardContent className="p-6">
+                <p className="text-muted-foreground text-center leading-relaxed">
+                  Cada foto tem um tempo limite para avaliação. Mantenha o foco
+                  e confie na sua primeira impressão.
                 </p>
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3 p-3 bg-green-500/10 rounded-lg">
-                    <kbd className="px-3 py-2 bg-green-500 text-white rounded font-mono text-sm font-bold">D</kbd>
-                    <span>Registrar como <strong>DEFERIDO</strong></span>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 bg-red-500/10 rounded-lg">
-                    <kbd className="px-3 py-2 bg-red-500 text-white rounded font-mono text-sm font-bold">I</kbd>
-                    <span>Registrar como <strong>INDEFERIDO</strong></span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div ref={card8Ref} className={card8Visible ? 'revealed' : ''}>
-            <Card className="bg-[#a0755f]/10 border-2 border-[#a0755f]">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-[#5a4a42]">
-                  <AlertCircle className="h-5 w-5" />
-                  Importante
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2 text-[#5a4a42]">
-                  <li className="flex items-start gap-2">
-                    <span className="text-[#a0755f] mt-1">•</span>
-                    <span>O treinamento é <strong>sequencial</strong> - você não pode voltar para imagens anteriores</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-[#a0755f] mt-1">•</span>
-                    <span>Aguarde o administrador liberar cada foto antes de prosseguir</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-[#a0755f] mt-1">•</span>
-                    <span>Suas respostas são registradas automaticamente e não podem ser alteradas</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-[#a0755f] mt-1">•</span>
-                    <span>Um lembrete sonoro será tocado quando a sessão for iniciada</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-[#a0755f] mt-1">•</span>
-                    <span>Ao final, você receberá um certificado de participação</span>
-                  </li>
-                </ul>
               </CardContent>
             </Card>
           </div>
         </div>
 
-        {/* Waiting Message */}
-        <div className="text-center py-8">
-          <div className="inline-flex items-center gap-3 px-8 py-4 bg-blue-500/10 border-2 border-blue-500 rounded-xl">
-            <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
-            <span className="text-lg font-semibold text-blue-700">
-              Aguardando o administrador iniciar a sessão...
-            </span>
+        <Card
+          ref={ref4}
+          className={`shadow-xl border-2 transition-all duration-1000 delay-500 ${
+            isVisible4 ? "opacity-100 scale-100" : "opacity-0 scale-95"
+          }`}
+        >
+          <CardContent className="p-8 text-center">
+            <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-primary/10 flex items-center justify-center">
+              <Clock className="w-10 h-10 text-primary animate-pulse" />
+            </div>
+            <h3 className="text-2xl font-bold mb-4 text-foreground">
+              Aguardando Início
+            </h3>
+            <p className="text-lg text-muted-foreground mb-6">
+              O treinamento começará em breve. Fique atento!
+            </p>
+            <div className="flex items-center justify-center gap-2 text-muted-foreground">
+              <div className="w-2 h-2 rounded-full bg-primary animate-bounce" />
+              <div
+                className="w-2 h-2 rounded-full bg-primary animate-bounce"
+                style={{ animationDelay: "0.1s" }}
+              />
+              <div
+                className="w-2 h-2 rounded-full bg-primary animate-bounce"
+                style={{ animationDelay: "0.2s" }}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {sessionId && (
+          <div className="mt-8">
+            <AntessalaParticipantsMonitor sessionId={sessionId} />
           </div>
-        </div>
-      </div>
-      <VotingFooter />
+        )}
+      </main>
     </div>
   );
 }

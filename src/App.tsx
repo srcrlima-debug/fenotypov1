@@ -34,6 +34,7 @@ import AdminTrainingComparator from "./pages/AdminTrainingComparator";
 import TrainingRegister from "./pages/TrainingRegister";
 import TrainingLogin from "./pages/TrainingLogin";
 import TrainingWelcome from "./pages/TrainingWelcome";
+import TrainingAccess from "./pages/TrainingAccess";
 import Training from "./pages/Training";
 import SessionTraining from "./pages/SessionTraining";
 import SessionFeedback from "./pages/SessionFeedback";
@@ -66,6 +67,7 @@ const App = () => (
                   <Route path="/training/:trainingId/register" element={<TrainingRegister />} />
                   <Route path="/training/:trainingId/welcome" element={<TrainingWelcome />} />
                   <Route path="/training/:trainingId/login" element={<TrainingLogin />} />
+                  <Route path="/training/:trainingId/acesso" element={<TrainingAccess />} />
                   
                   {/* New unified antessala route (without sessionId) */}
                   <Route 

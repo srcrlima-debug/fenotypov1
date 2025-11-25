@@ -99,7 +99,7 @@ export default function TrainingRegister() {
 
       if (data) {
         toast.info('Você já está cadastrado neste treinamento');
-        navigate(`/training/${trainingId}/login`);
+        navigate(`/training/${trainingId}/antessala`);
       }
     } catch (error) {
       console.error('Error checking participation:', error);
