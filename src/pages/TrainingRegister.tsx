@@ -427,8 +427,8 @@ export default function TrainingRegister() {
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 required
-                disabled={!!user}
                 autoComplete="email"
+                placeholder="seu@email.com"
               />
             </div>
 
@@ -463,18 +463,24 @@ export default function TrainingRegister() {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="genero">Gênero</Label>
+              <Label htmlFor="genero">Identidade de Gênero</Label>
               <Select value={formData.genero} onValueChange={(value) => setFormData({ ...formData, genero: value })}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione seu gênero" />
+                  <SelectValue placeholder="Selecione sua identidade de gênero" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Masculino">Masculino</SelectItem>
-                  <SelectItem value="Feminino">Feminino</SelectItem>
+                  <SelectItem value="Mulher cisgênero">Mulher cisgênero</SelectItem>
+                  <SelectItem value="Mulher transexual/transgênero">Mulher transexual/transgênero</SelectItem>
+                  <SelectItem value="Não binário">Não binário</SelectItem>
+                  <SelectItem value="Homem cisgênero">Homem cisgênero</SelectItem>
+                  <SelectItem value="Homem transexual/transgênero">Homem transexual/transgênero</SelectItem>
                   <SelectItem value="Outro">Outro</SelectItem>
-                  <SelectItem value="Prefiro não informar">Prefiro não informar</SelectItem>
+                  <SelectItem value="Prefiro não responder">Prefiro não responder</SelectItem>
                 </SelectContent>
               </Select>
+              <p className="text-xs text-muted-foreground">
+                <strong>Cisgênero:</strong> pessoa que se identifica com o sexo designado ao nascer
+              </p>
             </div>
 
             <div className="space-y-2">
@@ -495,18 +501,31 @@ export default function TrainingRegister() {
 
             <div className="space-y-2">
               <Label htmlFor="estado">Estado</Label>
-              <Select value={formData.estado} onValueChange={(value) => setFormData({ ...formData, estado: value })}>
+              <Select 
+                value={formData.estado} 
+                onValueChange={(value) => {
+                  // Atualiza estado e automaticamente a região
+                  const estadoObj = estadosData.find(e => e.nome === value);
+                  setFormData({ 
+                    ...formData, 
+                    estado: value,
+                  });
+                }}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione seu estado" />
                 </SelectTrigger>
                 <SelectContent>
                   {estadosData.map((estado) => (
                     <SelectItem key={estado.nome} value={estado.nome}>
-                      {estado.nome}
+                      {estado.nome} - {estado.regiao}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              <p className="text-xs text-muted-foreground">
+                A região é automaticamente definida pelo estado selecionado
+              </p>
             </div>
 
             <div className="space-y-2">

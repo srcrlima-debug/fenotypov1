@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
+import { getRegiaoFromEstado } from '@/lib/regionMapping';
 
 const registroSchema = z.object({
   email: z.string().email({ message: 'Email inválido' }),
@@ -237,7 +238,17 @@ const Registro = () => {
 
             <div className="space-y-2">
               <Label htmlFor="estado">Estado</Label>
-              <Select value={formData.estado} onValueChange={(value) => setFormData({ ...formData, estado: value })}>
+              <Select 
+                value={formData.estado} 
+                onValueChange={(value) => {
+                  const regiao = getRegiaoFromEstado(value);
+                  setFormData({ 
+                    ...formData, 
+                    estado: value,
+                    regiao: regiao
+                  });
+                }}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
@@ -249,13 +260,20 @@ const Registro = () => {
                   ))}
                 </SelectContent>
               </Select>
+              <p className="text-xs text-muted-foreground">
+                A região é automaticamente definida pelo estado selecionado
+              </p>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="regiao">Região de Origem</Label>
-              <Select value={formData.regiao} onValueChange={(value) => setFormData({ ...formData, regiao: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione" />
+              <Select 
+                value={formData.regiao} 
+                onValueChange={(value) => setFormData({ ...formData, regiao: value })}
+                disabled={true}
+              >
+                <SelectTrigger className="opacity-70">
+                  <SelectValue placeholder="Preenchida automaticamente" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Norte">Norte</SelectItem>
@@ -265,6 +283,9 @@ const Registro = () => {
                   <SelectItem value="Sul">Sul</SelectItem>
                 </SelectContent>
               </Select>
+              <p className="text-xs text-muted-foreground">
+                A região é preenchida automaticamente baseada no estado selecionado
+              </p>
             </div>
 
             <div className="space-y-2">
