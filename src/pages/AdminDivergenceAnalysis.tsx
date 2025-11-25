@@ -174,7 +174,7 @@ export default function AdminDivergenceAnalysis() {
             <div>
               <Button 
                 variant="ghost" 
-                onClick={() => navigate("/admin")}
+                onClick={() => navigate("/admin/trainings")}
                 className="mb-4"
               >
                 <ArrowLeft className="mr-2 h-4 w-4" />

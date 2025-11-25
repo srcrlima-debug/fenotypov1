@@ -94,7 +94,7 @@ export default function AdminLiveControl() {
           description: "ID da sessão inválido",
           variant: "destructive",
         });
-        navigate("/admin");
+        navigate("/admin/trainings");
         return;
       }
     }
@@ -1074,7 +1074,7 @@ export default function AdminLiveControl() {
                 <AlertTriangle className="w-4 h-4" />
                 Análise de Divergências
               </Button>
-              <Button variant="outline" onClick={() => navigate("/admin")}>
+              <Button variant="outline" onClick={() => navigate("/admin/trainings")}>
                 Voltar
               </Button>
           </div>

@@ -568,7 +568,7 @@ const AdminDashboard = () => {
               <Button
                 variant="ghost"
                 size="sm"
-              onClick={() => navigate('/admin')}
+              onClick={() => navigate('/admin/trainings')}
               className="mb-2"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />

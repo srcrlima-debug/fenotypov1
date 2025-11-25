@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AssessmentProvider } from "./contexts/AssessmentContext";
 import { AuthProvider } from "./contexts/AuthContext";
 import { TrainingProvider } from "./contexts/TrainingContext";
@@ -18,7 +18,6 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import ComoFunciona from "./pages/ComoFunciona";
 import Antessala from "./pages/Antessala";
-import Admin from "./pages/Admin";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminLiveControl from "./pages/AdminLiveControl";
 import AdminAnalytics from "./pages/AdminAnalytics";
@@ -97,14 +96,10 @@ const App = () => (
                     } 
                   />
                   
-                  {/* Admin routes */}
+                  {/* Admin routes - Redirect old /admin to new /admin/trainings */}
                   <Route 
                     path="/admin" 
-                    element={
-                      <AdminRoute>
-                        <Admin />
-                      </AdminRoute>
-                    } 
+                    element={<Navigate to="/admin/trainings" replace />} 
                   />
                   <Route
                     path="/admin/trainings"

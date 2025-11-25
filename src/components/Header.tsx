@@ -134,7 +134,7 @@ export const Header = () => {
                         hasNotifications ? "animate-pulse" : ""
                       }`}
                       onClick={() => {
-                        navigate("/admin");
+                        navigate("/admin/trainings");
                         setMobileMenuOpen(false);
                       }}
                     >
@@ -193,7 +193,7 @@ export const Header = () => {
                 <Button 
                   variant="default" 
                   size="sm"
-                  onClick={() => navigate("/admin")}
+                  onClick={() => navigate("/admin/trainings")}
                   className={`bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 hover:border-primary/30 transition-all duration-300 hover:scale-105 hover:shadow-lg active:scale-95 ${
                     hasNotifications ? "animate-pulse" : ""
                   }`}

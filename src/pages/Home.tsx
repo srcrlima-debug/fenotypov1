@@ -63,7 +63,7 @@ const Home = () => {
               </Button>
               {user && (
                 <Button
-                  onClick={() => navigate("/admin")}
+                  onClick={() => navigate("/admin/trainings")}
                   size="lg"
                   className="button-3d h-20 w-full sm:flex-1 text-xl font-bold bg-gradient-to-r from-[#5a4a42] to-[#4a3a32] hover:from-[#4a3a32] hover:to-[#3a2a22] text-white shadow-2xl rounded-xl border-4 border-[#5a4a42] transition-all duration-300 group"
                 >
