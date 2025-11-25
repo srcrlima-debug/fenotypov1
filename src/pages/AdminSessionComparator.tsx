@@ -220,7 +220,7 @@ const AdminSessionComparator = () => {
             <div className="flex items-center gap-4">
               <Button 
                 variant="outline" 
-                onClick={() => navigate('/admin')}
+                onClick={() => navigate('/admin/trainings')}
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Voltar
