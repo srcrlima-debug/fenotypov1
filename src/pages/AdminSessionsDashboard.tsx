@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, type RefObject } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -6,10 +6,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Users, Calendar, TrendingUp, Activity, Download, ArrowUp, ArrowDown } from "lucide-react";
 import { toast } from "sonner";
-import html2canvas from "html2canvas";
-import * as Recharts from "recharts";
-
-const { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } = Recharts;
+import {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
 
 interface SessionStats {
   totalSessions: number;
@@ -190,24 +201,33 @@ export default function AdminSessionsDashboard() {
     }
   };
 
-  const exportChartAsImage = async (chartRef: React.RefObject<HTMLDivElement>, filename: string) => {
+  const exportChartAsImage = (chartRef: RefObject<HTMLDivElement>, filename: string) => {
     if (!chartRef.current) return;
 
     try {
-      const canvas = await html2canvas(chartRef.current, {
-        backgroundColor: '#ffffff',
-        scale: 2,
-      });
-      
-      const link = document.createElement('a');
-      link.download = `${filename}-${new Date().toISOString().split('T')[0]}.png`;
-      link.href = canvas.toDataURL('image/png');
+      const svg = chartRef.current.querySelector("svg");
+      if (!svg) {
+        toast.error("Não foi possível encontrar o gráfico para exportar");
+        return;
+      }
+
+      const serializer = new XMLSerializer();
+      let source = serializer.serializeToString(svg);
+
+      if (!source.match(/^<\?xml/)) {
+        source = '<?xml version="1.0" standalone="no"?>\r\n' + source;
+      }
+
+      const url = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(source);
+      const link = document.createElement("a");
+      link.download = `${filename}-${new Date().toISOString().split("T")[0]}.svg`;
+      link.href = url;
       link.click();
-      
-      toast.success('Gráfico exportado com sucesso!');
+
+      toast.success("Gráfico exportado com sucesso!");
     } catch (error) {
-      console.error('Error exporting chart:', error);
-      toast.error('Erro ao exportar gráfico');
+      console.error("Error exporting chart:", error);
+      toast.error("Erro ao exportar gráfico");
     }
   };
 
