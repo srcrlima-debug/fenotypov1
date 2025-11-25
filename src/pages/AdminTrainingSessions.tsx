@@ -5,9 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, Plus, Play, BarChart3, Trash2, Link2 } from 'lucide-react';
+import { ArrowLeft, Plus, Play, BarChart3, Trash2, Link2, Edit, GitCompare } from 'lucide-react';
 import { toast } from 'sonner';
 import { logSessionAction } from '@/lib/auditLogger';
 
@@ -19,6 +20,11 @@ export default function AdminTrainingSessions() {
   const [loading, setLoading] = useState(true);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [newSession, setNewSession] = useState({ nome: '', data: '' });
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingSession, setEditingSession] = useState<any>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletingSessionId, setDeletingSessionId] = useState<string | null>(null);
+  const [deletePassword, setDeletePassword] = useState('');
 
   useEffect(() => {
     loadData();
@@ -80,24 +86,70 @@ export default function AdminTrainingSessions() {
     }
   };
 
-  const handleDeleteSession = async (sessionId: string) => {
-    if (!confirm('Tem certeza que deseja deletar esta session?')) return;
+  const handleEditSession = async (e: React.FormEvent) => {
+    e.preventDefault();
 
     try {
-      const { error } = await supabase.from('sessions').delete().eq('id', sessionId);
+      const { error } = await supabase
+        .from('sessions')
+        .update({
+          nome: editingSession.nome,
+          data: editingSession.data,
+        })
+        .eq('id', editingSession.id);
+
       if (error) throw error;
 
       // Log audit action
-      await logSessionAction('delete_session', sessionId, {
+      await logSessionAction('update_session', editingSession.id, {
+        session_name: editingSession.nome,
         training_id: trainingId,
       });
 
-      toast.success('Session deletada com sucesso!');
+      toast.success('Sessão atualizada com sucesso!');
+      setEditDialogOpen(false);
+      setEditingSession(null);
+      loadData();
+    } catch (error) {
+      console.error('Error updating session:', error);
+      toast.error('Erro ao atualizar sessão');
+    }
+  };
+
+  const handleDeleteSession = async () => {
+    if (deletePassword !== 'CONFIRMAR') {
+      toast.error('Senha incorreta. Digite "CONFIRMAR" para excluir.');
+      return;
+    }
+
+    try {
+      const { error } = await supabase.from('sessions').delete().eq('id', deletingSessionId);
+      if (error) throw error;
+
+      // Log audit action
+      await logSessionAction('delete_session', deletingSessionId!, {
+        training_id: trainingId,
+      });
+
+      toast.success('Sessão deletada com sucesso!');
+      setDeleteDialogOpen(false);
+      setDeletingSessionId(null);
+      setDeletePassword('');
       loadData();
     } catch (error) {
       console.error('Error deleting session:', error);
-      toast.error('Erro ao deletar session');
+      toast.error('Erro ao deletar sessão');
     }
+  };
+
+  const openEditDialog = (session: any) => {
+    setEditingSession({ ...session });
+    setEditDialogOpen(true);
+  };
+
+  const openDeleteDialog = (sessionId: string) => {
+    setDeletingSessionId(sessionId);
+    setDeleteDialogOpen(true);
   };
 
   const copySessionLink = (sessionId: string, sessionName: string) => {
@@ -214,6 +266,14 @@ export default function AdminTrainingSessions() {
                     <Button
                       variant="outline"
                       size="sm"
+                      onClick={() => copySessionLink(session.id, session.nome)}
+                    >
+                      <Link2 className="w-4 h-4 mr-2" />
+                      Link
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={() => navigate(`/admin/live/${session.id}`)}
                     >
                       <Play className="w-4 h-4 mr-2" />
@@ -230,7 +290,22 @@ export default function AdminTrainingSessions() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleDeleteSession(session.id)}
+                      onClick={() => navigate(`/admin/session-comparator/${session.id}`)}
+                    >
+                      <GitCompare className="w-4 h-4 mr-2" />
+                      Comparar
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openEditDialog(session)}
+                    >
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => openDeleteDialog(session.id)}
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
@@ -241,6 +316,75 @@ export default function AdminTrainingSessions() {
           ))
         )}
       </div>
+
+      {/* Edit Session Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Sessão</DialogTitle>
+            <DialogDescription>Modifique as informações da sessão</DialogDescription>
+          </DialogHeader>
+          {editingSession && (
+            <form onSubmit={handleEditSession} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-nome">Nome da Sessão</Label>
+                <Input
+                  id="edit-nome"
+                  value={editingSession.nome}
+                  onChange={(e) => setEditingSession({ ...editingSession, nome: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-data">Data</Label>
+                <Input
+                  id="edit-data"
+                  type="date"
+                  value={editingSession.data}
+                  onChange={(e) => setEditingSession({ ...editingSession, data: e.target.value })}
+                  required
+                />
+              </div>
+              <Button type="submit" className="w-full">Salvar Alterações</Button>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação é irreversível e irá deletar todos os dados associados à sessão.
+              Para confirmar, digite <strong>CONFIRMAR</strong> no campo abaixo:
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2 py-4">
+            <Input
+              placeholder="Digite CONFIRMAR"
+              value={deletePassword}
+              onChange={(e) => setDeletePassword(e.target.value)}
+              autoFocus
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setDeletePassword('');
+              setDeletingSessionId(null);
+            }}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteSession}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              Excluir Sessão
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
