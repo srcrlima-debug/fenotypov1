@@ -25,6 +25,42 @@ interface AuditLogParams {
 }
 
 /**
+ * Private function to insert audit log directly into the database (fallback)
+ */
+async function insertAuditLogDirectly({
+  action,
+  resourceType,
+  resourceId,
+  details,
+}: AuditLogParams): Promise<void> {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      console.error('[Audit Fallback] No user available');
+      return;
+    }
+
+    const userAgent = typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown';
+
+    const { error } = await supabase.from('audit_logs').insert({
+      user_id: user.id,
+      action,
+      resource_type: resourceType,
+      resource_id: resourceId,
+      details,
+      user_agent: userAgent,
+    });
+
+    if (error) {
+      console.error('[Audit Fallback] Failed to insert audit log:', error);
+    }
+  } catch (error) {
+    console.error('[Audit Fallback] Error inserting audit log:', error);
+  }
+}
+
+/**
  * Log an administrative action to the audit log
  */
 export async function logAuditAction({
@@ -51,10 +87,12 @@ export async function logAuditAction({
     });
 
     if (error) {
-      console.error('Failed to log audit action:', error);
+      console.warn('[Audit] Edge Function failed, using direct insert fallback');
+      await insertAuditLogDirectly({ action, resourceType, resourceId, details });
     }
   } catch (error) {
-    console.error('Error in logAuditAction:', error);
+    console.warn('[Audit] Exception calling Edge Function, using direct insert fallback');
+    await insertAuditLogDirectly({ action, resourceType, resourceId, details });
   }
 }
 
