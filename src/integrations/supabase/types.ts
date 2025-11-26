@@ -626,6 +626,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_photo_time_valid: { Args: { p_session_id: string }; Returns: boolean }
       is_session_active: { Args: { _session_id: string }; Returns: boolean }
       is_session_creator: {
         Args: { _session_id: string; _user_id: string }
