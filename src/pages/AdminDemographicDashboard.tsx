@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, type RefObject } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Filter, Users, TrendingUp, AlertCircle } from 'lucide-react';
+import { toast as sonnerToast } from 'sonner';
+import { ArrowLeft, Filter, Users, TrendingUp, AlertCircle, Download } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
@@ -45,6 +46,13 @@ const AdminDemographicDashboard = () => {
 
   const [loading, setLoading] = useState(true);
   const [sessionName, setSessionName] = useState('');
+  const [comparisonPeriod, setComparisonPeriod] = useState<'month' | 'year'>('month');
+  
+  // Chart refs for export
+  const generoChartRef = useRef<HTMLDivElement>(null);
+  const racaChartRef = useRef<HTMLDivElement>(null);
+  const regiaoChartRef = useRef<HTMLDivElement>(null);
+  const experienciaChartRef = useRef<HTMLDivElement>(null);
   
   // All demographic data
   const [generoData, setGeneroData] = useState<DemographicData[]>([]);
@@ -298,6 +306,36 @@ const AdminDemographicDashboard = () => {
 
   const hasActiveFilters = filterGenero !== 'all' || filterRaca !== 'all' || filterRegiao !== 'all' || filterExperiencia !== 'all';
 
+  const exportChartAsImage = (chartRef: RefObject<HTMLDivElement>, filename: string) => {
+    if (!chartRef.current) return;
+
+    try {
+      const svg = chartRef.current.querySelector("svg");
+      if (!svg) {
+        sonnerToast.error("Não foi possível encontrar o gráfico para exportar");
+        return;
+      }
+
+      const serializer = new XMLSerializer();
+      let source = serializer.serializeToString(svg);
+
+      if (!source.match(/^<\?xml/)) {
+        source = '<?xml version="1.0" standalone="no"?>\r\n' + source;
+      }
+
+      const url = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(source);
+      const link = document.createElement("a");
+      link.download = `${filename}-${new Date().toISOString().split("T")[0]}.svg`;
+      link.href = url;
+      link.click();
+
+      sonnerToast.success("Gráfico exportado com sucesso!");
+    } catch (error) {
+      console.error("Error exporting chart:", error);
+      sonnerToast.error("Erro ao exportar gráfico");
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -502,21 +540,31 @@ const AdminDemographicDashboard = () => {
             <TabsContent value="genero" className="space-y-4">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <Card className="hover:shadow-lg transition-all">
-                  <CardHeader>
+                  <CardHeader className="flex flex-row items-center justify-between">
                     <CardTitle>Distribuição por Gênero</CardTitle>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => exportChartAsImage(generoChartRef, 'distribuicao-genero')}
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Exportar SVG
+                    </Button>
                   </CardHeader>
                   <CardContent>
-                    <ResponsiveContainer width="100%" height={300}>
-                      <BarChart data={generoData}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="value" angle={-45} textAnchor="end" height={100} />
-                        <YAxis />
-                        <Tooltip />
-                        <Legend />
-                        <Bar dataKey="deferido" fill="#10b981" name="Deferido" animationDuration={1000} />
-                        <Bar dataKey="indeferido" fill="#ef4444" name="Indeferido" animationDuration={1000} />
-                      </BarChart>
-                    </ResponsiveContainer>
+                    <div ref={generoChartRef}>
+                      <ResponsiveContainer width="100%" height={300}>
+                        <BarChart data={generoData}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="value" angle={-45} textAnchor="end" height={100} />
+                          <YAxis />
+                          <Tooltip />
+                          <Legend />
+                          <Bar dataKey="deferido" fill="#10b981" name="Deferido" animationDuration={1000} />
+                          <Bar dataKey="indeferido" fill="#ef4444" name="Indeferido" animationDuration={1000} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
                   </CardContent>
                 </Card>
 
@@ -590,21 +638,31 @@ const AdminDemographicDashboard = () => {
             <TabsContent value="raca" className="space-y-4">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <Card className="hover:shadow-lg transition-all">
-                  <CardHeader>
+                  <CardHeader className="flex flex-row items-center justify-between">
                     <CardTitle>Distribuição por Raça</CardTitle>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => exportChartAsImage(racaChartRef, 'distribuicao-raca')}
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Exportar SVG
+                    </Button>
                   </CardHeader>
                   <CardContent>
-                    <ResponsiveContainer width="100%" height={300}>
-                      <BarChart data={racaData}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="value" angle={-45} textAnchor="end" height={100} />
-                        <YAxis />
-                        <Tooltip />
-                        <Legend />
-                        <Bar dataKey="deferido" fill="#10b981" name="Deferido" animationDuration={1000} />
-                        <Bar dataKey="indeferido" fill="#ef4444" name="Indeferido" animationDuration={1000} />
-                      </BarChart>
-                    </ResponsiveContainer>
+                    <div ref={racaChartRef}>
+                      <ResponsiveContainer width="100%" height={300}>
+                        <BarChart data={racaData}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="value" angle={-45} textAnchor="end" height={100} />
+                          <YAxis />
+                          <Tooltip />
+                          <Legend />
+                          <Bar dataKey="deferido" fill="#10b981" name="Deferido" animationDuration={1000} />
+                          <Bar dataKey="indeferido" fill="#ef4444" name="Indeferido" animationDuration={1000} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
                   </CardContent>
                 </Card>
 
@@ -668,21 +726,31 @@ const AdminDemographicDashboard = () => {
             <TabsContent value="regiao" className="space-y-4">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <Card className="hover:shadow-lg transition-all">
-                  <CardHeader>
+                  <CardHeader className="flex flex-row items-center justify-between">
                     <CardTitle>Distribuição por Região</CardTitle>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => exportChartAsImage(regiaoChartRef, 'distribuicao-regiao')}
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Exportar SVG
+                    </Button>
                   </CardHeader>
                   <CardContent>
-                    <ResponsiveContainer width="100%" height={300}>
-                      <BarChart data={regiaoData}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="value" />
-                        <YAxis />
-                        <Tooltip />
-                        <Legend />
-                        <Bar dataKey="deferido" fill="#10b981" name="Deferido" animationDuration={1000} />
-                        <Bar dataKey="indeferido" fill="#ef4444" name="Indeferido" animationDuration={1000} />
-                      </BarChart>
-                    </ResponsiveContainer>
+                    <div ref={regiaoChartRef}>
+                      <ResponsiveContainer width="100%" height={300}>
+                        <BarChart data={regiaoData}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="value" />
+                          <YAxis />
+                          <Tooltip />
+                          <Legend />
+                          <Bar dataKey="deferido" fill="#10b981" name="Deferido" animationDuration={1000} />
+                          <Bar dataKey="indeferido" fill="#ef4444" name="Indeferido" animationDuration={1000} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
                   </CardContent>
                 </Card>
 
@@ -755,21 +823,31 @@ const AdminDemographicDashboard = () => {
             <TabsContent value="experiencia" className="space-y-4">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <Card className="hover:shadow-lg transition-all">
-                  <CardHeader>
+                  <CardHeader className="flex flex-row items-center justify-between">
                     <CardTitle>Distribuição por Experiência</CardTitle>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => exportChartAsImage(experienciaChartRef, 'distribuicao-experiencia')}
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Exportar SVG
+                    </Button>
                   </CardHeader>
                   <CardContent>
-                    <ResponsiveContainer width="100%" height={300}>
-                      <BarChart data={experienciaData}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="value" angle={-45} textAnchor="end" height={100} />
-                        <YAxis />
-                        <Tooltip />
-                        <Legend />
-                        <Bar dataKey="deferido" fill="#10b981" name="Deferido" animationDuration={1000} />
-                        <Bar dataKey="indeferido" fill="#ef4444" name="Indeferido" animationDuration={1000} />
-                      </BarChart>
-                    </ResponsiveContainer>
+                    <div ref={experienciaChartRef}>
+                      <ResponsiveContainer width="100%" height={300}>
+                        <BarChart data={experienciaData}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="value" angle={-45} textAnchor="end" height={100} />
+                          <YAxis />
+                          <Tooltip />
+                          <Legend />
+                          <Bar dataKey="deferido" fill="#10b981" name="Deferido" animationDuration={1000} />
+                          <Bar dataKey="indeferido" fill="#ef4444" name="Indeferido" animationDuration={1000} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
                   </CardContent>
                 </Card>
 
