@@ -24,7 +24,8 @@ interface Session {
   descricao: string | null;
   session_status: string;
   training_id: string;
-  participants?: { count: number }[];
+  participant_count?: number;
+  trainings?: { training_participants: { count: number }[] };
 }
 
 export default function AdminSessions() {
@@ -64,7 +65,7 @@ export default function AdminSessions() {
 
       let query = supabase
         .from("sessions")
-        .select('*, participant_count:training_participants(count)', { count: 'exact' })
+        .select('*, trainings(training_participants(count))', { count: 'exact' })
         .range((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage - 1);
 
       if (statusFilter !== "all") {
@@ -89,7 +90,7 @@ export default function AdminSessions() {
 
       const sessionsWithCounts = (data || []).map(session => ({
         ...session,
-        participant_count: session.participant_count?.[0]?.count || 0
+        participant_count: session.trainings?.training_participants?.[0]?.count || 0
       }));
 
       if (sortBy === "participants") {
@@ -301,7 +302,7 @@ export default function AdminSessions() {
         .from("sessions")
         .select(`
           *,
-          participants:training_participants(count)
+          trainings(training_participants(count))
         `)
         .order("created_at", { ascending: false });
 
@@ -309,7 +310,7 @@ export default function AdminSessions() {
 
       const sessionsForExport = (data || []).map(session => ({
         ...session,
-        participant_count: session.participants?.[0]?.count || 0
+        participant_count: session.trainings?.training_participants?.[0]?.count || 0
       }));
 
       await exportSessionsToPDF(sessionsForExport);
@@ -330,7 +331,7 @@ export default function AdminSessions() {
         .from("sessions")
         .select(`
           *,
-          participants:training_participants(count)
+          trainings(training_participants(count))
         `)
         .order("created_at", { ascending: false });
 
@@ -338,7 +339,7 @@ export default function AdminSessions() {
 
       const sessionsForExport = (data || []).map(session => ({
         ...session,
-        participant_count: session.participants?.[0]?.count || 0
+        participant_count: session.trainings?.training_participants?.[0]?.count || 0
       }));
 
       await exportSessionsToExcel(sessionsForExport);
@@ -640,7 +641,7 @@ export default function AdminSessions() {
                     <CardDescription>
                       <p className="text-sm text-muted-foreground">
                         {new Date(session.data).toLocaleDateString("pt-BR")} •{" "}
-                        {session.participants?.[0]?.count || 0} participantes
+                        {session.participant_count || 0} participantes
                       </p>
                       {session.descricao && (
                         <p className="text-sm text-muted-foreground mt-2">{session.descricao}</p>
