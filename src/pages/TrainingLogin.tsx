@@ -87,38 +87,43 @@ export default function TrainingLogin() {
     }
   };
 
-  const checkParticipation = async () => {
-    if (!user || !finalTrainingId) return;
+  const checkParticipationForUser = async (userId: string) => {
+    if (!finalTrainingId) return;
+
+    console.log('[TrainingLogin] Verificando participação para userId:', userId);
 
     try {
       const { data, error } = await supabase
         .from('training_participants')
         .select('*')
         .eq('training_id', finalTrainingId)
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .maybeSingle();
 
-      if (error) throw error;
+      if (error) {
+        console.error('[TrainingLogin] Erro ao verificar participação:', error);
+        throw error;
+      }
 
       if (!data) {
+        console.log('[TrainingLogin] Usuário não é participante, redirecionando para registro');
         toast.info('Você precisa se cadastrar neste treinamento primeiro');
-        await navigateWithSession(`/training/register`, {
-          additionalParams: finalTrainingId ? { trainingId: finalTrainingId } : {}
-        });
+        
+        await navigateWithSession(`/training/${finalTrainingId}/register`);
         return;
       }
+
+      console.log('[TrainingLogin] Usuário é participante, redirecionando para antessala');
 
       // If there's a redirect URL, use it
       if (redirectUrl) {
-        navigate(redirectUrl);
+        await navigateWithSession(redirectUrl);
         return;
       }
 
-      await navigateWithSession('/antessala', {
-        additionalParams: finalTrainingId ? { trainingId: finalTrainingId } : {}
-      });
+      await navigateWithSession('/antessala');
     } catch (error) {
-      console.error('Error checking participation:', error);
+      console.error('[TrainingLogin] Erro ao verificar participação:', error);
     }
   };
 
@@ -132,7 +137,9 @@ export default function TrainingLogin() {
         return;
       }
 
-      const { error } = await supabase.auth.signInWithPassword({
+      console.log('[TrainingLogin] Iniciando login...');
+
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
       });
@@ -146,26 +153,33 @@ export default function TrainingLogin() {
         return;
       }
 
-      // Get session to confirm user
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session?.user) {
-        toast.error('Erro ao obter sessão');
+      if (!data.session?.user) {
+        toast.error('Erro ao obter sessão após login');
         return;
       }
 
+      console.log('[TrainingLogin] Login bem-sucedido, userId:', data.session.user.id);
       toast.success('Login realizado com sucesso!');
 
-      // Após login, usar checkParticipation para centralizar a lógica
-      await checkParticipation();
+      await checkParticipationForUser(data.session.user.id);
       
     } catch (error: any) {
-      console.error('Error during login:', error);
+      console.error('[TrainingLogin] Erro durante login:', error);
       toast.error(error.message || 'Erro ao fazer login');
     } finally {
       setLoading(false);
     }
   };
+
+  // Auto-redirect para usuário já logado
+  useEffect(() => {
+    if (authLoading) return;
+    
+    if (user && finalTrainingId) {
+      console.log('[TrainingLogin] Usuário já está logado, verificando participação automaticamente');
+      checkParticipationForUser(user.id);
+    }
+  }, [user, finalTrainingId, authLoading]);
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-background via-background to-primary/5">
