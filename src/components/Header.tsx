@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { CircleUser, Settings, LogOut, BookOpenText, Shield, Menu } from "lucide-react";
+import { CircleUser, Settings, LogOut, BookOpenText, Shield, Menu, Trophy } from "lucide-react";
 import logo from "@/assets/logo-fenotypo-horiz-2.png";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -217,7 +217,17 @@ export const Header = () => {
               )}
 
               {user && (
-                <DropdownMenu>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate("/conquistas")}
+                    className="hover:scale-105 transition-transform duration-300"
+                  >
+                    <Trophy className="mr-2 h-4 w-4" />
+                    Conquistas
+                  </Button>
+                  <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="sm">
                       <CircleUser className="h-4 w-4" />
@@ -229,7 +239,8 @@ export const Header = () => {
                       Sair
                     </DropdownMenuItem>
                   </DropdownMenuContent>
-                </DropdownMenu>
+                 </DropdownMenu>
+               </div>
               )}
             </div>
           </nav>

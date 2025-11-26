@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AssessmentProvider } from "./contexts/AssessmentContext";
 import { AuthProvider } from "./contexts/AuthContext";
 import { TrainingProvider } from "./contexts/TrainingContext";
+import { BadgeProvider } from "./contexts/BadgeContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AdminRoute } from "./components/AdminRoute";
 import ErrorBoundary from "./pages/ErrorBoundary";
@@ -42,6 +43,7 @@ import SessionTraining from "./pages/SessionTraining";
 import SessionFeedback from "./pages/SessionFeedback";
 import AdminFeedback from "./pages/AdminFeedback";
 import Results from "./pages/Results";
+import Achievements from "./pages/Achievements";
 import Error404 from "./pages/Error404";
 
 const queryClient = new QueryClient();
@@ -51,11 +53,12 @@ const App = () => (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <AuthProvider>
-          <TrainingProvider>
-            <AssessmentProvider>
-              <Toaster />
-              <Sonner />
-              <BrowserRouter>
+          <BadgeProvider>
+            <TrainingProvider>
+              <AssessmentProvider>
+                <Toaster />
+                <Sonner />
+                <BrowserRouter>
                 <Routes>
                   <Route path="/" element={<Home />} />
                   <Route path="/login" element={<Login />} />
@@ -64,6 +67,7 @@ const App = () => (
                   <Route path="/esqueci-senha" element={<ForgotPassword />} />
                   <Route path="/redefinir-senha" element={<ResetPassword />} />
                   <Route path="/como-funciona" element={<ComoFunciona />} />
+                  <Route path="/conquistas" element={<Achievements />} />
                   
                   {/* Training-specific routes */}
                   <Route path="/training/:trainingId/register" element={<TrainingRegister />} />
@@ -280,10 +284,11 @@ const App = () => (
               </BrowserRouter>
             </AssessmentProvider>
           </TrainingProvider>
-        </AuthProvider>
-      </TooltipProvider>
-    </QueryClientProvider>
-  </ErrorBoundary>
+        </BadgeProvider>
+      </AuthProvider>
+    </TooltipProvider>
+  </QueryClientProvider>
+</ErrorBoundary>
 );
 
 export default App;

@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 interface TutorialStep {
   id: string;
@@ -63,6 +65,7 @@ export function OnboardingTutorial({ onComplete }: OnboardingTutorialProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 });
   const tooltipRef = useRef<HTMLDivElement>(null);
+  const { user } = useAuth();
 
   useEffect(() => {
     const hasSeenTutorial = localStorage.getItem("fenotypo-tutorial-completed");
@@ -174,9 +177,24 @@ export function OnboardingTutorial({ onComplete }: OnboardingTutorialProps) {
     onComplete?.();
   };
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
     localStorage.setItem("fenotypo-tutorial-completed", "true");
     setIsActive(false);
+    
+    // Award tutorial badge
+    if (user) {
+      try {
+        await supabase.functions.invoke('check-badges', {
+          body: {
+            userId: user.id,
+            action: 'complete_tutorial',
+          },
+        });
+      } catch (error) {
+        console.error('Error awarding tutorial badge:', error);
+      }
+    }
+    
     onComplete?.();
   };
 
