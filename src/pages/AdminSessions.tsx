@@ -46,6 +46,10 @@ export default function AdminSessions() {
   const [deletePassword, setDeletePassword] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [isExporting, setIsExporting] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [isDuplicating, setIsDuplicating] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [sortBy, setSortBy] = useState<'nome' | 'data' | 'status' | 'participants'>('data');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const itemsPerPage = 12;
@@ -115,11 +119,14 @@ export default function AdminSessions() {
   const handleCreateSession = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (isCreating) return;
+
     if (!selectedDate) {
       toast.error("Por favor, selecione uma data");
       return;
     }
 
+    setIsCreating(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       const formattedDate = format(selectedDate, "yyyy-MM-dd");
@@ -169,6 +176,8 @@ export default function AdminSessions() {
     } catch (error) {
       console.error("Error creating session:", error);
       toast.error("Erro ao criar sessão");
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -196,8 +205,9 @@ export default function AdminSessions() {
 
   const handleEditSession = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingSession) return;
+    if (!editingSession || isEditing) return;
 
+    setIsEditing(true);
     try {
       const { error } = await supabase
         .from("sessions")
@@ -221,6 +231,8 @@ export default function AdminSessions() {
     } catch (error) {
       console.error("Error updating session:", error);
       toast.error("Erro ao atualizar sessão");
+    } finally {
+      setIsEditing(false);
     }
   };
 
@@ -230,6 +242,9 @@ export default function AdminSessions() {
       return;
     }
 
+    if (isDeleting) return;
+
+    setIsDeleting(true);
     try {
       const { error } = await supabase
         .from("sessions")
@@ -248,10 +263,15 @@ export default function AdminSessions() {
     } catch (error) {
       console.error("Error deleting session:", error);
       toast.error("Erro ao deletar sessão");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
   const handleDuplicateSession = async (session: Session) => {
+    if (isDuplicating === session.id) return;
+
+    setIsDuplicating(session.id);
     try {
       const { data: { user } } = await supabase.auth.getUser();
 
@@ -279,6 +299,8 @@ export default function AdminSessions() {
     } catch (error) {
       console.error("Error duplicating session:", error);
       toast.error("Erro ao duplicar sessão");
+    } finally {
+      setIsDuplicating(null);
     }
   };
 
@@ -503,13 +525,23 @@ export default function AdminSessions() {
                   rows={3}
                 />
               </div>
-              <Button 
-                type="submit" 
-                className="w-full hover:scale-[1.02] transition-transform duration-300"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Criar Sessão
-              </Button>
+                  <Button 
+                    type="submit" 
+                    disabled={isCreating}
+                    className="w-full hover:scale-[1.02] transition-transform duration-300"
+                  >
+                    {isCreating ? (
+                      <>
+                        <div className="w-4 h-4 mr-2 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                        Criando...
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="w-4 h-4 mr-2" />
+                        Criar Sessão
+                      </>
+                    )}
+                  </Button>
             </form>
           </DialogContent>
         </Dialog>
@@ -671,14 +703,19 @@ export default function AdminSessions() {
                     <BarChart3 className="w-4 h-4 mr-2" />
                     Dashboard
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDuplicateSession(session)}
-                    className="hover:scale-105 transition-transform duration-300"
-                  >
-                    <Copy className="w-4 h-4" />
-                  </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDuplicateSession(session)}
+                        disabled={isDuplicating === session.id}
+                        className="hover:scale-105 transition-transform duration-300"
+                      >
+                        {isDuplicating === session.id ? (
+                          <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <Copy className="w-4 h-4" />
+                        )}
+                      </Button>
                   <Button
                     variant="outline"
                     size="sm"
@@ -823,8 +860,19 @@ export default function AdminSessions() {
                   rows={3}
                 />
               </div>
-              <Button type="submit" className="w-full">
-                Salvar Alterações
+              <Button 
+                type="submit" 
+                disabled={isEditing}
+                className="w-full hover:scale-[1.02] transition-transform duration-300"
+              >
+                {isEditing ? (
+                  <>
+                    <div className="w-4 h-4 mr-2 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                    Salvando...
+                  </>
+                ) : (
+                  "Salvar Alterações"
+                )}
               </Button>
             </form>
           )}
@@ -857,8 +905,19 @@ export default function AdminSessions() {
             >
               Cancelar
             </AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteSession}>
-              Confirmar Exclusão
+            <AlertDialogAction 
+              onClick={handleDeleteSession}
+              disabled={isDeleting}
+              className="hover:scale-[1.02] transition-transform duration-300"
+            >
+              {isDeleting ? (
+                <>
+                  <div className="w-4 h-4 mr-2 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                  Excluindo...
+                </>
+              ) : (
+                "Confirmar Exclusão"
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
