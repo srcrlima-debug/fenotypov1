@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -28,8 +28,11 @@ interface Session {
 
 export default function TrainingAccess() {
   const { trainingId } = useParams<{ trainingId: string }>();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
+  
+  const sessionIdFromQuery = searchParams.get('sessionId') || undefined;
   
   const [loading, setLoading] = useState(true);
   const [training, setTraining] = useState<Training | null>(null);
@@ -249,6 +252,12 @@ export default function TrainingAccess() {
 
   // Usuário não autenticado
   if (!user) {
+    const searchParams = new URLSearchParams();
+    if (sessionIdFromQuery) searchParams.set('sessionId', sessionIdFromQuery);
+
+    const queryString = searchParams.toString();
+    const extra = queryString ? `?${queryString}` : '';
+
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted/20 p-4">
         <Card className="w-full max-w-md shadow-xl border-2">
@@ -264,13 +273,13 @@ export default function TrainingAccess() {
             </p>
             <div className="space-y-2">
               <Button
-                onClick={() => navigate(`/training/${trainingId}/login`)}
+                onClick={() => navigate(`/training/${trainingId}/login${extra}`)}
                 className="w-full"
               >
                 Fazer Login
               </Button>
               <Button
-                onClick={() => navigate(`/training/${trainingId}/register`)}
+                onClick={() => navigate(`/training/${trainingId}/register${extra}`)}
                 variant="outline"
                 className="w-full"
               >

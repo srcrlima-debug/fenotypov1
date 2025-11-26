@@ -46,19 +46,12 @@ export default function TrainingLogin() {
     }
   }, [sessionId, isValidSessionId, logAccess, finalTrainingId]);
 
+  // Carregar treinamento
   useEffect(() => {
     if (finalTrainingId) {
       loadTraining();
     }
   }, [finalTrainingId]);
-
-  useEffect(() => {
-    if (authLoading) return; // Aguardar auth carregar!
-    
-    if (user && finalTrainingId) {
-      checkParticipation();
-    }
-  }, [user, finalTrainingId, authLoading]);
 
   const loadTraining = async () => {
     if (!finalTrainingId) return;
@@ -75,7 +68,6 @@ export default function TrainingLogin() {
     } catch (error) {
       console.error('Error loading training:', error);
       toast.error('Treinamento não encontrado');
-      navigate('/');
     }
   };
 
@@ -148,30 +140,8 @@ export default function TrainingLogin() {
 
       toast.success('Login realizado com sucesso!');
 
-      // Check participation directly
-      const { data: participant } = await supabase
-        .from('training_participants')
-        .select('*')
-        .eq('training_id', finalTrainingId)
-        .eq('user_id', session.user.id)
-        .maybeSingle();
-
-      if (!participant) {
-        toast.info('Você precisa se cadastrar neste treinamento primeiro');
-        await navigateWithSession(`/training/register`, {
-          additionalParams: finalTrainingId ? { trainingId: finalTrainingId } : {}
-        });
-        return;
-      }
-
-      // Redirect directly
-      if (redirectUrl) {
-        navigate(redirectUrl);
-      } else {
-        await navigateWithSession('/antessala', {
-          additionalParams: finalTrainingId ? { trainingId: finalTrainingId } : {}
-        });
-      }
+      // Após login, usar checkParticipation para centralizar a lógica
+      await checkParticipation();
       
     } catch (error: any) {
       console.error('Error during login:', error);
