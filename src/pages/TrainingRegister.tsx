@@ -164,11 +164,35 @@ export default function TrainingRegister() {
   useEffect(() => {
     if (!authLoading && !user) {
       toast.info('Faça login para continuar o cadastro');
-      navigateWithSession(`/training/login`, {
-        additionalParams: finalTrainingId ? { trainingId: finalTrainingId } : {}
-      });
+      navigateWithSession(`/training/${finalTrainingId}/login`);
     }
   }, [user, authLoading, finalTrainingId, navigateWithSession]);
+
+  // Auto-redirect para usuário já participante
+  useEffect(() => {
+    if (authLoading) return;
+    
+    if (user && finalTrainingId) {
+      const checkExistingParticipation = async () => {
+        console.log('[TrainingRegister] Verificando participação existente...');
+        
+        const { data } = await supabase
+          .from('training_participants')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('training_id', finalTrainingId)
+          .maybeSingle();
+
+        if (data) {
+          console.log('[TrainingRegister] Usuário já é participante, redirecionando para antessala');
+          toast.info('Você já está cadastrado neste treinamento');
+          await navigateWithSession('/antessala');
+        }
+      };
+
+      checkExistingParticipation();
+    }
+  }, [user, finalTrainingId, authLoading, navigateWithSession]);
 
   useEffect(() => {
     loadTraining();
@@ -330,9 +354,7 @@ export default function TrainingRegister() {
     // Verificar se usuário está autenticado
     if (!user) {
       toast.error('Você precisa estar autenticado para completar o cadastro');
-      await navigateWithSession(`/training/login`, {
-        additionalParams: finalTrainingId ? { trainingId: finalTrainingId } : {}
-      });
+      await navigateWithSession(`/training/${finalTrainingId}/login`);
       return;
     }
     
@@ -386,11 +408,10 @@ export default function TrainingRegister() {
 
       if (participantError) throw participantError;
 
+      console.log('[TrainingRegister] Cadastro concluído com sucesso!');
       toast.success('Cadastro realizado com sucesso!');
       
-      await navigateWithSession('/antessala', {
-        additionalParams: finalTrainingId ? { trainingId: finalTrainingId } : {}
-      });
+      await navigateWithSession('/antessala');
     } catch (error: any) {
       console.error('Error during registration:', error);
       toast.error(error.message || 'Erro ao realizar cadastro');
