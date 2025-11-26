@@ -13,6 +13,7 @@ import { useCardTilt } from "@/hooks/useCardTilt";
 import { AntessalaParticipantsMonitor } from "@/components/AntessalaParticipantsMonitor";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import Autoplay from "embla-carousel-autoplay";
+import { cn } from "@/lib/utils";
 
 interface SessionData {
   id: string;
@@ -39,6 +40,8 @@ export default function Antessala() {
   const [loading, setLoading] = useState(true);
   const [onlineParticipants, setOnlineParticipants] = useState(0);
   const [hasPlayedSound, setHasPlayedSound] = useState(false);
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [carouselApi, setCarouselApi] = useState<any>();
 
   const { ref: ref1, isVisible: isVisible1 } = useScrollReveal();
   const { ref: ref2, isVisible: isVisible2 } = useScrollReveal();
@@ -47,6 +50,8 @@ export default function Antessala() {
   const autoplayPlugin = useRef(
     Autoplay({ delay: 5000, stopOnInteraction: true })
   );
+
+  const totalSlides = 8;
 
   const playStartSound = () => {
     if (hasPlayedSound) return;
@@ -289,6 +294,14 @@ export default function Antessala() {
   }, [sessionId, trainingId, user, navigate, playStartSound, loading]);
 
   useEffect(() => {
+    if (!carouselApi) return;
+
+    carouselApi.on("select", () => {
+      setCurrentSlide(carouselApi.selectedScrollSnap());
+    });
+  }, [carouselApi]);
+
+  useEffect(() => {
     if (!sessionId || !userName) return;
 
     const presenceChannel = supabase.channel(`antessala-${sessionId}`, {
@@ -461,6 +474,7 @@ export default function Antessala() {
             plugins={[autoplayPlugin.current]}
             onMouseEnter={() => autoplayPlugin.current.stop()}
             onMouseLeave={() => autoplayPlugin.current.play()}
+            setApi={setCarouselApi}
             className="w-full max-w-5xl mx-auto"
           >
             <CarouselContent>
@@ -676,6 +690,23 @@ export default function Antessala() {
             <CarouselPrevious className="hidden sm:flex" />
             <CarouselNext className="hidden sm:flex" />
           </Carousel>
+
+          {/* Indicadores de progresso (dots) */}
+          <div className="flex justify-center gap-2 mt-6">
+            {Array.from({ length: totalSlides }).map((_, index) => (
+              <button
+                key={index}
+                onClick={() => carouselApi?.scrollTo(index)}
+                className={cn(
+                  "h-2 rounded-full transition-all duration-300",
+                  currentSlide === index
+                    ? "w-8 bg-primary"
+                    : "w-2 bg-muted-foreground/30 hover:bg-muted-foreground/50"
+                )}
+                aria-label={`Ir para slide ${index + 1}`}
+              />
+            ))}
+          </div>
         </div>
 
         <Card className="shadow-xl border-2 mb-8">
