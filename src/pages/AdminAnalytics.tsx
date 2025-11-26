@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, type RefObject } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { toast as sonnerToast } from 'sonner';
 import { 
   ArrowLeft, 
   Users, 
@@ -107,6 +108,13 @@ const AdminAnalytics = () => {
   
   const [session, setSession] = useState<SessionData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [comparisonPeriod, setComparisonPeriod] = useState<'month' | 'year'>('month');
+  
+  // Chart refs for export
+  const generoChartRef = useRef<HTMLDivElement>(null);
+  const racaChartRef = useRef<HTMLDivElement>(null);
+  const regiaoChartRef = useRef<HTMLDivElement>(null);
+  const experienciaChartRef = useRef<HTMLDivElement>(null);
   
   // Demographic statistics
   const [generoStats, setGeneroStats] = useState<DemographicStats[]>([]);
@@ -450,6 +458,36 @@ const AdminAnalytics = () => {
     });
 
     setHeatmapData(heatmap);
+  };
+
+  const exportChartAsImage = (chartRef: RefObject<HTMLDivElement>, filename: string) => {
+    if (!chartRef.current) return;
+
+    try {
+      const svg = chartRef.current.querySelector("svg");
+      if (!svg) {
+        sonnerToast.error("Não foi possível encontrar o gráfico para exportar");
+        return;
+      }
+
+      const serializer = new XMLSerializer();
+      let source = serializer.serializeToString(svg);
+
+      if (!source.match(/^<\?xml/)) {
+        source = '<?xml version="1.0" standalone="no"?>\r\n' + source;
+      }
+
+      const url = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(source);
+      const link = document.createElement("a");
+      link.download = `${filename}-${new Date().toISOString().split("T")[0]}.svg`;
+      link.href = url;
+      link.click();
+
+      sonnerToast.success("Gráfico exportado com sucesso!");
+    } catch (error) {
+      console.error("Error exporting chart:", error);
+      sonnerToast.error("Erro ao exportar gráfico");
+    }
   };
 
   // Helper function to create bar chart on canvas
@@ -1150,28 +1188,38 @@ const AdminAnalytics = () => {
           <TabsContent value="genero" className="space-y-4">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card>
-                <CardHeader>
+                <CardHeader className="flex flex-row items-center justify-between">
                   <CardTitle>Distribuição por Identidade de Gênero</CardTitle>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => exportChartAsImage(generoChartRef, 'distribuicao-genero')}
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Exportar SVG
+                  </Button>
                 </CardHeader>
                 <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={generoStats}
-                        dataKey="total"
-                        nameKey="value"
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={80}
-                        label={(entry) => `${entry.value}: ${entry.total}`}
-                      >
-                        {generoStats.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
+                  <div ref={generoChartRef}>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <PieChart>
+                        <Pie
+                          data={generoStats}
+                          dataKey="total"
+                          nameKey="value"
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={80}
+                          label={(entry) => `${entry.value}: ${entry.total}`}
+                        >
+                          {generoStats.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
                 </CardContent>
               </Card>
 
@@ -1200,28 +1248,38 @@ const AdminAnalytics = () => {
           <TabsContent value="raca" className="space-y-4">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card>
-                <CardHeader>
+                <CardHeader className="flex flex-row items-center justify-between">
                   <CardTitle>Distribuição por Pertencimento Racial</CardTitle>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => exportChartAsImage(racaChartRef, 'distribuicao-raca')}
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Exportar SVG
+                  </Button>
                 </CardHeader>
                 <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={racaStats}
-                        dataKey="total"
-                        nameKey="value"
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={80}
-                        label={(entry) => `${entry.value}: ${entry.total}`}
-                      >
-                        {racaStats.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
+                  <div ref={racaChartRef}>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <PieChart>
+                        <Pie
+                          data={racaStats}
+                          dataKey="total"
+                          nameKey="value"
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={80}
+                          label={(entry) => `${entry.value}: ${entry.total}`}
+                        >
+                          {racaStats.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
                 </CardContent>
               </Card>
 
@@ -1250,28 +1308,38 @@ const AdminAnalytics = () => {
           <TabsContent value="regiao" className="space-y-4">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card>
-                <CardHeader>
+                <CardHeader className="flex flex-row items-center justify-between">
                   <CardTitle>Distribuição por Região</CardTitle>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => exportChartAsImage(regiaoChartRef, 'distribuicao-regiao')}
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Exportar SVG
+                  </Button>
                 </CardHeader>
                 <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={regiaoStats}
-                        dataKey="total"
-                        nameKey="value"
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={80}
-                        label={(entry) => `${entry.value}: ${entry.total}`}
-                      >
-                        {regiaoStats.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
+                  <div ref={regiaoChartRef}>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <PieChart>
+                        <Pie
+                          data={regiaoStats}
+                          dataKey="total"
+                          nameKey="value"
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={80}
+                          label={(entry) => `${entry.value}: ${entry.total}`}
+                        >
+                          {regiaoStats.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
                 </CardContent>
               </Card>
 
@@ -1300,28 +1368,38 @@ const AdminAnalytics = () => {
           <TabsContent value="experiencia" className="space-y-4">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card>
-                <CardHeader>
+                <CardHeader className="flex flex-row items-center justify-between">
                   <CardTitle>Distribuição por Experiência</CardTitle>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => exportChartAsImage(experienciaChartRef, 'distribuicao-experiencia')}
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Exportar SVG
+                  </Button>
                 </CardHeader>
                 <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={experienciaStats}
-                        dataKey="total"
-                        nameKey="value"
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={80}
-                        label={(entry) => `${entry.value}: ${entry.total}`}
-                      >
-                        {experienciaStats.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
+                  <div ref={experienciaChartRef}>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <PieChart>
+                        <Pie
+                          data={experienciaStats}
+                          dataKey="total"
+                          nameKey="value"
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={80}
+                          label={(entry) => `${entry.value}: ${entry.total}`}
+                        >
+                          {experienciaStats.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
                 </CardContent>
               </Card>
 
