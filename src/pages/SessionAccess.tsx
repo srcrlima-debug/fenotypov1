@@ -115,7 +115,25 @@ export default function SessionAccess() {
         return;
       }
 
-      // Se logado, verificar participação
+      // Se logado, verificar se é admin ou participante
+      console.log('[SessionAccess] Verificando se usuário é admin...');
+      const { data: adminRole } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .eq('role', 'admin')
+        .maybeSingle();
+
+      const isAdmin = !!adminRole;
+
+      if (isAdmin) {
+        await logAccess('admin_access_granted', { trainingId });
+        console.log('[SessionAccess] Usuário é admin, acesso permitido');
+        navigate(`/antessala?sessionId=${sessionId}&trainingId=${trainingId}`);
+        return;
+      }
+
+      // Se não é admin, verificar participação
       console.log('[SessionAccess] Verificando participação do usuário...');
       await logAccess('checking_participation', { trainingId });
 

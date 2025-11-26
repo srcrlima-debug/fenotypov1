@@ -22,7 +22,7 @@ export default function TrainingLogin() {
     navigateWithSession,
     logAccess
   } = useSessionNavigation({
-    autoRedirectIfAuthenticated: true,
+    autoRedirectIfAuthenticated: false, // Disabled to allow login
     antessalaPath: '/antessala'
   });
 

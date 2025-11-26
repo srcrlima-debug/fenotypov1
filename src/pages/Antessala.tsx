@@ -271,10 +271,16 @@ export default function Antessala() {
             const updatedSession = payload.new as SessionData;
             setSessionData(updatedSession);
 
+            // Redirect to training when session becomes active
             if (updatedSession.session_status === "active") {
+              console.log("Session is now active, redirecting to training...");
               playStartSound();
+              toast({
+                title: "Treinamento Iniciado!",
+                description: "Redirecionando para a sala de avaliação...",
+              });
               setTimeout(() => {
-                navigate(`/treino/${sessionId}`);
+                navigate(`/treino/${sessionId}?sessionId=${sessionId}&trainingId=${trainingId}`);
               }, 1000);
             }
           }
