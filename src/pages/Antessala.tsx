@@ -30,14 +30,12 @@ export default function Antessala() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   
-  // ✅ CORREÇÃO: Extrair APENAS de query params (fonte única)
   const sessionId = searchParams.get('sessionId');
   const trainingId = searchParams.get('trainingId');
   
   const { user } = useAuth();
   const { toast } = useToast();
   
-  // ✅ Usar useSessionNavigation para validação
   const { validateSessionId, logAccess } = useSessionNavigation({
     autoRedirectIfAuthenticated: false
   });
@@ -133,9 +131,7 @@ export default function Antessala() {
 
   useEffect(() => {
     const loadSession = async () => {
-      // ✅ VALIDAÇÃO 1: sessionId E trainingId são obrigatórios
       if (!sessionId || !trainingId) {
-        console.error('[Antessala] sessionId ou trainingId ausentes');
         toast({
           title: "Acesso Inválido",
           description: "É necessário um link válido com ID de sessão e treinamento.",
@@ -145,9 +141,7 @@ export default function Antessala() {
         return;
       }
 
-      // ✅ VALIDAÇÃO 2: Validar formato UUID do sessionId
       if (!validateSessionId(sessionId)) {
-        console.error('[Antessala] sessionId inválido:', sessionId);
         toast({
           title: "Link Corrompido",
           description: "O link de acesso está inválido. Solicite um novo link.",
@@ -161,17 +155,14 @@ export default function Antessala() {
         return;
       }
 
-      // ✅ VALIDAÇÃO 3: Buscar sessão ESPECÍFICA (não genérica)
-      console.log('[Antessala] Buscando sessão:', sessionId);
       const { data: session, error } = await supabase
         .from("sessions")
         .select("*, training_id, created_by")
         .eq("id", sessionId)
         .maybeSingle();
 
-      // ✅ VALIDAÇÃO 4: Erro de query
       if (error) {
-        console.error("❌ [Antessala] Erro ao buscar sessão:", error.message, error);
+        console.error("Erro ao buscar sessão:", error);
         toast({
           title: "Erro ao acessar sessão",
           description: "Não foi possível carregar os dados da sessão. Tente novamente.",
@@ -182,9 +173,7 @@ export default function Antessala() {
         return;
       }
 
-      // ✅ VALIDAÇÃO 5: Sessão não existe OU sem permissão (RLS bloqueou)
       if (!session) {
-        console.error("❌ [Antessala] Sessão não encontrada ou acesso negado:", sessionId);
         toast({
           title: "Acesso Negado",
           description: "Esta sessão não existe ou você não tem permissão para acessá-la.",
@@ -195,12 +184,7 @@ export default function Antessala() {
         return;
       }
 
-      // ✅ VALIDAÇÃO 6: Verificar se training_id bate com o esperado
       if (session.training_id !== trainingId) {
-        console.error("❌ [Antessala] training_id da sessão não bate:", {
-          esperado: trainingId,
-          recebido: session.training_id
-        });
         toast({
           title: "Erro de Configuração",
           description: "Esta sessão não pertence ao treinamento especificado.",
@@ -210,35 +194,18 @@ export default function Antessala() {
         return;
       }
 
-      // ✅ ALERTA: Sessão órfã (não deveria mais existir após migração)
       if (!session.training_id) {
-        console.error("⚠️ [Antessala] ALERTA CRÍTICO: Sessão órfã detectada:", {
-          sessionId: session.id,
-          sessionName: session.nome,
-          createdBy: session.created_by
-        });
-
         toast({
           title: "⚠️ Sessão sem Treinamento",
           description: "Esta sessão não está vinculada a um treinamento. Contate o suporte.",
           variant: "destructive",
         });
-        // ✅ Bloquear acesso a sessões órfãs
         navigate("/");
         return;
       }
 
-      // ✅ Tudo validado, carregar sessão
-      console.log('[Antessala] Sessão válida carregada:', session.id);
       setSessionData(session);
-      console.log('[Antessala] sessionData setado:', { 
-        id: session.id, 
-        nome: session.nome, 
-        session_status: session.session_status, 
-        training_id: session.training_id 
-      });
       setLoading(false);
-      console.log('[Antessala] loading setado para false');
 
       if (session.session_status === "active") {
         playStartSound();
@@ -252,7 +219,6 @@ export default function Antessala() {
         return;
       }
 
-      // ✅ Setup realtime para updates
       const channel = supabase
         .channel(`session-${sessionId}`)
         .on(
@@ -264,12 +230,10 @@ export default function Antessala() {
             filter: `id=eq.${sessionId}`,
           },
           (payload) => {
-            console.log("[Antessala] Session updated:", payload);
             const updatedSession = payload.new as SessionData;
             setSessionData(updatedSession);
 
             if (updatedSession.session_status === "active") {
-              console.log("[Antessala] Session is now active, redirecting...");
               playStartSound();
               toast({
                 title: "Treinamento Iniciado!",
@@ -335,7 +299,6 @@ export default function Antessala() {
   }, [sessionId, userName]);
 
   if (loading) {
-    console.log('[Antessala] Retornando loading spinner');
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
@@ -347,7 +310,6 @@ export default function Antessala() {
   }
 
   if (!sessionData) {
-    console.log('[Antessala] Retornando erro - sessionData ausente');
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center p-4">
         <Card className="w-full max-w-2xl shadow-2xl border-2">
@@ -382,12 +344,6 @@ export default function Antessala() {
       </div>
     );
   }
-
-  console.log('[Antessala] Renderizando componente com:', { 
-    loading, 
-    sessionData: sessionData ? 'presente' : 'ausente', 
-    user: user ? 'presente' : 'ausente' 
-  });
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">

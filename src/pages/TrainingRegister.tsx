@@ -42,7 +42,6 @@ export default function TrainingRegister() {
     sessionId,
     trainingId: trainingIdFromHook,
     isValidSessionId,
-    navigateWithSession,
     logAccess
   } = useSessionNavigation({
     autoRedirectIfAuthenticated: false,
@@ -160,62 +159,42 @@ export default function TrainingRegister() {
     }
   }, [sessionId, isValidSessionId, logAccess, finalTrainingId]);
 
-  // Redirecionar para login se não autenticado
   useEffect(() => {
     if (!authLoading && !user) {
       toast.info('Faça login para continuar o cadastro');
-      navigateWithSession(`/training/${finalTrainingId}/login`);
+      navigate(`/training/${finalTrainingId}/login?sessionId=${sessionId}&trainingId=${finalTrainingId}`);
     }
-  }, [user, authLoading, finalTrainingId, navigateWithSession]);
+  }, [user, authLoading, finalTrainingId, sessionId, navigate]);
 
-  // Auto-redirect para usuário já participante
   useEffect(() => {
-    if (authLoading) return;
+    if (authLoading || !user || !finalTrainingId) return;
     
-    if (user && finalTrainingId) {
-      const checkExistingParticipation = async () => {
-        console.log('[TrainingRegister] Verificando participação existente...');
+    const checkExistingParticipation = async () => {
+      const { data } = await supabase
+        .from('training_participants')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('training_id', finalTrainingId)
+        .maybeSingle();
+
+      if (data) {
+        toast.info('Você já está cadastrado neste treinamento');
         
-        const { data } = await supabase
-          .from('training_participants')
-          .select('id')
-          .eq('user_id', user.id)
-          .eq('training_id', finalTrainingId)
-          .maybeSingle();
-
-        if (data) {
-          console.log('[TrainingRegister] Usuário já é participante, redirecionando para antessala');
-          toast.info('Você já está cadastrado neste treinamento');
-          
-          // ✅ CORREÇÃO: Validar que temos os parâmetros necessários
-          if (!sessionId || !finalTrainingId) {
-            console.warn('[TrainingRegister] sessionId ou trainingId ausentes para redirect:', { 
-              sessionId, 
-              finalTrainingId 
-            });
-            // Redirecionar para TrainingAccess que vai buscar a sessão ativa
-            navigate(`/training/${finalTrainingId}`);
-            return;
-          }
-          
-          // ✅ CORREÇÃO: Construir URL com query params explícitos
-          const params = new URLSearchParams();
-          params.set('sessionId', sessionId);
-          params.set('trainingId', finalTrainingId);
-          
-          console.log('[TrainingRegister] Redirecionando participante existente com params:', { 
-            sessionId, 
-            trainingId: finalTrainingId, 
-            url: `/antessala?${params.toString()}` 
-          });
-          
-          navigate(`/antessala?${params.toString()}`);
+        if (!sessionId || !finalTrainingId) {
+          navigate(`/training/${finalTrainingId}`);
+          return;
         }
-      };
+        
+        const params = new URLSearchParams();
+        params.set('sessionId', sessionId);
+        params.set('trainingId', finalTrainingId);
+        
+        navigate(`/antessala?${params.toString()}`);
+      }
+    };
 
-      checkExistingParticipation();
-    }
-  }, [user, finalTrainingId, authLoading, navigateWithSession]);
+    checkExistingParticipation();
+  }, [user, finalTrainingId, authLoading, sessionId, navigate]);
 
   useEffect(() => {
     loadTraining();
@@ -374,10 +353,9 @@ export default function TrainingRegister() {
       return;
     }
 
-    // Verificar se usuário está autenticado
     if (!user) {
       toast.error('Você precisa estar autenticado para completar o cadastro');
-      await navigateWithSession(`/training/${finalTrainingId}/login`);
+      navigate(`/training/${finalTrainingId}/login?sessionId=${sessionId}&trainingId=${finalTrainingId}`);
       return;
     }
     
@@ -431,30 +409,16 @@ export default function TrainingRegister() {
 
       if (participantError) throw participantError;
 
-      console.log('[TrainingRegister] Cadastro concluído com sucesso!');
       toast.success('Cadastro realizado com sucesso!');
       
-      // ✅ CORREÇÃO: Validar parâmetros antes de redirecionar
       if (!sessionId || !finalTrainingId) {
-        console.warn('[TrainingRegister] sessionId ou trainingId ausentes após cadastro:', { 
-          sessionId, 
-          finalTrainingId 
-        });
-        // Redirecionar para TrainingAccess que vai buscar a sessão ativa
         navigate(`/training/${finalTrainingId}`);
         return;
       }
 
-      // ✅ CORREÇÃO: Construir URL com query params explícitos
       const params = new URLSearchParams();
       params.set('sessionId', sessionId);
       params.set('trainingId', finalTrainingId);
-
-      console.log('[TrainingRegister] Redirecionando para antessala com params:', { 
-        sessionId, 
-        trainingId: finalTrainingId, 
-        url: `/antessala?${params.toString()}` 
-      });
 
       navigate(`/antessala?${params.toString()}`);
     } catch (error: any) {
