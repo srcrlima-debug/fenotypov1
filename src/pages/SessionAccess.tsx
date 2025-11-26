@@ -25,25 +25,22 @@ export default function SessionAccess() {
     }
 
     try {
+      // SEMPRE buscar trainingId do URL primeiro (não depende de auth)
       let trainingId = trainingIdFromQuery;
 
-      // Se o link não tiver trainingId, tentamos buscar apenas se o usuário já estiver logado
-      if (!trainingId && user) {
-        const { data: session, error: sessionError } = await supabase
+      // Se não tem trainingId na URL, buscar da sessão (agora permitido para anon)
+      if (!trainingId) {
+        const { data: session, error } = await supabase
           .from('sessions')
           .select('id, training_id, nome')
           .eq('id', sessionId)
           .single();
 
-        if (sessionError || !session) {
-          console.error('Erro ao carregar sessão:', sessionError);
-          toast.error('Sessão não encontrada');
-          navigate('/');
-          return;
-        }
+        console.log('Session lookup:', { session, error });
 
-        if (!session.training_id) {
-          toast.error('Sessão sem treinamento vinculado');
+        if (error || !session) {
+          console.error('Sessão não encontrada:', error);
+          toast.error('Sessão não encontrada. Verifique se o link está correto.');
           navigate('/');
           return;
         }
@@ -52,40 +49,35 @@ export default function SessionAccess() {
       }
 
       if (!trainingId) {
-        toast.error('Treinamento não encontrado para esta sessão');
+        toast.error('Treinamento não vinculado a esta sessão');
         navigate('/');
         return;
       }
 
-      // Se usuário não está logado, redireciona direto para o cadastro
+      // Se não logado, vai para registro
       if (!user) {
         navigate(`/training/register?trainingId=${trainingId}&sessionId=${sessionId}`);
         return;
       }
 
-      // Verifica se usuário já está registrado neste treinamento
-      const { data: participant, error: participantError } = await supabase
+      // Se logado, verificar participação
+      const { data: participant } = await supabase
         .from('training_participants')
         .select('id')
         .eq('training_id', trainingId)
         .eq('user_id', user.id)
         .maybeSingle();
 
-      if (participantError) {
-        console.error('Error checking participant:', participantError);
-      }
-
-      // Se não está registrado, redireciona para registro
       if (!participant) {
         navigate(`/training/register?trainingId=${trainingId}&sessionId=${sessionId}`);
         return;
       }
 
-      // Usuário já está registrado, vai para antessala com sessionId e trainingId
+      // Usuário registrado, vai para antessala
       navigate(`/antessala?sessionId=${sessionId}&trainingId=${trainingId}`);
     } catch (error: any) {
-      console.error('Error in session access:', error);
-      toast.error('Erro ao acessar sessão');
+      console.error('Erro no acesso à sessão:', error);
+      toast.error('Erro ao processar acesso. Tente novamente.');
       navigate('/');
     } finally {
       setLoading(false);
