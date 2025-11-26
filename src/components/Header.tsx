@@ -205,9 +205,11 @@ export const Header = () => {
 
               {!user && (
                 <Button 
+                  data-tour="login"
                   variant="default" 
                   size="sm"
                   onClick={() => navigate("/login")}
+                  className="hover:scale-105 transition-transform duration-300"
                 >
                   <CircleUser className="mr-2 h-4 w-4" />
                   Admin
