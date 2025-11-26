@@ -292,7 +292,7 @@ export default function Antessala() {
       };
     };
 
-    if (loading || !user) {
+    if (!user) {
       return;
     }
 
