@@ -35,7 +35,6 @@ import AdminSessionsDashboard from "./pages/AdminSessionsDashboard";
 import SessionAccess from "./pages/SessionAccess";
 import TrainingRegister from "./pages/TrainingRegister";
 import TrainingLogin from "./pages/TrainingLogin";
-import TrainingSignup from "./pages/TrainingSignup";
 import TrainingWelcome from "./pages/TrainingWelcome";
 import TrainingAccess from "./pages/TrainingAccess";
 import Training from "./pages/Training";
@@ -68,7 +67,6 @@ const App = () => (
                   
                   {/* Training-specific routes */}
                   <Route path="/training/:trainingId/register" element={<TrainingRegister />} />
-                  <Route path="/training/:trainingId/signup" element={<TrainingSignup />} />
                   <Route path="/training/:trainingId/welcome" element={<TrainingWelcome />} />
                   <Route path="/training/:trainingId/login" element={<TrainingLogin />} />
                   <Route path="/training/:trainingId/acesso" element={<TrainingAccess />} />
@@ -76,8 +74,6 @@ const App = () => (
                   {/* Simplified session access route */}
                   <Route path="/session/:sessionId/acesso" element={<SessionAccess />} />
                   <Route path="/training/register" element={<TrainingRegister />} />
-                  <Route path="/training/signup" element={<TrainingSignup />} />
-                  <Route path="/training/login" element={<TrainingLogin />} />
                   
                   {/* New unified antessala route (without sessionId) */}
                   <Route 

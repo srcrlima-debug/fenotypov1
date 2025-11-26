@@ -1,219 +1,85 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams, Link } from 'react-router-dom';
 import { z } from 'zod';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { useSessionNavigation } from '@/hooks/useSessionNavigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { getRegiaoFromEstado } from '@/lib/regionMapping';
-import { BookOpen, ListChecks, Scale, AlertTriangle, ChevronLeft, ChevronRight, CheckCircle2, CheckCircle, AlertCircle } from 'lucide-react';
+import { estadosData } from '@/lib/regionMapping';
+import { BookOpen, ListChecks, Scale, AlertTriangle, UserPlus, ChevronLeft, ChevronRight, Shield } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
-import { cn } from '@/lib/utils';
 
-const estadosBrasileiros = [
-  'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 
-  'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'
-];
-
-const profileSchema = z.object({
+const registerSchema = z.object({
+  email: z.string().email({ message: 'Email inválido' }),
+  password: z.string().min(6, { message: 'A senha deve ter pelo menos 6 caracteres' }),
+  confirmPassword: z.string(),
   genero: z.string().min(1, { message: 'Selecione o gênero' }),
   faixa_etaria: z.string().min(1, { message: 'Selecione a faixa etária' }),
   estado: z.string().min(1, { message: 'Selecione o estado' }),
-  regiao: z.string().min(1, { message: 'Região é obrigatória' }),
-  pertencimento_racial: z.string().optional(),
-  experiencia_bancas: z.string().optional(),
   consent: z.boolean().refine(val => val === true, {
     message: 'Você deve concordar com os termos para continuar'
   })
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "As senhas não coincidem",
+  path: ["confirmPassword"],
 });
 
 export default function TrainingRegister() {
   const { trainingId: trainingIdParam } = useParams<{ trainingId: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { user, loading: authLoading } = useAuth();
   
-  const {
-    sessionId,
-    trainingId: trainingIdFromHook,
-    isValidSessionId,
-    logAccess
-  } = useSessionNavigation({
-    autoRedirectIfAuthenticated: false,
-    antessalaPath: '/antessala'
-  });
-  
-  const trainingIdFromQuery = searchParams.get('trainingId');
-  const finalTrainingId = trainingIdFromHook || trainingIdFromQuery || trainingIdParam;
-  
+  // Priorizar query params sobre URL params
+  const trainingId = searchParams.get('trainingId') || trainingIdParam;
+  const sessionId = searchParams.get('sessionId');
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [training, setTraining] = useState<any>(null);
   const [loadingTraining, setLoadingTraining] = useState(true);
   const [currentStep, setCurrentStep] = useState(0);
-  const [lastSubmitTime, setLastSubmitTime] = useState<number>(0);
-  const DEBOUNCE_TIME = 2000;
+  const [touchStart, setTouchStart] = useState(0);
 
   const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+    confirmPassword: '',
     genero: '',
     faixa_etaria: '',
     estado: '',
-    regiao: '',
     pertencimento_racial: '',
     experiencia_bancas: '',
     consent: false
   });
 
-  const [touched, setTouched] = useState({
-    genero: false,
-    faixa_etaria: false,
-    estado: false,
-    regiao: false,
-    pertencimento_racial: false,
-    experiencia_bancas: false,
-    consent: false
-  });
-
-  const [errors, setErrors] = useState<Record<string, string>>({});
-
-  // Validate field on change
-  const validateField = (fieldName: keyof typeof formData, value: string | boolean) => {
-    try {
-      // Define schemas para cada campo individualmente
-      if (fieldName === 'genero') {
-        z.string().min(1, { message: 'Selecione o gênero' }).parse(value);
-      } else if (fieldName === 'faixa_etaria') {
-        z.string().min(1, { message: 'Selecione a faixa etária' }).parse(value);
-      } else if (fieldName === 'estado') {
-        z.string().min(1, { message: 'Selecione o estado' }).parse(value);
-      } else if (fieldName === 'regiao') {
-        z.string().min(1, { message: 'Região é obrigatória' }).parse(value);
-      } else if (fieldName === 'consent') {
-        z.boolean().refine(val => val === true, {
-          message: 'Você deve concordar com os termos para continuar'
-        }).parse(value);
-      }
-      
-      setErrors(prev => ({ ...prev, [fieldName]: '' }));
-      return true;
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        setErrors(prev => ({ ...prev, [fieldName]: error.errors[0].message }));
-      }
-      return false;
-    }
-  };
-
-  const handleFieldChange = (fieldName: keyof typeof formData, value: string | boolean) => {
-    setFormData(prev => ({ ...prev, [fieldName]: value }));
-    setTouched(prev => ({ ...prev, [fieldName]: true }));
-    validateField(fieldName, value);
-    
-    // Auto-preencher região quando estado é selecionado
-    if (fieldName === 'estado' && typeof value === 'string') {
-      const regiao = getRegiaoFromEstado(value);
-      if (regiao) {
-        setFormData(prev => ({ ...prev, regiao }));
-        setTouched(prev => ({ ...prev, regiao: true }));
-        validateField('regiao', regiao);
-      }
-    }
-  };
-
-  const isFieldValid = (fieldName: string) => {
-    return touched[fieldName as keyof typeof touched] && formData[fieldName as keyof typeof formData] && !errors[fieldName];
-  };
-
-  const isFieldInvalid = (fieldName: string) => {
-    return touched[fieldName as keyof typeof touched] && errors[fieldName];
-  };
-
-  // Calcular progresso do formulário
-  const calculateProgress = () => {
-    const requiredFields = ['genero', 'faixa_etaria', 'estado', 'regiao', 'consent'];
-    const filledFields = requiredFields.filter(field => {
-      const value = formData[field as keyof typeof formData];
-      if (typeof value === 'boolean') return value === true;
-      return value && value.toString().trim() !== '';
-    });
-    return {
-      filled: filledFields.length,
-      total: requiredFields.length,
-      percentage: (filledFields.length / requiredFields.length) * 100
-    };
-  };
-
-  const progress = calculateProgress();
-
   useEffect(() => {
-    if (sessionId && !isValidSessionId) {
-      toast.error('Link de acesso inválido. Solicite um novo link ao administrador.');
-      logAccess('invalid_sessionid_on_register', { 
-        error: 'Invalid UUID format',
-        trainingId: finalTrainingId 
-      });
+    if (user && trainingId) {
+      checkExistingParticipation();
     }
-  }, [sessionId, isValidSessionId, logAccess, finalTrainingId]);
-
-  useEffect(() => {
-    if (!authLoading && !user) {
-      toast.info('Faça login para continuar o cadastro');
-      navigate(`/training/${finalTrainingId}/login?sessionId=${sessionId}&trainingId=${finalTrainingId}`);
-    }
-  }, [user, authLoading, finalTrainingId, sessionId, navigate]);
-
-  useEffect(() => {
-    if (authLoading || !user || !finalTrainingId) return;
-    
-    const checkExistingParticipation = async () => {
-      const { data } = await supabase
-        .from('training_participants')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('training_id', finalTrainingId)
-        .maybeSingle();
-
-      if (data) {
-        toast.info('Você já está cadastrado neste treinamento');
-        
-        if (!sessionId || !finalTrainingId) {
-          navigate(`/training/${finalTrainingId}`);
-          return;
-        }
-        
-        const params = new URLSearchParams();
-        params.set('sessionId', sessionId);
-        params.set('trainingId', finalTrainingId);
-        
-        navigate(`/antessala?${params.toString()}`);
-      }
-    };
-
-    checkExistingParticipation();
-  }, [user, finalTrainingId, authLoading, sessionId, navigate]);
+  }, [user, trainingId]);
 
   useEffect(() => {
     loadTraining();
-  }, [finalTrainingId]);
+  }, [trainingId]);
 
   const loadTraining = async () => {
-    if (!finalTrainingId) return;
+    if (!trainingId) return;
 
     try {
       const { data, error } = await supabase
         .from('trainings')
         .select('*')
-        .eq('id', finalTrainingId)
+        .eq('id', trainingId)
         .single();
 
       if (error) throw error;
 
       if (data.status !== 'active') {
         toast.error('Este treinamento não está mais aceitando inscrições');
+        navigate('/');
         return;
       }
 
@@ -221,8 +87,27 @@ export default function TrainingRegister() {
     } catch (error) {
       console.error('Error loading training:', error);
       toast.error('Treinamento não encontrado');
+      navigate('/');
     } finally {
       setLoadingTraining(false);
+    }
+  };
+
+  const checkExistingParticipation = async () => {
+    try {
+      const { data } = await supabase
+        .from('training_participants')
+        .select('*')
+        .eq('training_id', trainingId)
+        .eq('user_id', user?.id)
+        .maybeSingle();
+
+      if (data) {
+        toast.info('Você já está cadastrado neste treinamento');
+        navigate(`/training/${trainingId}/antessala`);
+      }
+    } catch (error) {
+      console.error('Error checking participation:', error);
     }
   };
 
@@ -338,89 +223,101 @@ export default function TrainingRegister() {
     }
   };
 
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    const touchEnd = e.changedTouches[0].clientX;
+    const diff = touchStart - touchEnd;
+    
+    if (Math.abs(diff) > 50) {
+      if (diff > 0) {
+        nextStep();
+      } else {
+        prevStep();
+      }
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Verificar debounce
-    const now = Date.now();
-    if (now - lastSubmitTime < DEBOUNCE_TIME) {
-      toast.error('Aguarde alguns segundos antes de enviar novamente');
-      return;
-    }
-
-    // Verificar se já está enviando
-    if (loading) {
-      return;
-    }
-
-    if (!user) {
-      toast.error('Você precisa estar autenticado para completar o cadastro');
-      navigate(`/training/${finalTrainingId}/login?sessionId=${sessionId}&trainingId=${finalTrainingId}`);
-      return;
-    }
-    
     setLoading(true);
-    setLastSubmitTime(now);
 
     try {
-      const validationResult = profileSchema.safeParse(formData);
+      // Sanitize and validate inputs
+      const sanitizedEmail = formData.email.trim().toLowerCase();
+      const sanitizedPassword = formData.password.trim();
+
+      // Validate form data using zod
+      const validationResult = registerSchema.safeParse({
+        ...formData,
+        email: sanitizedEmail,
+        password: sanitizedPassword
+      });
 
       if (!validationResult.success) {
         toast.error(validationResult.error.errors[0].message);
         return;
       }
 
-      // Atualizar/criar perfil do usuário
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .upsert(
-          {
-            user_id: user.id,
-            email: user.email || '',
-            genero: formData.genero.trim(),
-            faixa_etaria: formData.faixa_etaria.trim(),
-            estado: formData.estado.trim(),
-            pertencimento_racial: formData.pertencimento_racial?.trim() || null,
-            experiencia_bancas: formData.experiencia_bancas?.trim() || null,
-            regiao: formData.regiao
-          },
-          { onConflict: 'user_id' }
-        );
+      let userId = user?.id;
 
-      if (profileError) throw profileError;
+      // Create account if user is not logged in
+      if (!user) {
+        const { data: authData, error: authError } = await supabase.auth.signUp({
+          email: sanitizedEmail,
+          password: sanitizedPassword,
+          options: {
+            emailRedirectTo: `${window.location.origin}/training/${trainingId}/login`
+          }
+        });
 
-      // Registrar como participante do treinamento
+        if (authError) {
+          if (authError.message.includes('already registered')) {
+            toast.error('Este email já está cadastrado. Faça login.');
+            navigate(`/training/${trainingId}/login`);
+            return;
+          }
+          throw authError;
+        }
+
+        userId = authData.user?.id;
+      }
+
+      if (!userId) {
+        throw new Error('Erro ao criar conta');
+      }
+
+      // Get region from estado
+      const estadoObj = estadosData.find(e => e.nome === formData.estado);
+      const regiao = estadoObj?.regiao || null;
+
+      // Register as training participant
       const { error: participantError } = await supabase
         .from('training_participants')
-        .upsert(
-          {
-            training_id: finalTrainingId,
-            user_id: user.id,
-            email: user.email || '',
-            genero: formData.genero.trim(),
-            faixa_etaria: formData.faixa_etaria.trim(),
-            estado: formData.estado.trim(),
-            pertencimento_racial: formData.pertencimento_racial?.trim() || null,
-            experiencia_bancas: formData.experiencia_bancas?.trim() || null,
-            regiao: formData.regiao
-          },
-          { onConflict: 'training_id,user_id' }
-        );
+        .insert({
+          training_id: trainingId,
+          user_id: userId,
+          email: sanitizedEmail,
+          genero: formData.genero.trim(),
+          faixa_etaria: formData.faixa_etaria.trim(),
+          estado: formData.estado.trim(),
+          pertencimento_racial: formData.pertencimento_racial?.trim() || null,
+          experiencia_bancas: formData.experiencia_bancas?.trim() || null,
+          regiao: regiao
+        });
 
       if (participantError) throw participantError;
 
       toast.success('Cadastro realizado com sucesso!');
       
-      if (!sessionId || !finalTrainingId) {
-        navigate(`/training/${finalTrainingId}`);
-        return;
+      // Redirecionar para antessala com sessionId se disponível
+      if (sessionId) {
+        navigate(`/antessala?sessionId=${sessionId}&trainingId=${trainingId}`);
+      } else {
+        navigate(`/training/${trainingId}/antessala`);
       }
-
-      const params = new URLSearchParams();
-      params.set('sessionId', sessionId);
-      params.set('trainingId', finalTrainingId);
-
-      navigate(`/antessala?${params.toString()}`);
     } catch (error: any) {
       console.error('Error during registration:', error);
       toast.error(error.message || 'Erro ao realizar cadastro');
@@ -453,10 +350,14 @@ export default function TrainingRegister() {
               : `Data: ${new Date(training?.data).toLocaleDateString('pt-BR')}`
             }
           </CardDescription>
+          {currentStep >= carouselSteps.length && training?.descricao && (
+            <p className="text-sm text-muted-foreground mt-2">{training.descricao}</p>
+          )}
         </CardHeader>
         <CardContent>
           {currentStep < carouselSteps.length ? (
             <div className="space-y-6">
+              {/* Progress Bar */}
               <div className="space-y-2">
                 <div className="w-full bg-muted rounded-full h-2">
                   <div 
@@ -469,12 +370,18 @@ export default function TrainingRegister() {
                 </p>
               </div>
 
-              <div className="min-h-[350px] flex items-center justify-center">
+              {/* Carousel Content with Touch Support */}
+              <div 
+                className="min-h-[350px] flex items-center justify-center"
+                onTouchStart={handleTouchStart}
+                onTouchEnd={handleTouchEnd}
+              >
                 <div className="animate-fade-in w-full">
                   {carouselSteps[currentStep].content}
                 </div>
               </div>
 
+              {/* Carousel indicators - Clickable */}
               <div className="flex justify-center gap-2">
                 {carouselSteps.map((step, index) => (
                   <button
@@ -492,6 +399,7 @@ export default function TrainingRegister() {
                 ))}
               </div>
 
+              {/* Navigation buttons */}
               <div className="flex justify-between gap-4">
                 <Button
                   variant="outline"
@@ -503,245 +411,216 @@ export default function TrainingRegister() {
                   Anterior
                 </Button>
                 <Button onClick={nextStep} className="gap-2">
-                  {currentStep === carouselSteps.length - 1 ? 'Ir para Cadastro' : 'Próximo'}
-                  <ChevronRight className="w-4 h-4" />
+                  {currentStep === carouselSteps.length - 1 ? (
+                    <>
+                      <UserPlus className="w-4 h-4" />
+                      Ir para Cadastro
+                    </>
+                  ) : (
+                    <>
+                      Próximo
+                      <ChevronRight className="w-4 h-4" />
+                    </>
+                  )}
                 </Button>
               </div>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4" autoComplete="on">
-              {/* Indicador de Progresso */}
-              <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 space-y-3">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium text-foreground">
-                    Progresso do Cadastro
-                  </span>
-                  <span className="text-muted-foreground">
-                    {progress.filled} de {progress.total} campos obrigatórios
-                  </span>
-                </div>
-                <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
-                  <div 
-                    className="bg-primary h-2 rounded-full transition-all duration-500 ease-out"
-                    style={{ width: `${progress.percentage}%` }}
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                required
+                autoComplete="email"
+                placeholder="seu@email.com"
+              />
+            </div>
+
+            {!user && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Senha</Label>
+                  <Input
+                    id="password"
+                    name="password"
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    required
+                    autoComplete="new-password"
                   />
                 </div>
-                {progress.percentage === 100 && (
-                  <p className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
-                    <CheckCircle className="w-4 h-4" />
-                    Todos os campos obrigatórios preenchidos!
-                  </p>
-                )}
-              </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="genero" className="flex items-center gap-2">
-                  Identidade de Gênero
-                  {isFieldValid('genero') && <CheckCircle className="h-4 w-4 text-green-500" />}
-                  {isFieldInvalid('genero') && <AlertCircle className="h-4 w-4 text-destructive" />}
-                </Label>
-                <Select 
-                  value={formData.genero} 
-                  onValueChange={(value) => handleFieldChange('genero', value)}
-                >
-                  <SelectTrigger className={cn(
-                    "bg-muted/30 border-border",
-                    isFieldValid('genero') && "border-green-500",
-                    isFieldInvalid('genero') && "border-destructive"
-                  )}>
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Mulher cisgênero">Mulher cisgênero</SelectItem>
-                    <SelectItem value="Mulher transexual/transgênero">Mulher transexual/transgênero</SelectItem>
-                    <SelectItem value="Não binário">Não binário</SelectItem>
-                    <SelectItem value="Homem cisgênero">Homem cisgênero</SelectItem>
-                    <SelectItem value="Homem transexual/transgênero">Homem transexual/transgênero</SelectItem>
-                    <SelectItem value="Outro">Outro</SelectItem>
-                    <SelectItem value="Prefiro não responder">Prefiro não responder</SelectItem>
-                  </SelectContent>
-                </Select>
-                {isFieldInvalid('genero') && (
-                  <p className="text-xs text-destructive">{errors.genero}</p>
-                )}
-                <p className="text-xs text-muted-foreground">
-                  <strong>Cisgênero:</strong> identifica-se com o sexo designado ao nascer<br/>
-                  <strong>Transgênero:</strong> identidade diferente da designada ao nascer<br/>
-                  <strong>Não binário:</strong> não se define dentro do sistema binário homem/mulher
-                </p>
-              </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword">Confirmar Senha</Label>
+                  <Input
+                    id="confirmPassword"
+                    name="confirm-password"
+                    type="password"
+                    value={formData.confirmPassword}
+                    onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                    required
+                    autoComplete="new-password"
+                  />
+                </div>
+              </>
+            )}
 
-              <div className="space-y-2">
-                <Label htmlFor="faixa_etaria" className="flex items-center gap-2">
-                  Faixa Etária
-                  {isFieldValid('faixa_etaria') && <CheckCircle className="h-4 w-4 text-green-500" />}
-                  {isFieldInvalid('faixa_etaria') && <AlertCircle className="h-4 w-4 text-destructive" />}
-                </Label>
-                <Select 
-                  value={formData.faixa_etaria} 
-                  onValueChange={(value) => handleFieldChange('faixa_etaria', value)}
-                >
-                  <SelectTrigger className={cn(
-                    "bg-muted/30 border-border",
-                    isFieldValid('faixa_etaria') && "border-green-500",
-                    isFieldInvalid('faixa_etaria') && "border-destructive"
-                  )}>
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="18-25">18-25</SelectItem>
-                    <SelectItem value="26-35">26-35</SelectItem>
-                    <SelectItem value="36-45">36-45</SelectItem>
-                    <SelectItem value="46-55">46-55</SelectItem>
-                    <SelectItem value="56+">56+</SelectItem>
-                  </SelectContent>
-                </Select>
-                {isFieldInvalid('faixa_etaria') && (
-                  <p className="text-xs text-destructive">{errors.faixa_etaria}</p>
-                )}
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="genero">Identidade de Gênero</Label>
+              <Select value={formData.genero} onValueChange={(value) => setFormData({ ...formData, genero: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione sua identidade de gênero" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Mulher cisgênero">Mulher cisgênero</SelectItem>
+                  <SelectItem value="Mulher transexual/transgênero">Mulher transexual/transgênero</SelectItem>
+                  <SelectItem value="Não binário">Não binário</SelectItem>
+                  <SelectItem value="Homem cisgênero">Homem cisgênero</SelectItem>
+                  <SelectItem value="Homem transexual/transgênero">Homem transexual/transgênero</SelectItem>
+                  <SelectItem value="Outro">Outro</SelectItem>
+                  <SelectItem value="Prefiro não responder">Prefiro não responder</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                <strong>Cisgênero:</strong> pessoa que se identifica com o sexo designado ao nascer
+              </p>
+            </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="estado" className="flex items-center gap-2">
-                  Estado
-                  {isFieldValid('estado') && <CheckCircle className="h-4 w-4 text-green-500" />}
-                  {isFieldInvalid('estado') && <AlertCircle className="h-4 w-4 text-destructive" />}
-                </Label>
-                <Select 
-                  value={formData.estado} 
-                  onValueChange={(value) => handleFieldChange('estado', value)}
-                >
-                  <SelectTrigger className={cn(
-                    "bg-muted/30 border-border",
-                    isFieldValid('estado') && "border-green-500",
-                    isFieldInvalid('estado') && "border-destructive"
-                  )}>
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {estadosBrasileiros.map((estado) => (
-                      <SelectItem key={estado} value={estado}>
-                        {estado}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {isFieldInvalid('estado') && (
-                  <p className="text-xs text-destructive">{errors.estado}</p>
-                )}
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="faixa_etaria">Faixa Etária</Label>
+              <Select value={formData.faixa_etaria} onValueChange={(value) => setFormData({ ...formData, faixa_etaria: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione sua faixa etária" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="18-25">18-25 anos</SelectItem>
+                  <SelectItem value="26-35">26-35 anos</SelectItem>
+                  <SelectItem value="36-45">36-45 anos</SelectItem>
+                  <SelectItem value="46-55">46-55 anos</SelectItem>
+                  <SelectItem value="56+">56+ anos</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="regiao" className="flex items-center gap-2">
-                  Região de Origem
-                  {isFieldValid('regiao') && <CheckCircle className="h-4 w-4 text-green-500" />}
-                  {isFieldInvalid('regiao') && <AlertCircle className="h-4 w-4 text-destructive" />}
-                </Label>
-                <Select 
-                  value={formData.regiao} 
-                  onValueChange={(value) => handleFieldChange('regiao', value)}
-                  disabled={true}
-                >
-                  <SelectTrigger className={cn(
-                    "bg-muted/30 border-border opacity-70",
-                    isFieldValid('regiao') && "border-green-500",
-                    isFieldInvalid('regiao') && "border-destructive"
-                  )}>
-                    <SelectValue placeholder="Preenchida automaticamente" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Norte">Norte</SelectItem>
-                    <SelectItem value="Nordeste">Nordeste</SelectItem>
-                    <SelectItem value="Centro-Oeste">Centro-Oeste</SelectItem>
-                    <SelectItem value="Sudeste">Sudeste</SelectItem>
-                    <SelectItem value="Sul">Sul</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  A região é preenchida automaticamente baseada no estado selecionado
-                </p>
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="estado">Estado</Label>
+              <Select 
+                value={formData.estado} 
+                onValueChange={(value) => {
+                  // Atualiza estado e automaticamente a região
+                  const estadoObj = estadosData.find(e => e.nome === value);
+                  setFormData({ 
+                    ...formData, 
+                    estado: value,
+                  });
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione seu estado" />
+                </SelectTrigger>
+                <SelectContent>
+                  {estadosData.map((estado) => (
+                    <SelectItem key={estado.nome} value={estado.nome}>
+                      {estado.nome} - {estado.regiao}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                A região é automaticamente definida pelo estado selecionado
+              </p>
+            </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="pertencimento_racial" className="flex items-center gap-2">
-                  Pertencimento Racial
-                </Label>
-                <Select 
-                  value={formData.pertencimento_racial} 
-                  onValueChange={(value) => handleFieldChange('pertencimento_racial', value)}
-                >
-                  <SelectTrigger className="bg-muted/30 border-border">
-                    <SelectValue placeholder="Selecione (opcional)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Preto">Preto</SelectItem>
-                    <SelectItem value="Parda">Parda</SelectItem>
-                    <SelectItem value="Indígena">Indígena</SelectItem>
-                    <SelectItem value="Branco">Branco</SelectItem>
-                    <SelectItem value="Amarelo">Amarelo</SelectItem>
-                    <SelectItem value="Outro">Outro</SelectItem>
-                    <SelectItem value="Prefiro não responder">Prefiro não responder</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="pertencimento_racial">Pertencimento Racial</Label>
+              <Select value={formData.pertencimento_racial} onValueChange={(value) => setFormData({ ...formData, pertencimento_racial: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione (opcional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Branca">Branca</SelectItem>
+                  <SelectItem value="Parda">Parda</SelectItem>
+                  <SelectItem value="Preta">Preta</SelectItem>
+                  <SelectItem value="Amarela">Amarela</SelectItem>
+                  <SelectItem value="Indígena">Indígena</SelectItem>
+                  <SelectItem value="Prefiro não informar">Prefiro não informar</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="experiencia_bancas" className="flex items-center gap-2">
-                  Experiência com Bancas de Heteroidentificação
-                </Label>
-                <Select 
-                  value={formData.experiencia_bancas} 
-                  onValueChange={(value) => handleFieldChange('experiencia_bancas', value)}
-                >
-                  <SelectTrigger className="bg-muted/30 border-border">
-                    <SelectValue placeholder="Selecione (opcional)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Não possuo">Não possuo</SelectItem>
-                    <SelectItem value="Já participo">Já participo</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="experiencia_bancas">Experiência em Bancas</Label>
+              <Select value={formData.experiencia_bancas} onValueChange={(value) => setFormData({ ...formData, experiencia_bancas: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione (opcional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Nenhuma">Nenhuma</SelectItem>
+                  <SelectItem value="1-2 anos">1-2 anos</SelectItem>
+                  <SelectItem value="3-5 anos">3-5 anos</SelectItem>
+                  <SelectItem value="5+ anos">5+ anos</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-              <div className="flex items-start space-x-2 border border-border rounded-md p-4 bg-muted/30">
-                <Checkbox 
-                  id="consent" 
-                  checked={formData.consent}
-                  onCheckedChange={(checked) => handleFieldChange('consent', checked as boolean)}
-                />
-                <div className="grid gap-1.5 leading-none">
-                  <label
-                    htmlFor="consent"
-                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                  >
-                    Concordo com os termos
-                  </label>
-                  <p className="text-xs text-muted-foreground">
-                    Confirmo que li e aceito os termos de uso de dados da plataforma Fenotypo, 
-                    conforme a Lei Geral de Proteção de Dados (LGPD). Entendo que meus dados 
-                    serão utilizados exclusivamente para fins educacionais e análise estatística anônima.
+            {/* LGPD Compliance Card */}
+            <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 space-y-3">
+              <div className="flex items-start gap-3">
+                <Shield className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                <div className="space-y-2 text-sm">
+                  <h4 className="font-semibold text-blue-900 dark:text-blue-100">
+                    Segurança e Privacidade - Conformidade com LGPD
+                  </h4>
+                  <p className="text-blue-700 dark:text-blue-300">
+                    Todas as medidas de segurança seguem as melhores práticas e estão em 
+                    conformidade com a Lei Geral de Proteção de Dados (LGPD).
                   </p>
                 </div>
               </div>
-
-              <Button 
-                type="submit" 
-                className="w-full bg-[hsl(20,70%,65%)] hover:bg-[hsl(20,70%,55%)] text-white relative" 
-                disabled={loading || !formData.consent}
-              >
-                {loading && (
-                  <div className="absolute left-4">
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  </div>
-                )}
-                {loading ? 'Cadastrando...' : 'Finalizar Cadastro'}
-              </Button>
               
-              {loading && (
-                <p className="text-xs text-center text-muted-foreground">
-                  Por favor, aguarde enquanto processamos seu cadastro
+              <div className="flex items-start gap-3 bg-white dark:bg-gray-900 rounded p-3 border border-blue-200 dark:border-blue-800">
+                <Checkbox 
+                  id="consent"
+                  checked={formData.consent}
+                  onCheckedChange={(checked) => setFormData({...formData, consent: checked as boolean})}
+                  required
+                />
+                <Label htmlFor="consent" className="text-xs leading-relaxed cursor-pointer">
+                  Li e concordo com o <strong>uso anônimo dos meus dados</strong> para estudos 
+                  acadêmicos e aprimoramento dos processos de heteroidentificação. Estou ciente 
+                  de que todas as informações são tratadas em conformidade com a LGPD.
+                </Label>
+              </div>
+            </div>
+
+            <Button type="submit" className="w-full" disabled={loading || !formData.consent}>
+              {loading ? 'Cadastrando...' : 'Cadastrar'}
+            </Button>
+
+              <div className="text-center text-sm">
+                <p className="text-muted-foreground">
+                  Já possui cadastro?{' '}
+                  <Link to={`/training/${trainingId}/login`} className="text-primary hover:underline">
+                    Fazer login
+                  </Link>
                 </p>
-              )}
+              </div>
+              
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setCurrentStep(currentStep - 1)}
+                className="w-full"
+              >
+                <ChevronLeft className="w-4 h-4 mr-2" />
+                Voltar
+              </Button>
             </form>
           )}
         </CardContent>

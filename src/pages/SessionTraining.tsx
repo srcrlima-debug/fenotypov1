@@ -97,122 +97,45 @@ export default function SessionTraining() {
         return;
       }
 
-      try {
-        console.log('[SessionTraining] Validando acesso à sessão:', sessionId);
+      // Check how many evaluations the user has completed
+      const { count: userVotesCount } = await supabase
+        .from("avaliacoes")
+        .select("*", { count: "exact", head: true })
+        .eq("session_id", sessionId)
+        .eq("user_id", user.id);
 
-        // ✅ CORREÇÃO 1: Buscar sessão com training_id explicitamente
-        const { data: session, error: sessionError } = await supabase
-          .from("sessions")
-          .select("*, training_id")
-          .eq("id", sessionId)
-          .maybeSingle();
+      setUserTotalVotes(userVotesCount || 0);
+      setUserCompletedEvaluations((userVotesCount || 0) >= 30);
 
-        if (sessionError) {
-          console.error('[SessionTraining] Erro ao buscar sessão:', sessionError);
-          toast({
-            title: "Erro ao acessar sessão",
-            description: "Não foi possível carregar os dados da sessão.",
-            variant: "destructive",
-          });
-          navigate("/");
-          return;
-        }
+      const { data: session, error: sessionError } = await supabase
+        .from("sessions")
+        .select("*")
+        .eq("id", sessionId)
+        .single();
 
-        if (!session) {
-          console.error('[SessionTraining] Sessão não encontrada ou acesso negado:', sessionId);
-          toast({
-            title: "Sessão não encontrada",
-            description: "Esta sessão não existe ou foi encerrada.",
-            variant: "destructive",
-          });
-          navigate("/");
-          return;
-        }
-
-        // ✅ CORREÇÃO 2: Verificar se user é participante do treinamento
-        if (session.training_id) {
-          console.log('[SessionTraining] Verificando participação no treinamento:', session.training_id);
-          
-          const { data: participant, error: participantError } = await supabase
-            .from('training_participants')
-            .select('id')
-            .eq('training_id', session.training_id)
-            .eq('user_id', user.id)
-            .maybeSingle();
-
-          if (participantError) {
-            console.error('[SessionTraining] Erro ao verificar participação:', participantError);
-          }
-
-          if (!participant) {
-            console.error('[SessionTraining] Usuário não é participante do treinamento');
-            toast({
-              title: "Acesso Negado",
-              description: "Você não está cadastrado neste treinamento.",
-              variant: "destructive",
-            });
-            navigate("/");
-            return;
-          }
-
-          console.log('[SessionTraining] Participação confirmada, acesso permitido');
-        } else {
-          // ✅ Se sessão órfã (sem training_id), apenas admin pode acessar
-          console.warn('[SessionTraining] Sessão órfã detectada, verificando se é admin');
-          
-          const { data: adminRole } = await supabase
-            .from('user_roles')
-            .select('role')
-            .eq('user_id', user.id)
-            .eq('role', 'admin')
-            .maybeSingle();
-
-          if (!adminRole) {
-            console.error('[SessionTraining] Usuário não é admin, bloqueando acesso a sessão órfã');
-            toast({
-              title: "Acesso Negado",
-              description: "Esta sessão não está configurada corretamente.",
-              variant: "destructive",
-            });
-            navigate("/");
-            return;
-          }
-          
-          console.log('[SessionTraining] Admin confirmado, acesso a sessão órfã permitido');
-        }
-
-        // Check if session has ended
-        if (session.session_status === "completed") {
-          toast({
-            title: "Sessão encerrada",
-            description: "Esta sessão foi encerrada pelo administrador.",
-            variant: "destructive",
-          });
-          navigate("/");
-          return;
-        }
-
-        // Check how many evaluations the user has completed
-        const { count: userVotesCount } = await supabase
-          .from("avaliacoes")
-          .select("*", { count: "exact", head: true })
-          .eq("session_id", sessionId)
-          .eq("user_id", user.id);
-
-        setUserTotalVotes(userVotesCount || 0);
-        setUserCompletedEvaluations((userVotesCount || 0) >= 30);
-
-        setSessionData(session);
-        setLoading(false);
-      } catch (error) {
-        console.error('[SessionTraining] Exceção ao validar acesso:', error);
+      if (sessionError || !session) {
         toast({
-          title: "Erro",
-          description: "Não foi possível validar seu acesso à sessão.",
+          title: "Sessão não encontrada",
+          description: "Esta sessão não existe ou foi encerrada.",
           variant: "destructive",
         });
         navigate("/");
+        return;
       }
+
+      // Check if session has ended
+      if (session.session_status === "completed") {
+        toast({
+          title: "Sessão encerrada",
+          description: "Esta sessão foi encerrada pelo administrador.",
+          variant: "destructive",
+        });
+        navigate("/");
+        return;
+      }
+
+      setSessionData(session);
+      setLoading(false);
     };
 
     checkSessionAndUser();

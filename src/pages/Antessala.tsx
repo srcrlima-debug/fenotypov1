@@ -1,9 +1,9 @@
 import { useEffect, useState, useRef } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Clock, Users, CircleCheck, Timer, Image, Keyboard, TriangleAlert, Monitor, UserCheck, KeyRound, Calendar, Link2, AlertCircle } from "lucide-react";
+import { Clock, Eye, MessageSquare, Users } from "lucide-react";
 import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,10 +11,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCardTilt } from "@/hooks/useCardTilt";
 import { AntessalaParticipantsMonitor } from "@/components/AntessalaParticipantsMonitor";
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
-import Autoplay from "embla-carousel-autoplay";
-import { cn } from "@/lib/utils";
-import { useSessionNavigation } from "@/hooks/useSessionNavigation";
 
 interface SessionData {
   id: string;
@@ -27,35 +23,40 @@ interface SessionData {
 }
 
 export default function Antessala() {
+  const { sessionId: sessionIdParam, trainingId: trainingIdParam } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   
-  const sessionId = searchParams.get('sessionId');
-  const trainingId = searchParams.get('trainingId');
-  
+  // Priorizar query params sobre URL params
+  const sessionId = searchParams.get('sessionId') || sessionIdParam;
+  const trainingId = searchParams.get('trainingId') || trainingIdParam;
   const { user } = useAuth();
   const { toast } = useToast();
-  
-  const { validateSessionId, logAccess } = useSessionNavigation({
-    autoRedirectIfAuthenticated: false
-  });
   const [sessionData, setSessionData] = useState<SessionData | null>(null);
   const [userName, setUserName] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [onlineParticipants, setOnlineParticipants] = useState(0);
   const [hasPlayedSound, setHasPlayedSound] = useState(false);
-  const [currentSlide, setCurrentSlide] = useState(0);
-  const [carouselApi, setCarouselApi] = useState<any>();
 
   const { ref: ref1, isVisible: isVisible1 } = useScrollReveal();
   const { ref: ref2, isVisible: isVisible2 } = useScrollReveal();
   const { ref: ref3, isVisible: isVisible3 } = useScrollReveal();
+  const { ref: ref4, isVisible: isVisible4 } = useScrollReveal();
 
-  const autoplayPlugin = useRef(
-    Autoplay({ delay: 5000, stopOnInteraction: true })
-  );
+  const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const cardTilts = [
+    useCardTilt(),
+    useCardTilt(),
+    useCardTilt(),
+  ];
 
-  const totalSlides = 8;
+  const handleMouseMove = (index: number, e: React.MouseEvent<HTMLDivElement>) => {
+    // Simplified without tilt effect
+  };
+
+  const handleMouseLeave = (index: number) => {
+    // Simplified without tilt effect
+  };
 
   const playStartSound = () => {
     if (hasPlayedSound) return;
@@ -131,38 +132,84 @@ export default function Antessala() {
 
   useEffect(() => {
     const loadSession = async () => {
-      if (!sessionId || !trainingId) {
-        toast({
-          title: "Acesso Inválido",
-          description: "É necessário um link válido com ID de sessão e treinamento.",
-          variant: "destructive",
-        });
+      if (!sessionId && trainingId) {
+        console.log("No sessionId in URL, searching for active session in training:", trainingId);
+        
+        if (!user) {
+          toast({
+            title: "Login necessário",
+            description: "Faça login para acessar este treinamento",
+          });
+          navigate(`/training/${trainingId}/login`);
+          return;
+        }
+
+        const { data: participant } = await supabase
+          .from("training_participants")
+          .select("*")
+          .eq("training_id", trainingId)
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (!participant) {
+          toast({
+            title: "Cadastro necessário",
+            description: "Você precisa se cadastrar neste treinamento",
+          });
+          navigate(`/training/${trainingId}/register`);
+          return;
+        }
+
+        const { data: activeSession } = await supabase
+          .from("sessions")
+          .select("*")
+          .eq("training_id", trainingId)
+          .in("session_status", ["waiting", "active"])
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (activeSession) {
+          console.log("Active session found, updating URL:", activeSession.id);
+          window.history.replaceState(
+            null,
+            "",
+            `/training/${trainingId}/session/${activeSession.id}/antessala`
+          );
+          setSessionData(activeSession);
+          setLoading(false);
+
+          if (activeSession.session_status === "active") {
+            playStartSound();
+            setTimeout(() => {
+              navigate(`/treino/${activeSession.id}`);
+            }, 1000);
+          }
+          return;
+        } else {
+          console.log("No active session found, showing waiting screen");
+          setSessionData(null);
+          setLoading(false);
+          return;
+        }
+      }
+
+      if (!sessionId) {
+        console.error("No sessionId or trainingId provided");
         navigate("/");
         return;
       }
 
-      if (!validateSessionId(sessionId)) {
-        toast({
-          title: "Link Corrompido",
-          description: "O link de acesso está inválido. Solicite um novo link.",
-          variant: "destructive",
-        });
-        await logAccess('invalid_sessionid_antessala', { 
-          error: 'Invalid UUID format',
-          trainingId 
-        });
-        navigate("/");
-        return;
-      }
-
+      // ✅ VALIDAÇÕES IMPLEMENTADAS (Etapa 3)
       const { data: session, error } = await supabase
         .from("sessions")
         .select("*, training_id, created_by")
         .eq("id", sessionId)
         .maybeSingle();
 
+      // ✅ VALIDAÇÃO 1: Erro de query
       if (error) {
-        console.error("Erro ao buscar sessão:", error);
+        console.error("❌ Erro ao buscar sessão:", error.message, error);
         toast({
           title: "Erro ao acessar sessão",
           description: "Não foi possível carregar os dados da sessão. Tente novamente.",
@@ -173,7 +220,9 @@ export default function Antessala() {
         return;
       }
 
+      // ✅ VALIDAÇÃO 2: Sessão não existe OU sem permissão (RLS bloqueou)
       if (!session) {
+        console.error("❌ Sessão não encontrada ou acesso negado:", sessionId);
         toast({
           title: "Acesso Negado",
           description: "Esta sessão não existe ou você não tem permissão para acessá-la.",
@@ -184,35 +233,28 @@ export default function Antessala() {
         return;
       }
 
-      if (session.training_id !== trainingId) {
-        toast({
-          title: "Erro de Configuração",
-          description: "Esta sessão não pertence ao treinamento especificado.",
-          variant: "destructive",
-        });
-        navigate("/");
-        return;
-      }
-
+      // ✅ VALIDAÇÃO 3: ALERTA se órfã (não deveria mais existir)
       if (!session.training_id) {
+        console.error("⚠️ ALERTA CRÍTICO: Sessão órfã detectada:", {
+          sessionId: session.id,
+          sessionName: session.nome,
+          createdBy: session.created_by,
+          createdAt: session.created_at
+        });
+
         toast({
           title: "⚠️ Sessão sem Treinamento",
           description: "Esta sessão não está vinculada a um treinamento. Contate o suporte.",
           variant: "destructive",
         });
-        navigate("/");
-        return;
       }
 
+      // Continuar fluxo normal...
       setSessionData(session);
       setLoading(false);
 
       if (session.session_status === "active") {
         playStartSound();
-        toast({
-          title: "Treinamento Iniciado!",
-          description: "Redirecionando para a sala de avaliação...",
-        });
         setTimeout(() => {
           navigate(`/treino/${session.id}`);
         }, 1000);
@@ -230,15 +272,12 @@ export default function Antessala() {
             filter: `id=eq.${sessionId}`,
           },
           (payload) => {
+            console.log("Session updated:", payload);
             const updatedSession = payload.new as SessionData;
             setSessionData(updatedSession);
 
             if (updatedSession.session_status === "active") {
               playStartSound();
-              toast({
-                title: "Treinamento Iniciado!",
-                description: "Redirecionando...",
-              });
               setTimeout(() => {
                 navigate(`/treino/${sessionId}`);
               }, 1000);
@@ -252,20 +291,12 @@ export default function Antessala() {
       };
     };
 
-    if (!user) {
+    if (loading || !user) {
       return;
     }
 
     loadSession();
-  }, [sessionId, trainingId, user, navigate]);
-
-  useEffect(() => {
-    if (!carouselApi) return;
-
-    carouselApi.on("select", () => {
-      setCurrentSlide(carouselApi.selectedScrollSnap());
-    });
-  }, [carouselApi]);
+  }, [sessionId, trainingId, user, navigate, playStartSound, loading]);
 
   useEffect(() => {
     if (!sessionId || !userName) return;
@@ -432,250 +463,75 @@ export default function Antessala() {
             Como Funciona?
           </h2>
 
-          <Carousel
-            opts={{
-              align: "start",
-              loop: true,
-            }}
-            plugins={[autoplayPlugin.current]}
-            onMouseEnter={() => autoplayPlugin.current.stop()}
-            onMouseLeave={() => autoplayPlugin.current.play()}
-            setApi={setCarouselApi}
-            className="w-full max-w-5xl mx-auto"
-          >
-            <CarouselContent>
-              {/* Card 1: Acesso Exclusivo */}
-              <CarouselItem>
-                <Card className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950 dark:to-red-900 border-2 border-red-500 mx-2">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-red-700 dark:text-red-300">
-                      <AlertCircle className="h-6 w-6" />
-                      Acesso Exclusivo via Link de Convite
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 flex items-start gap-3">
-                      <TriangleAlert className="h-6 w-6 text-red-600 mt-0.5 flex-shrink-0" />
-                      <div>
-                        <p className="font-bold text-red-800 dark:text-red-200 mb-2">Muito Importante!</p>
-                        <p className="text-red-700 dark:text-red-300 mb-2">
-                          O acesso ao aplicativo <strong>só é possível através de link de convite</strong> criado pelo administrador (Prof. Cristhian Lima) a cada sessão de treinamento e enviado aos participantes cadastrados.
-                        </p>
-                        <p className="text-red-700 dark:text-red-300">
-                          <strong>Não é possível acessar o treinamento diretamente pela página inicial.</strong> Aguarde receber o link de convite específico para sua sessão.
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </CarouselItem>
+          <div className="grid md:grid-cols-3 gap-6">
+            <Card
+              ref={(el) => (cardRefs.current[0] = el)}
+              className="group hover:shadow-2xl transition-all duration-300 border-2 hover:border-primary/50"
+            >
+              <CardHeader className="bg-gradient-to-br from-primary/20 to-primary/5">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Eye className="w-8 h-8 text-primary" />
+                </div>
+                <CardTitle className="text-xl text-center">
+                  Observação de Fotos
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                <p className="text-muted-foreground text-center leading-relaxed">
+                  Você verá uma série de fotografias, uma de cada vez. Observe
+                  cada imagem com atenção aos detalhes.
+                </p>
+              </CardContent>
+            </Card>
 
-              {/* Card 2: Preparação Prévia */}
-              <CarouselItem>
-                <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 border-2 border-blue-500 mx-2">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-blue-700 dark:text-blue-300">
-                      <Monitor className="h-6 w-6" />
-                      Preparação Prévia - Após Receber o Convite
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-muted-foreground font-semibold mb-3">
-                      Use preferencialmente <strong>computador, notebook ou tablet</strong> para melhor experiência:
-                    </p>
-                    <ol className="space-y-3">
-                      <li className="flex items-start gap-3 p-3 bg-white/50 dark:bg-black/20 rounded-lg">
-                        <span className="flex-shrink-0 w-7 h-7 flex items-center justify-center bg-blue-500 text-white rounded-full font-bold text-sm">1</span>
-                        <span>Acesse <strong>apenas através do link de convite</strong> que você recebeu do Prof. Cristhian</span>
-                      </li>
-                      <li className="flex items-start gap-3 p-3 bg-white/50 dark:bg-black/20 rounded-lg">
-                        <span className="flex-shrink-0 w-7 h-7 flex items-center justify-center bg-blue-500 text-white rounded-full font-bold text-sm">2</span>
-                        <span>Cadastre-se através do link e complete seu perfil com todas as informações solicitadas</span>
-                      </li>
-                      <li className="flex items-start gap-3 p-3 bg-white/50 dark:bg-black/20 rounded-lg">
-                        <span className="flex-shrink-0 w-7 h-7 flex items-center justify-center bg-blue-500 text-white rounded-full font-bold text-sm">3</span>
-                        <span>Teste suas credenciais fazendo login antes da sessão começar</span>
-                      </li>
-                    </ol>
-                  </CardContent>
-                </Card>
-              </CarouselItem>
+            <Card
+              ref={(el) => (cardRefs.current[1] = el)}
+              className="group hover:shadow-2xl transition-all duration-300 border-2 hover:border-primary/50"
+            >
+              <CardHeader className="bg-gradient-to-br from-primary/20 to-primary/5">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <MessageSquare className="w-8 h-8 text-primary" />
+                </div>
+                <CardTitle className="text-xl text-center">
+                  Avaliação Rápida
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                <p className="text-muted-foreground text-center leading-relaxed">
+                  Para cada foto, você responderá a uma pergunta específica
+                  sobre a imagem. Seja preciso e rápido.
+                </p>
+              </CardContent>
+            </Card>
 
-              {/* Card 3: Guarde Credenciais */}
-              <CarouselItem>
-                <Card className="bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950 dark:to-amber-900 border-2 border-amber-500 mx-2">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-amber-700 dark:text-amber-300">
-                      <KeyRound className="h-6 w-6" />
-                      Guarde Suas Credenciais
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4 flex items-start gap-3">
-                      <TriangleAlert className="h-6 w-6 text-amber-600 mt-0.5 flex-shrink-0" />
-                      <div>
-                        <p className="font-bold text-amber-800 dark:text-amber-200 mb-2">Importante!</p>
-                        <p className="text-amber-700 dark:text-amber-300">
-                          Anote ou salve seu <strong>e-mail e senha cadastrados</strong> em local seguro. Você precisará dessas informações no dia do treinamento.
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </CarouselItem>
-
-              {/* Card 4: No Dia do Treinamento */}
-              <CarouselItem>
-                <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 border-2 border-green-500 mx-2">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-green-700 dark:text-green-300">
-                      <Calendar className="h-6 w-6" />
-                      No Dia do Treinamento
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <ol className="space-y-3">
-                      <li className="flex items-start gap-3 p-3 bg-white/50 dark:bg-black/20 rounded-lg">
-                        <Link2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                        <span>Acesse a página <strong>apenas pelo link que será enviado</strong> pelo Prof. Cristhian no chat</span>
-                      </li>
-                      <li className="flex items-start gap-3 p-3 bg-white/50 dark:bg-black/20 rounded-lg">
-                        <UserCheck className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                        <span>Faça <strong>login</strong> com o e-mail e senha que você cadastrou</span>
-                      </li>
-                      <li className="flex items-start gap-3 p-3 bg-white/50 dark:bg-black/20 rounded-lg">
-                        <Timer className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                        <span>Aguarde o início da apresentação dos casos de avaliação fenotípica pelo Prof. Cristhian</span>
-                      </li>
-                    </ol>
-                  </CardContent>
-                </Card>
-              </CarouselItem>
-
-              {/* Card 5: Visualização das Imagens */}
-              <CarouselItem>
-                <Card className="mx-2">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Image className="h-5 w-5 text-primary" />
-                      Visualização das Imagens
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-muted-foreground">
-                      Você verá uma série de imagens, uma de cada vez. Para cada imagem, você terá um tempo
-                      limitado para fazer sua avaliação.
-                    </p>
-                  </CardContent>
-                </Card>
-              </CarouselItem>
-
-              {/* Card 6: Tempo de Resposta */}
-              <CarouselItem>
-                <Card className="mx-2">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Timer className="h-5 w-5 text-primary" />
-                      Tempo de Resposta
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-muted-foreground mb-4">
-                      Cada imagem tem um cronômetro. Quando o tempo acabar, a resposta será automaticamente
-                      registrada como "Não Respondido".
-                    </p>
-                    <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 flex items-start gap-2">
-                      <TriangleAlert className="h-5 w-5 text-red-500 mt-0.5 flex-shrink-0" />
-                      <p className="text-sm text-red-700 dark:text-red-300">
-                        <strong>Atenção:</strong> Nos últimos 10 segundos, o cronômetro ficará vermelho
-                        para alertá-lo sobre o tempo restante.
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </CarouselItem>
-
-              {/* Card 7: Como Avaliar */}
-              <CarouselItem>
-                <Card className="mx-2">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <CircleCheck className="h-5 w-5 text-primary" />
-                      Como Avaliar
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div>
-                        <h4 className="font-semibold mb-2">Opções de Resposta:</h4>
-                        <ul className="space-y-2">
-                          <li className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-green-500" />
-                            <strong className="text-green-700 dark:text-green-400">DEFERIDO:</strong>
-                            <span className="text-muted-foreground">Se a imagem atende aos critérios</span>
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-red-500" />
-                            <strong className="text-red-700 dark:text-red-400">INDEFERIDO:</strong>
-                            <span className="text-muted-foreground">Se a imagem não atende aos critérios</span>
-                          </li>
-                        </ul>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </CarouselItem>
-
-              {/* Card 8: Atalhos de Teclado */}
-              <CarouselItem>
-                <Card className="mx-2">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Keyboard className="h-5 w-5 text-primary" />
-                      Atalhos de Teclado
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-muted-foreground mb-4">
-                      Para agilizar sua avaliação, você pode usar atalhos de teclado:
-                    </p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div className="bg-muted rounded-lg p-3 flex items-center gap-3">
-                        <kbd className="px-3 py-1.5 bg-background border rounded font-mono text-sm font-semibold">D</kbd>
-                        <span className="text-sm">Deferido</span>
-                      </div>
-                      <div className="bg-muted rounded-lg p-3 flex items-center gap-3">
-                        <kbd className="px-3 py-1.5 bg-background border rounded font-mono text-sm font-semibold">I</kbd>
-                        <span className="text-sm">Indeferido</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </CarouselItem>
-            </CarouselContent>
-            <CarouselPrevious className="hidden sm:flex" />
-            <CarouselNext className="hidden sm:flex" />
-          </Carousel>
-
-          {/* Indicadores de progresso (dots) */}
-          <div className="flex justify-center gap-2 mt-6">
-            {Array.from({ length: totalSlides }).map((_, index) => (
-              <button
-                key={index}
-                onClick={() => carouselApi?.scrollTo(index)}
-                className={cn(
-                  "h-2 rounded-full transition-all duration-300",
-                  currentSlide === index
-                    ? "w-8 bg-primary"
-                    : "w-2 bg-muted-foreground/30 hover:bg-muted-foreground/50"
-                )}
-                aria-label={`Ir para slide ${index + 1}`}
-              />
-            ))}
+            <Card
+              ref={(el) => (cardRefs.current[2] = el)}
+              className="group hover:shadow-2xl transition-all duration-300 border-2 hover:border-primary/50"
+            >
+              <CardHeader className="bg-gradient-to-br from-primary/20 to-primary/5">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Clock className="w-8 h-8 text-primary" />
+                </div>
+                <CardTitle className="text-xl text-center">
+                  Tempo Limitado
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                <p className="text-muted-foreground text-center leading-relaxed">
+                  Cada foto tem um tempo limite para avaliação. Mantenha o foco
+                  e confie na sua primeira impressão.
+                </p>
+              </CardContent>
+            </Card>
           </div>
         </div>
 
-        <Card className="shadow-xl border-2 mb-8">
+        <Card
+          ref={ref4}
+          className={`shadow-xl border-2 transition-all duration-1000 delay-500 ${
+            isVisible4 ? "opacity-100 scale-100" : "opacity-0 scale-95"
+          }`}
+        >
           <CardContent className="p-8 text-center">
             <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-primary/10 flex items-center justify-center">
               <Clock className="w-10 h-10 text-primary animate-pulse" />

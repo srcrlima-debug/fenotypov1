@@ -255,48 +255,6 @@ export type Database = {
         }
         Relationships: []
       }
-      session_access_logs: {
-        Row: {
-          access_type: string
-          created_at: string | null
-          error_code: string | null
-          error_message: string | null
-          id: string
-          session_id: string | null
-          status: string
-          training_id: string | null
-          url_params: Json | null
-          user_agent: string | null
-          user_id: string | null
-        }
-        Insert: {
-          access_type: string
-          created_at?: string | null
-          error_code?: string | null
-          error_message?: string | null
-          id?: string
-          session_id?: string | null
-          status: string
-          training_id?: string | null
-          url_params?: Json | null
-          user_agent?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          access_type?: string
-          created_at?: string | null
-          error_code?: string | null
-          error_message?: string | null
-          id?: string
-          session_id?: string | null
-          status?: string
-          training_id?: string | null
-          url_params?: Json | null
-          user_agent?: string | null
-          user_id?: string | null
-        }
-        Relationships: []
-      }
       sessions: {
         Row: {
           created_at: string
@@ -610,15 +568,6 @@ export type Database = {
         }[]
       }
       cleanup_old_rate_limit_logs: { Args: never; Returns: undefined }
-      create_session_with_training: {
-        Args: {
-          p_data: string
-          p_descricao: string
-          p_nome: string
-          p_user_id: string
-        }
-        Returns: Json
-      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -626,7 +575,6 @@ export type Database = {
         }
         Returns: boolean
       }
-      is_photo_time_valid: { Args: { p_session_id: string }; Returns: boolean }
       is_session_active: { Args: { _session_id: string }; Returns: boolean }
       is_session_creator: {
         Args: { _session_id: string; _user_id: string }

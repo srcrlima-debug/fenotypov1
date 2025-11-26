@@ -2,12 +2,14 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/Header";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
-import { BookOpenText } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { BookOpenText, LayoutDashboard } from "lucide-react";
 import logoVertical from "@/assets/logo-fenotypo-vert-2.png";
 import fistIcon from "@/assets/fist-icon.png";
 
 const Home = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { ref: descRef, isVisible: descVisible } = useScrollReveal();
   const { ref: ctaRef, isVisible: ctaVisible } = useScrollReveal();
   const { ref: featuresRef, isVisible: featuresVisible } = useScrollReveal();
@@ -50,15 +52,25 @@ const Home = () => {
             ref={ctaRef}
             className={`pt-3 scroll-reveal ${ctaVisible ? 'revealed' : ''}`}
           >
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 max-w-2xl mx-auto">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 max-w-2xl mx-auto">
               <Button
                 onClick={() => navigate("/como-funciona")}
                 size="lg"
-                className="button-3d h-20 w-full text-xl font-bold bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-2xl rounded-xl border-4 border-green-700 transition-all duration-300 group"
+                className="button-3d h-20 w-full sm:flex-1 text-xl font-bold bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-2xl rounded-xl border-4 border-green-700 transition-all duration-300 group"
               >
                 <BookOpenText className="inline-block mr-3 w-11 h-11 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-12" />
                 Como Funciona
               </Button>
+              {user && (
+                <Button
+                  onClick={() => navigate("/admin/trainings")}
+                  size="lg"
+                  className="button-3d h-20 w-full sm:flex-1 text-xl font-bold bg-gradient-to-r from-[#5a4a42] to-[#4a3a32] hover:from-[#4a3a32] hover:to-[#3a2a22] text-white shadow-2xl rounded-xl border-4 border-[#5a4a42] transition-all duration-300 group"
+                >
+                  <LayoutDashboard className="inline-block mr-3 w-11 h-11 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12" />
+                  Acessar Dashboard
+                </Button>
+              )}
             </div>
           </div>
 

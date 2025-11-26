@@ -7,7 +7,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
-import { CheckCircle2 } from 'lucide-react';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Email inválido' }),
@@ -18,15 +17,12 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [fieldValidation, setFieldValidation] = useState({
-    email: false,
-    password: false,
-  });
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
   const { toast } = useToast();
 
+  // Get redirect URL from query params or location state
   const searchParams = new URLSearchParams(location.search);
   const redirectParam = searchParams.get('redirect');
   const from = redirectParam || (location.state as any)?.from || '/';
@@ -36,15 +32,6 @@ const Login = () => {
       navigate(from, { replace: true });
     }
   }, [user, navigate, from]);
-
-  const validateEmail = (email: string) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    setFieldValidation(prev => ({ ...prev, email: emailRegex.test(email) }));
-  };
-
-  const validatePassword = (password: string) => {
-    setFieldValidation(prev => ({ ...prev, password: password.length >= 6 }));
-  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,6 +52,7 @@ const Login = () => {
             description: 'Parece que você ainda não tem uma conta. Vamos criar uma agora!',
             variant: 'default',
           });
+          // Redirecionar para registro mantendo o email preenchido
           setTimeout(() => {
             navigate(`/registro?email=${encodeURIComponent(validatedData.email)}${from !== '/' ? `&redirect=${encodeURIComponent(from)}` : ''}`);
           }, 1500);
@@ -95,47 +83,35 @@ const Login = () => {
     }
   };
 
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="w-full max-w-md">
-        <div className="bg-card rounded-lg shadow-lg p-8 border border-border">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center gap-2 mb-4">
-              <span className="text-2xl">👤</span>
-            </div>
-            <h1 className="text-3xl font-bold">Login</h1>
-            <p className="text-muted-foreground mt-2">
-              Entre com seu email e senha
-            </p>
-          </div>
+        <div className="bg-card rounded-lg shadow-soft p-8">
+          <h1 className="text-3xl font-bold text-center mb-2">Login</h1>
+          <p className="text-muted-foreground text-center mb-8">
+            Entre com seu email e senha
+          </p>
 
-          <form onSubmit={handleLogin} className="space-y-5" autoComplete="on">
+          <form onSubmit={handleLogin} className="space-y-4" autoComplete="on">
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm font-medium">Email</Label>
-              <div className="relative">
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  placeholder="seu@email.com"
-                  value={email}
-                  onChange={(e) => {
-                    setEmail(e.target.value);
-                    validateEmail(e.target.value);
-                  }}
-                  autoComplete="email"
-                  required
-                  className="pr-10 bg-muted/30 border-border"
-                />
-                {fieldValidation.email && (
-                  <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-green-500" />
-                )}
-              </div>
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                placeholder="seu@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                onInput={(e) => setEmail((e.target as HTMLInputElement).value)}
+                autoComplete="email"
+                required
+              />
             </div>
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="password" className="text-sm font-medium">Senha</Label>
+                <Label htmlFor="password">Senha</Label>
                 <Link 
                   to="/esqueci-senha" 
                   className="text-xs text-primary hover:underline"
@@ -143,30 +119,22 @@ const Login = () => {
                   Esqueceu a senha?
                 </Link>
               </div>
-              <div className="relative">
-                <Input
-                  id="password"
-                  name="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => {
-                    setPassword(e.target.value);
-                    validatePassword(e.target.value);
-                  }}
-                  autoComplete="current-password"
-                  required
-                  className="pr-10 bg-muted/30 border-border"
-                />
-                {fieldValidation.password && (
-                  <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-green-500" />
-                )}
-              </div>
+              <Input
+                id="password"
+                name="password"
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                onInput={(e) => setPassword((e.target as HTMLInputElement).value)}
+                autoComplete="current-password"
+                required
+              />
             </div>
 
             <Button 
               type="submit" 
-              className="w-full bg-[hsl(20,70%,65%)] hover:bg-[hsl(20,70%,55%)] text-white font-medium py-6 mt-6" 
+              className="w-full" 
               disabled={loading}
             >
               {loading ? 'Entrando...' : 'Entrar'}
@@ -177,7 +145,7 @@ const Login = () => {
             Não tem uma conta?{' '}
             <Link 
               to={from !== '/' ? `/registro?redirect=${encodeURIComponent(from)}` : '/registro'} 
-              className="text-primary hover:underline font-medium"
+              className="text-primary hover:underline"
             >
               Criar conta
             </Link>

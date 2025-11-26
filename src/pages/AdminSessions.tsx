@@ -24,8 +24,7 @@ interface Session {
   descricao: string | null;
   session_status: string;
   training_id: string;
-  participant_count?: number;
-  trainings?: { training_participants: { count: number }[] };
+  participants?: { count: number }[];
 }
 
 export default function AdminSessions() {
@@ -61,53 +60,57 @@ export default function AdminSessions() {
 
   const loadSessions = async () => {
     try {
-      setLoading(true);
-
+      // Aplicar filtros na query
       let query = supabase
         .from("sessions")
-        .select('*, trainings(training_participants(count))', { count: 'exact' })
-        .range((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage - 1);
+        .select(`
+          *,
+          participants:training_participants(count)
+        `, { count: 'exact' });
 
+      // Filtros
       if (statusFilter !== "all") {
         query = query.eq("session_status", statusFilter);
       }
-
       if (dateFilter) {
         query = query.eq("data", dateFilter);
       }
-
       if (searchQuery) {
         query = query.ilike("nome", `%${searchQuery}%`);
       }
 
-      if (sortBy !== "participants") {
-        query = query.order(sortBy, { ascending: sortOrder === "asc" });
-      }
-
-      const { data, error, count } = await query;
+      // Ordenação
+      let orderColumn = 'created_at';
+      if (sortBy === 'nome') orderColumn = 'nome';
+      else if (sortBy === 'data') orderColumn = 'data';
+      else if (sortBy === 'status') orderColumn = 'session_status';
       
+      query = query.order(orderColumn, { ascending: sortOrder === 'asc' });
+
+      // Paginação
+      const from = (currentPage - 1) * itemsPerPage;
+      const to = from + itemsPerPage - 1;
+
+      const { data, error, count } = await query.range(from, to);
+
       if (error) throw error;
-
-      const sessionsWithCounts = (data || []).map(session => ({
-        ...session,
-        participant_count: session.trainings?.training_participants?.[0]?.count || 0
-      }));
-
-      if (sortBy === "participants") {
-        sessionsWithCounts.sort((a, b) => 
-          sortOrder === "asc" 
-            ? a.participant_count - b.participant_count
-            : b.participant_count - a.participant_count
-        );
+      
+      let sessionsData = data || [];
+      
+      // Ordenação por participantes (não pode ser feita no banco)
+      if (sortBy === 'participants') {
+        sessionsData = sessionsData.sort((a, b) => {
+          const countA = a.participants?.[0]?.count || 0;
+          const countB = b.participants?.[0]?.count || 0;
+          return sortOrder === 'asc' ? countA - countB : countB - countA;
+        });
       }
-
-      setSessions(sessionsWithCounts);
+      
+      setSessions(sessionsData);
       setTotalCount(count || 0);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error loading sessions:", error);
-      toast.error("Erro ao carregar sessões", {
-        description: error.message
-      });
+      toast.error("Erro ao carregar sessions");
     } finally {
       setLoading(false);
     }
@@ -126,26 +129,43 @@ export default function AdminSessions() {
     setIsCreating(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        toast.error("Você precisa estar logado para criar sessões");
-        return;
-      }
-
       const formattedDate = format(selectedDate, "yyyy-MM-dd");
 
-      const { data, error } = await supabase.rpc('create_session_with_training', {
-        p_nome: newSession.nome,
-        p_data: formattedDate,
-        p_descricao: newSession.descricao || null,
-        p_user_id: user.id
-      });
+      // First, create the training
+      const { data: training, error: trainingError } = await supabase
+        .from("trainings")
+        .insert({
+          nome: newSession.nome,
+          data: formattedDate,
+          descricao: newSession.descricao || null,
+          created_by: user?.id,
+          status: "active",
+        })
+        .select()
+        .single();
 
-      if (error) throw error;
+      if (trainingError) throw trainingError;
 
-      await logSessionAction("create_session", data.session_id, {
+      // Then create the session linked to the training
+      const { data: session, error: sessionError } = await supabase
+        .from("sessions")
+        .insert({
+          nome: newSession.nome,
+          data: formattedDate,
+          descricao: newSession.descricao || null,
+          training_id: training.id,
+          created_by: user?.id,
+          session_status: "waiting",
+        })
+        .select()
+        .single();
+
+      if (sessionError) throw sessionError;
+
+      // Log audit action (usar session.id correto)
+      await logSessionAction("create_session", session.id, {
         session_name: newSession.nome,
-        training_id: data.training_id,
+        training_id: training.id,
       });
 
       toast.success("Sessão criada com sucesso!");
@@ -153,16 +173,16 @@ export default function AdminSessions() {
       setNewSession({ nome: "", data: "", descricao: "" });
       setSelectedDate(undefined);
       loadSessions();
-    } catch (error: any) {
-      toast.error(error.message || "Erro ao criar sessão");
+    } catch (error) {
+      console.error("Error creating session:", error);
+      toast.error("Erro ao criar sessão");
     } finally {
       setIsCreating(false);
     }
   };
 
-  const copySessionLink = (sessionId: string, sessionName: string, trainingId?: string | null) => {
-    const baseLink = `${window.location.origin}/session/${sessionId}/acesso`;
-    const link = trainingId ? `${baseLink}?trainingId=${trainingId}` : baseLink;
+  const copySessionLink = (sessionId: string, sessionName: string) => {
+    const link = `${window.location.origin}/session/${sessionId}/acesso`;
     navigator.clipboard.writeText(link);
     toast.success(`Link da sessão "${sessionName}" copiado!`);
   };
@@ -302,7 +322,7 @@ export default function AdminSessions() {
         .from("sessions")
         .select(`
           *,
-          trainings(training_participants(count))
+          participants:training_participants(count)
         `)
         .order("created_at", { ascending: false });
 
@@ -310,7 +330,7 @@ export default function AdminSessions() {
 
       const sessionsForExport = (data || []).map(session => ({
         ...session,
-        participant_count: session.trainings?.training_participants?.[0]?.count || 0
+        participant_count: session.participants?.[0]?.count || 0
       }));
 
       await exportSessionsToPDF(sessionsForExport);
@@ -331,7 +351,7 @@ export default function AdminSessions() {
         .from("sessions")
         .select(`
           *,
-          trainings(training_participants(count))
+          participants:training_participants(count)
         `)
         .order("created_at", { ascending: false });
 
@@ -339,7 +359,7 @@ export default function AdminSessions() {
 
       const sessionsForExport = (data || []).map(session => ({
         ...session,
-        participant_count: session.trainings?.training_participants?.[0]?.count || 0
+        participant_count: session.participants?.[0]?.count || 0
       }));
 
       await exportSessionsToExcel(sessionsForExport);
@@ -614,12 +634,16 @@ export default function AdminSessions() {
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
         {sessions.length === 0 && !loading ? (
-          <Card className="col-span-full animate-fade-slide-up border-dashed">
+          <Card className="col-span-full animate-fade-slide-up">
             <CardContent className="flex flex-col items-center justify-center py-12">
-              <p className="text-muted-foreground mb-2 text-lg">Nenhuma sessão criada ainda</p>
-              <p className="text-sm text-muted-foreground">
-                Use o botão "Nova Sessão" acima para criar sua primeira sessão de treinamento.
-              </p>
+              <p className="text-muted-foreground mb-4">Nenhuma sessão criada ainda</p>
+              <Button 
+                onClick={() => setCreateDialogOpen(true)}
+                className="hover:scale-105 transition-transform duration-300"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Criar Primeira Sessão
+              </Button>
             </CardContent>
           </Card>
         ) : (
@@ -641,7 +665,7 @@ export default function AdminSessions() {
                     <CardDescription>
                       <p className="text-sm text-muted-foreground">
                         {new Date(session.data).toLocaleDateString("pt-BR")} •{" "}
-                        {session.participant_count || 0} participantes
+                        {session.participants?.[0]?.count || 0} participantes
                       </p>
                       {session.descricao && (
                         <p className="text-sm text-muted-foreground mt-2">{session.descricao}</p>
@@ -655,7 +679,7 @@ export default function AdminSessions() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => copySessionLink(session.id, session.nome, session.training_id)}
+                    onClick={() => copySessionLink(session.id, session.nome)}
                     className="hover:scale-105 transition-transform duration-300"
                   >
                     <Link2 className="w-4 h-4 mr-2" />
