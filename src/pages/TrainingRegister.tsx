@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams, useSearchParams, Link } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { z } from 'zod';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -10,9 +10,14 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { estadosData } from '@/lib/regionMapping';
-import { BookOpen, ListChecks, Scale, AlertTriangle, UserPlus, ChevronLeft, ChevronRight, Shield } from 'lucide-react';
+import { getRegiaoFromEstado } from '@/lib/regionMapping';
+import { BookOpen, ListChecks, Scale, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
+
+const estadosBrasileiros = [
+  'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 
+  'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'
+];
 
 const registerSchema = z.object({
   email: z.string().email({ message: 'Email inválido' }),
@@ -21,6 +26,9 @@ const registerSchema = z.object({
   genero: z.string().min(1, { message: 'Selecione o gênero' }),
   faixa_etaria: z.string().min(1, { message: 'Selecione a faixa etária' }),
   estado: z.string().min(1, { message: 'Selecione o estado' }),
+  regiao: z.string().min(1, { message: 'Região é obrigatória' }),
+  pertencimento_racial: z.string().optional(),
+  experiencia_bancas: z.string().optional(),
   consent: z.boolean().refine(val => val === true, {
     message: 'Você deve concordar com os termos para continuar'
   })
@@ -42,11 +50,10 @@ export default function TrainingRegister() {
     navigateWithSession,
     logAccess
   } = useSessionNavigation({
-    autoRedirectIfAuthenticated: false, // Disabled to allow registration
+    autoRedirectIfAuthenticated: false,
     antessalaPath: '/antessala'
   });
   
-  // Priorizar hook > query params > URL params
   const trainingIdFromQuery = searchParams.get('trainingId');
   const finalTrainingId = trainingIdFromHook || trainingIdFromQuery || trainingIdParam;
   
@@ -54,7 +61,6 @@ export default function TrainingRegister() {
   const [training, setTraining] = useState<any>(null);
   const [loadingTraining, setLoadingTraining] = useState(true);
   const [currentStep, setCurrentStep] = useState(0);
-  const [touchStart, setTouchStart] = useState(0);
 
   const [formData, setFormData] = useState({
     email: '',
@@ -63,12 +69,12 @@ export default function TrainingRegister() {
     genero: '',
     faixa_etaria: '',
     estado: '',
+    regiao: '',
     pertencimento_racial: '',
     experiencia_bancas: '',
     consent: false
   });
 
-  // Validar sessionId se presente
   useEffect(() => {
     if (sessionId && !isValidSessionId) {
       toast.error('Link de acesso inválido. Solicite um novo link ao administrador.');
@@ -106,28 +112,6 @@ export default function TrainingRegister() {
       toast.error('Treinamento não encontrado');
     } finally {
       setLoadingTraining(false);
-    }
-  };
-
-  const checkExistingParticipation = async () => {
-    if (!user || !finalTrainingId) return;
-
-    try {
-      const { data } = await supabase
-        .from('training_participants')
-        .select('*')
-        .eq('training_id', finalTrainingId)
-        .eq('user_id', user?.id)
-        .maybeSingle();
-
-      if (data) {
-        toast.info('Você já está cadastrado neste treinamento');
-        await navigateWithSession('/antessala', {
-          additionalParams: finalTrainingId ? { trainingId: finalTrainingId } : {}
-        });
-      }
-    } catch (error) {
-      console.error('Error checking participation:', error);
     }
   };
 
@@ -243,33 +227,14 @@ export default function TrainingRegister() {
     }
   };
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    setTouchStart(e.targetTouches[0].clientX);
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    const touchEnd = e.changedTouches[0].clientX;
-    const diff = touchStart - touchEnd;
-    
-    if (Math.abs(diff) > 50) {
-      if (diff > 0) {
-        nextStep();
-      } else {
-        prevStep();
-      }
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      // Sanitize and validate inputs
       const sanitizedEmail = formData.email.trim().toLowerCase();
       const sanitizedPassword = formData.password.trim();
 
-      // Validate form data using zod
       const validationResult = registerSchema.safeParse({
         ...formData,
         email: sanitizedEmail,
@@ -283,7 +248,6 @@ export default function TrainingRegister() {
 
       let userId = user?.id;
 
-      // Create account if user is not logged in
       if (!user) {
         const { data: authData, error: authError } = await supabase.auth.signUp({
           email: sanitizedEmail,
@@ -311,11 +275,6 @@ export default function TrainingRegister() {
         throw new Error('Erro ao criar conta');
       }
 
-      // Get region from estado
-      const estadoObj = estadosData.find(e => e.nome === formData.estado);
-      const regiao = estadoObj?.regiao || null;
-
-      // Register as training participant
       const { error: participantError } = await supabase
         .from('training_participants')
         .insert({
@@ -327,14 +286,13 @@ export default function TrainingRegister() {
           estado: formData.estado.trim(),
           pertencimento_racial: formData.pertencimento_racial?.trim() || null,
           experiencia_bancas: formData.experiencia_bancas?.trim() || null,
-          regiao: regiao
+          regiao: formData.regiao
         });
 
       if (participantError) throw participantError;
 
       toast.success('Cadastro realizado com sucesso!');
       
-      // Redirecionar para antessala usando o hook
       await navigateWithSession('/antessala', {
         additionalParams: finalTrainingId ? { trainingId: finalTrainingId } : {}
       });
@@ -370,14 +328,10 @@ export default function TrainingRegister() {
               : `Data: ${new Date(training?.data).toLocaleDateString('pt-BR')}`
             }
           </CardDescription>
-          {currentStep >= carouselSteps.length && training?.descricao && (
-            <p className="text-sm text-muted-foreground mt-2">{training.descricao}</p>
-          )}
         </CardHeader>
         <CardContent>
           {currentStep < carouselSteps.length ? (
             <div className="space-y-6">
-              {/* Progress Bar */}
               <div className="space-y-2">
                 <div className="w-full bg-muted rounded-full h-2">
                   <div 
@@ -390,18 +344,12 @@ export default function TrainingRegister() {
                 </p>
               </div>
 
-              {/* Carousel Content with Touch Support */}
-              <div 
-                className="min-h-[350px] flex items-center justify-center"
-                onTouchStart={handleTouchStart}
-                onTouchEnd={handleTouchEnd}
-              >
+              <div className="min-h-[350px] flex items-center justify-center">
                 <div className="animate-fade-in w-full">
                   {carouselSteps[currentStep].content}
                 </div>
               </div>
 
-              {/* Carousel indicators - Clickable */}
               <div className="flex justify-center gap-2">
                 {carouselSteps.map((step, index) => (
                   <button
@@ -419,7 +367,6 @@ export default function TrainingRegister() {
                 ))}
               </div>
 
-              {/* Navigation buttons */}
               <div className="flex justify-between gap-4">
                 <Button
                   variant="outline"
@@ -431,221 +378,206 @@ export default function TrainingRegister() {
                   Anterior
                 </Button>
                 <Button onClick={nextStep} className="gap-2">
-                  {currentStep === carouselSteps.length - 1 ? (
-                    <>
-                      <UserPlus className="w-4 h-4" />
-                      Ir para Cadastro
-                    </>
-                  ) : (
-                    <>
-                      Próximo
-                      <ChevronRight className="w-4 h-4" />
-                    </>
-                  )}
+                  {currentStep === carouselSteps.length - 1 ? 'Ir para Cadastro' : 'Próximo'}
+                  <ChevronRight className="w-4 h-4" />
                 </Button>
               </div>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4" autoComplete="on">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                required
-                autoComplete="email"
-                placeholder="seu@email.com"
-              />
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  required
+                  autoComplete="email"
+                  placeholder="seu@email.com"
+                />
+              </div>
 
-            {!user && (
-              <>
-                <div className="space-y-2">
-                  <Label htmlFor="password">Senha</Label>
-                  <Input
-                    id="password"
-                    name="password"
-                    type="password"
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    required
-                    autoComplete="new-password"
-                  />
-                </div>
+              {!user && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Senha</Label>
+                    <Input
+                      id="password"
+                      name="password"
+                      type="password"
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      required
+                      autoComplete="new-password"
+                      placeholder="••••••••"
+                    />
+                  </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Confirmar Senha</Label>
-                  <Input
-                    id="confirmPassword"
-                    name="confirm-password"
-                    type="password"
-                    value={formData.confirmPassword}
-                    onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                    required
-                    autoComplete="new-password"
-                  />
-                </div>
-              </>
-            )}
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmPassword">Confirmar Senha</Label>
+                    <Input
+                      id="confirmPassword"
+                      name="confirmPassword"
+                      type="password"
+                      value={formData.confirmPassword}
+                      onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                      required
+                      autoComplete="new-password"
+                      placeholder="••••••••"
+                    />
+                  </div>
+                </>
+              )}
 
-            <div className="space-y-2">
-              <Label htmlFor="genero">Identidade de Gênero</Label>
-              <Select value={formData.genero} onValueChange={(value) => setFormData({ ...formData, genero: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione sua identidade de gênero" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Mulher cisgênero">Mulher cisgênero</SelectItem>
-                  <SelectItem value="Mulher transexual/transgênero">Mulher transexual/transgênero</SelectItem>
-                  <SelectItem value="Não binário">Não binário</SelectItem>
-                  <SelectItem value="Homem cisgênero">Homem cisgênero</SelectItem>
-                  <SelectItem value="Homem transexual/transgênero">Homem transexual/transgênero</SelectItem>
-                  <SelectItem value="Outro">Outro</SelectItem>
-                  <SelectItem value="Prefiro não responder">Prefiro não responder</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                <strong>Cisgênero:</strong> pessoa que se identifica com o sexo designado ao nascer
-              </p>
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="genero">Identidade de Gênero</Label>
+                <Select value={formData.genero} onValueChange={(value) => setFormData({ ...formData, genero: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Mulher cisgênero">Mulher cisgênero</SelectItem>
+                    <SelectItem value="Mulher transexual/transgênero">Mulher transexual/transgênero</SelectItem>
+                    <SelectItem value="Não binário">Não binário</SelectItem>
+                    <SelectItem value="Homem cisgênero">Homem cisgênero</SelectItem>
+                    <SelectItem value="Homem transexual/transgênero">Homem transexual/transgênero</SelectItem>
+                    <SelectItem value="Outro">Outro</SelectItem>
+                    <SelectItem value="Prefiro não responder">Prefiro não responder</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Cisgênero: identifica-se com o sexo designado ao nascer
+                </p>
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="faixa_etaria">Faixa Etária</Label>
-              <Select value={formData.faixa_etaria} onValueChange={(value) => setFormData({ ...formData, faixa_etaria: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione sua faixa etária" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="18-25">18-25 anos</SelectItem>
-                  <SelectItem value="26-35">26-35 anos</SelectItem>
-                  <SelectItem value="36-45">36-45 anos</SelectItem>
-                  <SelectItem value="46-55">46-55 anos</SelectItem>
-                  <SelectItem value="56+">56+ anos</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="faixaEtaria">Faixa Etária</Label>
+                <Select value={formData.faixa_etaria} onValueChange={(value) => setFormData({ ...formData, faixa_etaria: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="18-25">18-25</SelectItem>
+                    <SelectItem value="26-35">26-35</SelectItem>
+                    <SelectItem value="36-45">36-45</SelectItem>
+                    <SelectItem value="46-55">46-55</SelectItem>
+                    <SelectItem value="56+">56+</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="estado">Estado</Label>
-              <Select 
-                value={formData.estado} 
-                onValueChange={(value) => {
-                  // Atualiza estado e automaticamente a região
-                  const estadoObj = estadosData.find(e => e.nome === value);
-                  setFormData({ 
-                    ...formData, 
-                    estado: value,
-                  });
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione seu estado" />
-                </SelectTrigger>
-                <SelectContent>
-                  {estadosData.map((estado) => (
-                    <SelectItem key={estado.nome} value={estado.nome}>
-                      {estado.nome} - {estado.regiao}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                A região é automaticamente definida pelo estado selecionado
-              </p>
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="estado">Estado</Label>
+                <Select 
+                  value={formData.estado} 
+                  onValueChange={(value) => {
+                    const regiao = getRegiaoFromEstado(value);
+                    setFormData({ 
+                      ...formData, 
+                      estado: value,
+                      regiao: regiao
+                    });
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {estadosBrasileiros.map((estado) => (
+                      <SelectItem key={estado} value={estado}>
+                        {estado}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  A região é automaticamente definida pelo estado selecionado
+                </p>
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="pertencimento_racial">Pertencimento Racial</Label>
-              <Select value={formData.pertencimento_racial} onValueChange={(value) => setFormData({ ...formData, pertencimento_racial: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione (opcional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Branca">Branca</SelectItem>
-                  <SelectItem value="Parda">Parda</SelectItem>
-                  <SelectItem value="Preta">Preta</SelectItem>
-                  <SelectItem value="Amarela">Amarela</SelectItem>
-                  <SelectItem value="Indígena">Indígena</SelectItem>
-                  <SelectItem value="Prefiro não informar">Prefiro não informar</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="regiao">Região de Origem</Label>
+                <Select 
+                  value={formData.regiao} 
+                  onValueChange={(value) => setFormData({ ...formData, regiao: value })}
+                  disabled={true}
+                >
+                  <SelectTrigger className="opacity-70">
+                    <SelectValue placeholder="Preenchida automaticamente" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Norte">Norte</SelectItem>
+                    <SelectItem value="Nordeste">Nordeste</SelectItem>
+                    <SelectItem value="Centro-Oeste">Centro-Oeste</SelectItem>
+                    <SelectItem value="Sudeste">Sudeste</SelectItem>
+                    <SelectItem value="Sul">Sul</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  A região é preenchida automaticamente baseada no estado selecionado
+                </p>
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="experiencia_bancas">Experiência em Bancas</Label>
-              <Select value={formData.experiencia_bancas} onValueChange={(value) => setFormData({ ...formData, experiencia_bancas: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione (opcional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Nenhuma">Nenhuma</SelectItem>
-                  <SelectItem value="1-2 anos">1-2 anos</SelectItem>
-                  <SelectItem value="3-5 anos">3-5 anos</SelectItem>
-                  <SelectItem value="5+ anos">5+ anos</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="pertencimentoRacial">Pertencimento Racial</Label>
+                <Select value={formData.pertencimento_racial} onValueChange={(value) => setFormData({ ...formData, pertencimento_racial: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione (opcional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Preto">Preto</SelectItem>
+                    <SelectItem value="Parda">Parda</SelectItem>
+                    <SelectItem value="Indígena">Indígena</SelectItem>
+                    <SelectItem value="Branco">Branco</SelectItem>
+                    <SelectItem value="Amarelo">Amarelo</SelectItem>
+                    <SelectItem value="Outro">Outro</SelectItem>
+                    <SelectItem value="Prefiro não responder">Prefiro não responder</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-            {/* LGPD Compliance Card */}
-            <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 space-y-3">
-              <div className="flex items-start gap-3">
-                <Shield className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                <div className="space-y-2 text-sm">
-                  <h4 className="font-semibold text-blue-900 dark:text-blue-100">
-                    Segurança e Privacidade - Conformidade com LGPD
-                  </h4>
-                  <p className="text-blue-700 dark:text-blue-300">
-                    Todas as medidas de segurança seguem as melhores práticas e estão em 
-                    conformidade com a Lei Geral de Proteção de Dados (LGPD).
+              <div className="space-y-2">
+                <Label htmlFor="experienciaBancas">Experiência com Bancas de Heteroidentificação</Label>
+                <Select value={formData.experiencia_bancas} onValueChange={(value) => setFormData({ ...formData, experiencia_bancas: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione (opcional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="É minha primeira formação">É minha primeira formação</SelectItem>
+                    <SelectItem value="Já participo de Bancas de heteroidentificação">Já participo de Bancas de heteroidentificação</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-start space-x-2 border border-border rounded-md p-4 bg-muted/30">
+                <Checkbox 
+                  id="consent" 
+                  checked={formData.consent}
+                  onCheckedChange={(checked) => setFormData({ ...formData, consent: checked as boolean })}
+                />
+                <div className="grid gap-1.5 leading-none">
+                  <label
+                    htmlFor="consent"
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  >
+                    Concordo com os termos
+                  </label>
+                  <p className="text-xs text-muted-foreground">
+                    Confirmo que li e aceito os termos de uso de dados da plataforma Fenotypo, 
+                    conforme a Lei Geral de Proteção de Dados (LGPD). Entendo que meus dados 
+                    serão utilizados exclusivamente para fins educacionais e análise estatística anônima.
                   </p>
                 </div>
               </div>
-              
-              <div className="flex items-start gap-3 bg-white dark:bg-gray-900 rounded p-3 border border-blue-200 dark:border-blue-800">
-                <Checkbox 
-                  id="consent"
-                  checked={formData.consent}
-                  onCheckedChange={(checked) => setFormData({...formData, consent: checked as boolean})}
-                  required
-                />
-                <Label htmlFor="consent" className="text-xs leading-relaxed cursor-pointer">
-                  Li e concordo com o <strong>uso anônimo dos meus dados</strong> para estudos 
-                  acadêmicos e aprimoramento dos processos de heteroidentificação. Estou ciente 
-                  de que todas as informações são tratadas em conformidade com a LGPD.
-                </Label>
-              </div>
-            </div>
 
-            <Button type="submit" className="w-full" disabled={loading || !formData.consent}>
-              {loading ? 'Cadastrando...' : 'Cadastrar'}
-            </Button>
-
-              <div className="text-center text-sm">
-                <p className="text-muted-foreground">
-                  Já possui cadastro?{' '}
-                  <button
-                    type="button"
-                    onClick={() => navigateWithSession(`/training/login`, {
-                      additionalParams: finalTrainingId ? { trainingId: finalTrainingId } : {}
-                    })}
-                    className="text-primary hover:underline"
-                  >
-                    Fazer login
-                  </button>
-                </p>
-              </div>
-              
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setCurrentStep(currentStep - 1)}
-                className="w-full"
+              <Button 
+                type="submit" 
+                className="w-full" 
+                disabled={loading || !formData.consent}
               >
-                <ChevronLeft className="w-4 h-4 mr-2" />
-                Voltar
+                {loading ? 'Cadastrando...' : 'Finalizar Cadastro'}
               </Button>
             </form>
           )}
