@@ -96,24 +96,60 @@ export default function TrainingAccess() {
         if (participantData) {
           setIsParticipant(true);
           
-          // 4. Buscar sessão ativa do treinamento
-          const { data: sessionData } = await supabase
-            .from('sessions')
-            .select('*')
-            .eq('training_id', trainingId)
-            .in('session_status', ['waiting', 'active'])
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
+          // 4. Buscar sessão específica ou ativa do treinamento
+          let sessionData: Session | null = null;
+
+          // 4a. Se veio sessionId específico nos query params, buscar ESSA sessão
+          if (sessionIdFromQuery) {
+            console.log('[TrainingAccess] Buscando sessão específica:', sessionIdFromQuery);
+            
+            const { data, error } = await supabase
+              .from('sessions')
+              .select('*')
+              .eq('id', sessionIdFromQuery)
+              .eq('training_id', trainingId) // Garantir que pertence ao training correto
+              .maybeSingle();
+
+            if (error) {
+              console.error('[TrainingAccess] Erro ao buscar sessão específica:', error);
+            } else if (data) {
+              sessionData = data;
+              console.log('[TrainingAccess] Sessão específica encontrada:', data.id, data.session_status);
+            } else {
+              console.warn('[TrainingAccess] Sessão específica não encontrada, buscando sessão ativa genérica');
+            }
+          }
+
+          // 4b. Se não veio sessionId OU não encontrou, buscar sessão ativa do treinamento
+          if (!sessionData) {
+            console.log('[TrainingAccess] Buscando sessão ativa genérica do treinamento');
+            
+            const { data } = await supabase
+              .from('sessions')
+              .select('*')
+              .eq('training_id', trainingId)
+              .in('session_status', ['waiting', 'active'])
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+
+            sessionData = data;
+          }
 
           setActiveSession(sessionData);
 
-          // 5. Redirecionar baseado no status da sessão
+          // 5. Redirecionar baseado no status da sessão usando rota canônica
           if (sessionData) {
+            const params = new URLSearchParams();
+            params.set('sessionId', sessionData.id);
+            params.set('trainingId', trainingId!);
+
             if (sessionData.session_status === 'waiting') {
-              navigate(`/training/${trainingId}/session/${sessionData.id}/antessala`);
+              console.log('[TrainingAccess] Redirecionando para antessala:', `/antessala?${params.toString()}`);
+              navigate(`/antessala?${params.toString()}`);
               return;
             } else if (sessionData.session_status === 'active') {
+              console.log('[TrainingAccess] Redirecionando para treino:', `/treino/${sessionData.id}`);
               navigate(`/treino/${sessionData.id}`);
               return;
             }
@@ -163,11 +199,17 @@ export default function TrainingAccess() {
         (payload) => {
           const newSession = payload.new as Session;
           if (newSession.session_status === 'waiting') {
+            const params = new URLSearchParams();
+            params.set('sessionId', newSession.id);
+            params.set('trainingId', trainingId);
+            
+            console.log('[TrainingAccess] Nova sessão criada, redirecionando:', `/antessala?${params.toString()}`);
+            
             toast({
               title: 'Sessão criada!',
               description: 'Redirecionando para a sala de espera...',
             });
-            navigate(`/training/${trainingId}/session/${newSession.id}/antessala`);
+            navigate(`/antessala?${params.toString()}`);
           }
         }
       )
