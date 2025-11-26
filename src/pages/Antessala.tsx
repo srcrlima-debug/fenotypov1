@@ -231,7 +231,14 @@ export default function Antessala() {
       // ✅ Tudo validado, carregar sessão
       console.log('[Antessala] Sessão válida carregada:', session.id);
       setSessionData(session);
+      console.log('[Antessala] sessionData setado:', { 
+        id: session.id, 
+        nome: session.nome, 
+        session_status: session.session_status, 
+        training_id: session.training_id 
+      });
       setLoading(false);
+      console.log('[Antessala] loading setado para false');
 
       if (session.session_status === "active") {
         playStartSound();
@@ -328,6 +335,7 @@ export default function Antessala() {
   }, [sessionId, userName]);
 
   if (loading) {
+    console.log('[Antessala] Retornando loading spinner');
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
@@ -339,6 +347,7 @@ export default function Antessala() {
   }
 
   if (!sessionData) {
+    console.log('[Antessala] Retornando erro - sessionData ausente');
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center p-4">
         <Card className="w-full max-w-2xl shadow-2xl border-2">
@@ -373,6 +382,12 @@ export default function Antessala() {
       </div>
     );
   }
+
+  console.log('[Antessala] Renderizando componente com:', { 
+    loading, 
+    sessionData: sessionData ? 'presente' : 'ausente', 
+    user: user ? 'presente' : 'ausente' 
+  });
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
