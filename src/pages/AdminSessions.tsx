@@ -60,57 +60,59 @@ export default function AdminSessions() {
 
   const loadSessions = async () => {
     try {
-      // Aplicar filtros na query
+      setLoading(true);
+
       let query = supabase
         .from("sessions")
-        .select(`
-          *,
-          participants:training_participants(count)
-        `, { count: 'exact' });
+        .select('*', { count: 'exact' })
+        .range((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage - 1);
 
-      // Filtros
       if (statusFilter !== "all") {
         query = query.eq("session_status", statusFilter);
       }
+
       if (dateFilter) {
         query = query.eq("data", dateFilter);
       }
+
       if (searchQuery) {
         query = query.ilike("nome", `%${searchQuery}%`);
       }
 
-      // Ordenação
-      let orderColumn = 'created_at';
-      if (sortBy === 'nome') orderColumn = 'nome';
-      else if (sortBy === 'data') orderColumn = 'data';
-      else if (sortBy === 'status') orderColumn = 'session_status';
-      
-      query = query.order(orderColumn, { ascending: sortOrder === 'asc' });
-
-      // Paginação
-      const from = (currentPage - 1) * itemsPerPage;
-      const to = from + itemsPerPage - 1;
-
-      const { data, error, count } = await query.range(from, to);
-
-      if (error) throw error;
-      
-      let sessionsData = data || [];
-      
-      // Ordenação por participantes (não pode ser feita no banco)
-      if (sortBy === 'participants') {
-        sessionsData = sessionsData.sort((a, b) => {
-          const countA = a.participants?.[0]?.count || 0;
-          const countB = b.participants?.[0]?.count || 0;
-          return sortOrder === 'asc' ? countA - countB : countB - countA;
-        });
+      if (sortBy !== "participants") {
+        query = query.order(sortBy, { ascending: sortOrder === "asc" });
       }
+
+      const { data, error, count } = await query;
       
-      setSessions(sessionsData);
+      if (error) throw error;
+
+      const sessionsWithCounts = await Promise.all(
+        (data || []).map(async (session) => {
+          const { count: participantCount } = await supabase
+            .from("training_participants")
+            .select("*", { count: "exact", head: true })
+            .eq("training_id", session.training_id || "");
+          
+          return { ...session, participant_count: participantCount || 0 };
+        })
+      );
+
+      if (sortBy === "participants") {
+        sessionsWithCounts.sort((a, b) => 
+          sortOrder === "asc" 
+            ? a.participant_count - b.participant_count
+            : b.participant_count - a.participant_count
+        );
+      }
+
+      setSessions(sessionsWithCounts);
       setTotalCount(count || 0);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error loading sessions:", error);
-      toast.error("Erro ao carregar sessions");
+      toast.error("Erro ao carregar sessões", {
+        description: error.message
+      });
     } finally {
       setLoading(false);
     }
@@ -634,16 +636,12 @@ export default function AdminSessions() {
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
         {sessions.length === 0 && !loading ? (
-          <Card className="col-span-full animate-fade-slide-up">
+          <Card className="col-span-full animate-fade-slide-up border-dashed">
             <CardContent className="flex flex-col items-center justify-center py-12">
-              <p className="text-muted-foreground mb-4">Nenhuma sessão criada ainda</p>
-              <Button 
-                onClick={() => setCreateDialogOpen(true)}
-                className="hover:scale-105 transition-transform duration-300"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Criar Primeira Sessão
-              </Button>
+              <p className="text-muted-foreground mb-2 text-lg">Nenhuma sessão criada ainda</p>
+              <p className="text-sm text-muted-foreground">
+                Use o botão "Nova Sessão" acima para criar sua primeira sessão de treinamento.
+              </p>
             </CardContent>
           </Card>
         ) : (
