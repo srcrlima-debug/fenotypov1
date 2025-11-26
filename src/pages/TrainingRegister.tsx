@@ -3,6 +3,7 @@ import { useNavigate, useParams, useSearchParams, Link } from 'react-router-dom'
 import { z } from 'zod';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSessionNavigation } from '@/hooks/useSessionNavigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -32,11 +33,23 @@ export default function TrainingRegister() {
   const { trainingId: trainingIdParam } = useParams<{ trainingId: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { user, loading: authLoading } = useAuth();
   
-  // Priorizar query params sobre URL params
-  const trainingId = searchParams.get('trainingId') || trainingIdParam;
-  const sessionId = searchParams.get('sessionId');
-  const { user } = useAuth();
+  const {
+    sessionId,
+    trainingId: trainingIdFromHook,
+    isValidSessionId,
+    navigateWithSession,
+    logAccess
+  } = useSessionNavigation({
+    autoRedirectIfAuthenticated: true,
+    antessalaPath: '/antessala'
+  });
+  
+  // Priorizar hook > query params > URL params
+  const trainingIdFromQuery = searchParams.get('trainingId');
+  const finalTrainingId = trainingIdFromHook || trainingIdFromQuery || trainingIdParam;
+  
   const [loading, setLoading] = useState(false);
   const [training, setTraining] = useState<any>(null);
   const [loadingTraining, setLoadingTraining] = useState(true);
@@ -55,24 +68,37 @@ export default function TrainingRegister() {
     consent: false
   });
 
+  // Validar sessionId se presente
   useEffect(() => {
-    if (user && trainingId) {
+    if (sessionId && !isValidSessionId) {
+      toast.error('Link de acesso inválido. Solicite um novo link ao administrador.');
+      logAccess('invalid_sessionid_on_register', { 
+        error: 'Invalid UUID format',
+        trainingId: finalTrainingId 
+      });
+    }
+  }, [sessionId, isValidSessionId, logAccess, finalTrainingId]);
+
+  useEffect(() => {
+    if (authLoading) return; // Aguardar auth carregar!
+    
+    if (user && finalTrainingId) {
       checkExistingParticipation();
     }
-  }, [user, trainingId]);
+  }, [user, finalTrainingId, authLoading]);
 
   useEffect(() => {
     loadTraining();
-  }, [trainingId]);
+  }, [finalTrainingId]);
 
   const loadTraining = async () => {
-    if (!trainingId) return;
+    if (!finalTrainingId) return;
 
     try {
       const { data, error } = await supabase
         .from('trainings')
         .select('*')
-        .eq('id', trainingId)
+        .eq('id', finalTrainingId)
         .single();
 
       if (error) throw error;
@@ -98,13 +124,15 @@ export default function TrainingRegister() {
       const { data } = await supabase
         .from('training_participants')
         .select('*')
-        .eq('training_id', trainingId)
+        .eq('training_id', finalTrainingId)
         .eq('user_id', user?.id)
         .maybeSingle();
 
       if (data) {
         toast.info('Você já está cadastrado neste treinamento');
-        navigate(`/training/${trainingId}/antessala`);
+        await navigateWithSession('/antessala', {
+          additionalParams: finalTrainingId ? { trainingId: finalTrainingId } : {}
+        });
       }
     } catch (error) {
       console.error('Error checking participation:', error);
@@ -269,14 +297,16 @@ export default function TrainingRegister() {
           email: sanitizedEmail,
           password: sanitizedPassword,
           options: {
-            emailRedirectTo: `${window.location.origin}/training/${trainingId}/login`
+            emailRedirectTo: `${window.location.origin}/training/login?trainingId=${finalTrainingId}`
           }
         });
 
         if (authError) {
           if (authError.message.includes('already registered')) {
             toast.error('Este email já está cadastrado. Faça login.');
-            navigate(`/training/${trainingId}/login${sessionId ? `?sessionId=${sessionId}` : ''}`);
+            await navigateWithSession(`/training/login`, {
+              additionalParams: finalTrainingId ? { trainingId: finalTrainingId } : {}
+            });
             return;
           }
           throw authError;
@@ -297,7 +327,7 @@ export default function TrainingRegister() {
       const { error: participantError } = await supabase
         .from('training_participants')
         .insert({
-          training_id: trainingId,
+          training_id: finalTrainingId,
           user_id: userId,
           email: sanitizedEmail,
           genero: formData.genero.trim(),
@@ -312,12 +342,10 @@ export default function TrainingRegister() {
 
       toast.success('Cadastro realizado com sucesso!');
       
-      // Redirecionar para antessala com sessionId se disponível
-      if (sessionId) {
-        navigate(`/antessala?sessionId=${sessionId}&trainingId=${trainingId}`);
-      } else {
-        navigate(`/training/${trainingId}/antessala`);
-      }
+      // Redirecionar para antessala usando o hook
+      await navigateWithSession('/antessala', {
+        additionalParams: finalTrainingId ? { trainingId: finalTrainingId } : {}
+      });
     } catch (error: any) {
       console.error('Error during registration:', error);
       toast.error(error.message || 'Erro ao realizar cadastro');
@@ -606,9 +634,15 @@ export default function TrainingRegister() {
               <div className="text-center text-sm">
                 <p className="text-muted-foreground">
                   Já possui cadastro?{' '}
-                  <Link to={`/training/${trainingId}/login${sessionId ? `?sessionId=${sessionId}` : ''}`} className="text-primary hover:underline">
+                  <button
+                    type="button"
+                    onClick={() => navigateWithSession(`/training/login`, {
+                      additionalParams: finalTrainingId ? { trainingId: finalTrainingId } : {}
+                    })}
+                    className="text-primary hover:underline"
+                  >
                     Fazer login
-                  </Link>
+                  </button>
                 </p>
               </div>
               

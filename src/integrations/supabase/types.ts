@@ -255,6 +255,48 @@ export type Database = {
         }
         Relationships: []
       }
+      session_access_logs: {
+        Row: {
+          access_type: string
+          created_at: string | null
+          error_code: string | null
+          error_message: string | null
+          id: string
+          session_id: string | null
+          status: string
+          training_id: string | null
+          url_params: Json | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          access_type: string
+          created_at?: string | null
+          error_code?: string | null
+          error_message?: string | null
+          id?: string
+          session_id?: string | null
+          status: string
+          training_id?: string | null
+          url_params?: Json | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          access_type?: string
+          created_at?: string | null
+          error_code?: string | null
+          error_message?: string | null
+          id?: string
+          session_id?: string | null
+          status?: string
+          training_id?: string | null
+          url_params?: Json | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       sessions: {
         Row: {
           created_at: string
