@@ -1,18 +1,21 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
 export default function SessionAccess() {
   const { sessionId } = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
 
+  const trainingIdFromQuery = searchParams.get('trainingId');
+
   useEffect(() => {
     handleSessionAccess();
-  }, [sessionId, user]);
+  }, [sessionId, user, trainingIdFromQuery]);
 
   const handleSessionAccess = async () => {
     if (!sessionId) {
@@ -22,28 +25,41 @@ export default function SessionAccess() {
     }
 
     try {
-      // Busca a sessão e o training_id vinculado
-      const { data: session, error: sessionError } = await supabase
-        .from('sessions')
-        .select('id, training_id, nome')
-        .eq('id', sessionId)
-        .single();
+      let trainingId = trainingIdFromQuery;
 
-      if (sessionError || !session) {
-        toast.error('Sessão não encontrada');
+      // Se o link não tiver trainingId, tentamos buscar apenas se o usuário já estiver logado
+      if (!trainingId && user) {
+        const { data: session, error: sessionError } = await supabase
+          .from('sessions')
+          .select('id, training_id, nome')
+          .eq('id', sessionId)
+          .single();
+
+        if (sessionError || !session) {
+          console.error('Erro ao carregar sessão:', sessionError);
+          toast.error('Sessão não encontrada');
+          navigate('/');
+          return;
+        }
+
+        if (!session.training_id) {
+          toast.error('Sessão sem treinamento vinculado');
+          navigate('/');
+          return;
+        }
+
+        trainingId = session.training_id;
+      }
+
+      if (!trainingId) {
+        toast.error('Treinamento não encontrado para esta sessão');
         navigate('/');
         return;
       }
 
-      if (!session.training_id) {
-        toast.error('Sessão sem treinamento vinculado');
-        navigate('/');
-        return;
-      }
-
-      // Se usuário não está logado, redireciona para registro
+      // Se usuário não está logado, redireciona direto para o cadastro
       if (!user) {
-        navigate(`/training/register?trainingId=${session.training_id}&sessionId=${sessionId}`);
+        navigate(`/training/register?trainingId=${trainingId}&sessionId=${sessionId}`);
         return;
       }
 
@@ -51,7 +67,7 @@ export default function SessionAccess() {
       const { data: participant, error: participantError } = await supabase
         .from('training_participants')
         .select('id')
-        .eq('training_id', session.training_id)
+        .eq('training_id', trainingId)
         .eq('user_id', user.id)
         .maybeSingle();
 
@@ -61,12 +77,12 @@ export default function SessionAccess() {
 
       // Se não está registrado, redireciona para registro
       if (!participant) {
-        navigate(`/training/register?trainingId=${session.training_id}&sessionId=${sessionId}`);
+        navigate(`/training/register?trainingId=${trainingId}&sessionId=${sessionId}`);
         return;
       }
 
-      // Usuário já está registrado, vai para antessala
-      navigate(`/antessala?sessionId=${sessionId}`);
+      // Usuário já está registrado, vai para antessala com sessionId e trainingId
+      navigate(`/antessala?sessionId=${sessionId}&trainingId=${trainingId}`);
     } catch (error: any) {
       console.error('Error in session access:', error);
       toast.error('Erro ao acessar sessão');
