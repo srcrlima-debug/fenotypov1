@@ -253,6 +253,8 @@ export const useSessionNavigation = (config?: UseSessionNavigationConfig) => {
     validateSessionId,
     clearSessionParams,
     logAccess,
-    authLoading
+    authLoading,
+    checkParticipation,
+    checkIsAdmin
   };
 };
