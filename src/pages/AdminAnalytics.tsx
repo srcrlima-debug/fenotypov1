@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { toast as sonnerToast } from 'sonner';
+import JSZip from 'jszip';
 import { 
   ArrowLeft, 
   Users, 
@@ -15,7 +16,10 @@ import {
   ChartPie,
   TriangleAlert,
   FileText,
-  Activity
+  Activity,
+  ArrowUp,
+  ArrowDown,
+  FileArchive
 } from 'lucide-react';
 import { Header } from '@/components/Header';
 import {
@@ -99,6 +103,13 @@ interface HeatmapData {
   label: string;
 }
 
+interface ComparisonStats {
+  current: number;
+  previous: number;
+  change: number;
+  percentChange: number;
+}
+
 const COLORS = ['#10b981', '#ef4444', '#f59e0b', '#3b82f6', '#8b5cf6', '#ec4899'];
 
 const AdminAnalytics = () => {
@@ -109,6 +120,13 @@ const AdminAnalytics = () => {
   const [session, setSession] = useState<SessionData | null>(null);
   const [loading, setLoading] = useState(true);
   const [comparisonPeriod, setComparisonPeriod] = useState<'month' | 'year'>('month');
+  
+  // Comparison stats
+  const [totalStatsComparison, setTotalStatsComparison] = useState<{
+    participantes: ComparisonStats | null;
+    avaliacoes: ComparisonStats | null;
+    deferimento: ComparisonStats | null;
+  }>({ participantes: null, avaliacoes: null, deferimento: null });
   
   // Chart refs for export
   const generoChartRef = useRef<HTMLDivElement>(null);
@@ -488,6 +506,58 @@ const AdminAnalytics = () => {
       console.error("Error exporting chart:", error);
       sonnerToast.error("Erro ao exportar gráfico");
     }
+  };
+
+  const exportAllChartsAsZip = async () => {
+    try {
+      const zip = new JSZip();
+      const charts = [
+        { ref: generoChartRef, name: 'analise-genero' },
+        { ref: racaChartRef, name: 'analise-raca' },
+        { ref: regiaoChartRef, name: 'analise-regiao' },
+        { ref: experienciaChartRef, name: 'analise-experiencia' }
+      ];
+
+      for (const chart of charts) {
+        if (chart.ref.current) {
+          const svg = chart.ref.current.querySelector("svg");
+          if (svg) {
+            const serializer = new XMLSerializer();
+            let source = serializer.serializeToString(svg);
+            if (!source.match(/^<\?xml/)) {
+              source = '<?xml version="1.0" standalone="no"?>\r\n' + source;
+            }
+            zip.file(`${chart.name}.svg`, source);
+          }
+        }
+      }
+
+      const content = await zip.generateAsync({ type: 'blob' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(content);
+      link.download = `graficos-analytics-${new Date().toISOString().split('T')[0]}.zip`;
+      link.click();
+
+      sonnerToast.success("Todos os gráficos exportados com sucesso!");
+    } catch (error) {
+      console.error("Error exporting charts:", error);
+      sonnerToast.error("Erro ao exportar gráficos");
+    }
+  };
+
+  const renderChangeIndicator = (comparison: ComparisonStats | null) => {
+    if (!comparison) return null;
+    
+    const isPositive = comparison.change >= 0;
+    const Icon = isPositive ? ArrowUp : ArrowDown;
+    const colorClass = isPositive ? 'text-success' : 'text-destructive';
+
+    return (
+      <div className={`flex items-center gap-1 text-sm ${colorClass}`}>
+        <Icon className="w-4 h-4" />
+        <span>{Math.abs(comparison.percentChange).toFixed(1)}%</span>
+      </div>
+    );
   };
 
   // Helper function to create bar chart on canvas
@@ -943,6 +1013,19 @@ const AdminAnalytics = () => {
             </div>
           </div>
           <div className="flex gap-2">
+            <Select value={comparisonPeriod} onValueChange={(value: 'month' | 'year') => setComparisonPeriod(value)}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="month">Comparar com mês anterior</SelectItem>
+                <SelectItem value="year">Comparar com ano anterior</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button onClick={exportAllChartsAsZip} variant="outline">
+              <FileArchive className="w-4 h-4 mr-2" />
+              Exportar Todos (ZIP)
+            </Button>
             <Button onClick={handleGeneratePDF} variant="outline">
               <FileText className="w-4 h-4 mr-2" />
               Gerar PDF
