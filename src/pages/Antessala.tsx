@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,6 +14,7 @@ import { AntessalaParticipantsMonitor } from "@/components/AntessalaParticipants
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import Autoplay from "embla-carousel-autoplay";
 import { cn } from "@/lib/utils";
+import { useSessionNavigation } from "@/hooks/useSessionNavigation";
 
 interface SessionData {
   id: string;
@@ -26,15 +27,20 @@ interface SessionData {
 }
 
 export default function Antessala() {
-  const { sessionId: sessionIdParam, trainingId: trainingIdParam } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   
-  // Priorizar query params sobre URL params
-  const sessionId = searchParams.get('sessionId') || sessionIdParam;
-  const trainingId = searchParams.get('trainingId') || trainingIdParam;
+  // ✅ CORREÇÃO: Extrair APENAS de query params (fonte única)
+  const sessionId = searchParams.get('sessionId');
+  const trainingId = searchParams.get('trainingId');
+  
   const { user } = useAuth();
   const { toast } = useToast();
+  
+  // ✅ Usar useSessionNavigation para validação
+  const { validateSessionId, logAccess } = useSessionNavigation({
+    autoRedirectIfAuthenticated: false
+  });
   const [sessionData, setSessionData] = useState<SessionData | null>(null);
   const [userName, setUserName] = useState<string>("");
   const [loading, setLoading] = useState(true);
@@ -127,84 +133,45 @@ export default function Antessala() {
 
   useEffect(() => {
     const loadSession = async () => {
-      if (!sessionId && trainingId) {
-        console.log("No sessionId in URL, searching for active session in training:", trainingId);
-        
-        if (!user) {
-          toast({
-            title: "Login necessário",
-            description: "Faça login para acessar este treinamento",
-          });
-          navigate(`/training/${trainingId}/login`);
-          return;
-        }
-
-        const { data: participant } = await supabase
-          .from("training_participants")
-          .select("*")
-          .eq("training_id", trainingId)
-          .eq("user_id", user.id)
-          .maybeSingle();
-
-        if (!participant) {
-          toast({
-            title: "Cadastro necessário",
-            description: "Você precisa se cadastrar neste treinamento",
-          });
-          navigate(`/training/${trainingId}/register`);
-          return;
-        }
-
-        const { data: activeSession } = await supabase
-          .from("sessions")
-          .select("*")
-          .eq("training_id", trainingId)
-          .in("session_status", ["waiting", "active"])
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (activeSession) {
-          console.log("Active session found, updating URL:", activeSession.id);
-          window.history.replaceState(
-            null,
-            "",
-            `/training/${trainingId}/session/${activeSession.id}/antessala`
-          );
-          setSessionData(activeSession);
-          setLoading(false);
-
-          if (activeSession.session_status === "active") {
-            playStartSound();
-            setTimeout(() => {
-              navigate(`/treino/${activeSession.id}`);
-            }, 1000);
-          }
-          return;
-        } else {
-          console.log("No active session found, showing waiting screen");
-          setSessionData(null);
-          setLoading(false);
-          return;
-        }
-      }
-
-      if (!sessionId) {
-        console.error("No sessionId or trainingId provided");
+      // ✅ VALIDAÇÃO 1: sessionId E trainingId são obrigatórios
+      if (!sessionId || !trainingId) {
+        console.error('[Antessala] sessionId ou trainingId ausentes');
+        toast({
+          title: "Acesso Inválido",
+          description: "É necessário um link válido com ID de sessão e treinamento.",
+          variant: "destructive",
+        });
         navigate("/");
         return;
       }
 
-      // ✅ VALIDAÇÕES IMPLEMENTADAS (Etapa 3)
+      // ✅ VALIDAÇÃO 2: Validar formato UUID do sessionId
+      if (!validateSessionId(sessionId)) {
+        console.error('[Antessala] sessionId inválido:', sessionId);
+        toast({
+          title: "Link Corrompido",
+          description: "O link de acesso está inválido. Solicite um novo link.",
+          variant: "destructive",
+        });
+        await logAccess('invalid_sessionid_antessala', { 
+          error: 'Invalid UUID format',
+          trainingId 
+        });
+        navigate("/");
+        return;
+      }
+
+      // ✅ VALIDAÇÃO 3: Buscar sessão ESPECÍFICA (não genérica)
+      console.log('[Antessala] Buscando sessão:', sessionId);
       const { data: session, error } = await supabase
         .from("sessions")
         .select("*, training_id, created_by")
         .eq("id", sessionId)
         .maybeSingle();
 
-      // ✅ VALIDAÇÃO 1: Erro de query
+      // ✅ VALIDAÇÃO 4: Erro de query
       if (error) {
-        console.error("❌ Erro ao buscar sessão:", error.message, error);
+        console.error("❌ [Antessala] Erro ao buscar sessão:", error.message, error);
         toast({
           title: "Erro ao acessar sessão",
           description: "Não foi possível carregar os dados da sessão. Tente novamente.",
@@ -215,9 +182,9 @@ export default function Antessala() {
         return;
       }
 
-      // ✅ VALIDAÇÃO 2: Sessão não existe OU sem permissão (RLS bloqueou)
+      // ✅ VALIDAÇÃO 5: Sessão não existe OU sem permissão (RLS bloqueou)
       if (!session) {
-        console.error("❌ Sessão não encontrada ou acesso negado:", sessionId);
+        console.error("❌ [Antessala] Sessão não encontrada ou acesso negado:", sessionId);
         toast({
           title: "Acesso Negado",
           description: "Esta sessão não existe ou você não tem permissão para acessá-la.",
@@ -228,13 +195,27 @@ export default function Antessala() {
         return;
       }
 
-      // ✅ VALIDAÇÃO 3: ALERTA se órfã (não deveria mais existir)
+      // ✅ VALIDAÇÃO 6: Verificar se training_id bate com o esperado
+      if (session.training_id !== trainingId) {
+        console.error("❌ [Antessala] training_id da sessão não bate:", {
+          esperado: trainingId,
+          recebido: session.training_id
+        });
+        toast({
+          title: "Erro de Configuração",
+          description: "Esta sessão não pertence ao treinamento especificado.",
+          variant: "destructive",
+        });
+        navigate("/");
+        return;
+      }
+
+      // ✅ ALERTA: Sessão órfã (não deveria mais existir após migração)
       if (!session.training_id) {
-        console.error("⚠️ ALERTA CRÍTICO: Sessão órfã detectada:", {
+        console.error("⚠️ [Antessala] ALERTA CRÍTICO: Sessão órfã detectada:", {
           sessionId: session.id,
           sessionName: session.nome,
-          createdBy: session.created_by,
-          createdAt: session.created_at
+          createdBy: session.created_by
         });
 
         toast({
@@ -242,20 +223,29 @@ export default function Antessala() {
           description: "Esta sessão não está vinculada a um treinamento. Contate o suporte.",
           variant: "destructive",
         });
+        // ✅ Bloquear acesso a sessões órfãs
+        navigate("/");
+        return;
       }
 
-      // Continuar fluxo normal...
+      // ✅ Tudo validado, carregar sessão
+      console.log('[Antessala] Sessão válida carregada:', session.id);
       setSessionData(session);
       setLoading(false);
 
       if (session.session_status === "active") {
         playStartSound();
+        toast({
+          title: "Treinamento Iniciado!",
+          description: "Redirecionando para a sala de avaliação...",
+        });
         setTimeout(() => {
           navigate(`/treino/${session.id}`);
         }, 1000);
         return;
       }
 
+      // ✅ Setup realtime para updates
       const channel = supabase
         .channel(`session-${sessionId}`)
         .on(
@@ -267,20 +257,19 @@ export default function Antessala() {
             filter: `id=eq.${sessionId}`,
           },
           (payload) => {
-            console.log("Session updated:", payload);
+            console.log("[Antessala] Session updated:", payload);
             const updatedSession = payload.new as SessionData;
             setSessionData(updatedSession);
 
-            // Redirect to training when session becomes active
             if (updatedSession.session_status === "active") {
-              console.log("Session is now active, redirecting to training...");
+              console.log("[Antessala] Session is now active, redirecting...");
               playStartSound();
               toast({
                 title: "Treinamento Iniciado!",
-                description: "Redirecionando para a sala de avaliação...",
+                description: "Redirecionando...",
               });
               setTimeout(() => {
-                navigate(`/treino/${sessionId}?sessionId=${sessionId}&trainingId=${trainingId}`);
+                navigate(`/treino/${sessionId}`);
               }, 1000);
             }
           }
@@ -297,7 +286,7 @@ export default function Antessala() {
     }
 
     loadSession();
-  }, [sessionId, trainingId, user, navigate, playStartSound, loading]);
+  }, [sessionId, trainingId, user, navigate]);
 
   useEffect(() => {
     if (!carouselApi) return;
