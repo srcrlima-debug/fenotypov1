@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { useBadgeContext } from '@/contexts/BadgeContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,7 +22,6 @@ export default function SessionFeedback() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
-  const { checkBadges } = useBadgeContext();
 
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -186,10 +184,6 @@ export default function SessionFeedback() {
         // Reload badges to show in UI
         await loadData();
       }
-
-      // Check additional badges
-      await checkBadges('send_feedback', sessionId);
-      await checkBadges('check_all', sessionId);
 
       setSubmitted(true);
       toast({

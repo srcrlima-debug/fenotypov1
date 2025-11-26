@@ -192,34 +192,15 @@ All colors MUST be HSL.
     background-size: 1000px 100%;
   }
 
-  .tutorial-highlight {
-    position: relative;
-    z-index: 9997;
-    box-shadow: 0 0 0 4px hsl(var(--primary)), 0 0 0 6px hsl(var(--primary) / 0.3);
-    border-radius: 0.75rem;
-    animation: tutorial-pulse 2s ease-in-out infinite;
+  .scroll-reveal {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.6s ease-out, transform 0.6s ease-out;
   }
 
-  @keyframes tutorial-pulse {
-    0%, 100% {
-      box-shadow: 0 0 0 4px hsl(var(--primary)), 0 0 0 6px hsl(var(--primary) / 0.3);
-    }
-    50% {
-      box-shadow: 0 0 0 6px hsl(var(--primary)), 0 0 0 12px hsl(var(--primary) / 0.2);
-    }
-  }
-
-  @keyframes fade-in {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 1;
-    }
-  }
-
-  .animate-fade-in {
-    animation: fade-in 0.3s ease-out;
+  .scroll-reveal.revealed {
+    opacity: 1;
+    transform: translateY(0);
   }
 
   .page-transition {
@@ -301,6 +282,56 @@ All colors MUST be HSL.
     }
   }
 
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes slide-in {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes scale-in {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  .animate-pulse-zoom {
+    animation: pulse-zoom 2s ease-in-out infinite;
+  }
+
+  .animate-bounce-slow {
+    animation: bounce-slow 2s ease-in-out infinite;
+  }
+
+  .animate-fade-in {
+    animation: fade-in 0.4s ease-out forwards;
+  }
+
+  .animate-slide-in {
+    animation: slide-in 0.5s ease-out forwards;
+  }
+
+  .animate-scale-in {
+    animation: scale-in 0.4s ease-out forwards;
+  }
   .dark {
     --background: 0 0% 9%;
     --foreground: 0 0% 98%;
@@ -388,16 +419,4 @@ All colors MUST be HSL.
   .icon-bounce {
     animation: bounce-gentle 2s ease-in-out infinite;
   }
-}
-
-/* Scroll reveal animations */
-.scroll-reveal {
-  opacity: 0;
-  transform: translateY(20px);
-  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
-}
-
-.scroll-reveal.revealed {
-  opacity: 1;
-  transform: translateY(0);
 }

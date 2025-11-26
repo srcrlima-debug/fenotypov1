@@ -3,8 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Header } from "@/components/Header";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useAuth } from "@/contexts/AuthContext";
-import { OnboardingTutorial } from "@/components/OnboardingTutorial";
-import { BookOpenText, LayoutDashboard, Sparkles } from "lucide-react";
+import { BookOpenText, LayoutDashboard } from "lucide-react";
 import logoVertical from "@/assets/logo-fenotypo-vert-2.png";
 import fistIcon from "@/assets/fist-icon.png";
 
@@ -18,7 +17,6 @@ const Home = () => {
   return (
     <>
       <Header />
-      <OnboardingTutorial />
       <div className="min-h-[calc(100vh-4rem)] flex flex-col items-center justify-center p-6 bg-[#f5f1eb] page-transition">
         <div className="max-w-3xl w-full text-center space-y-4">
           
@@ -56,7 +54,6 @@ const Home = () => {
           >
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 max-w-2xl mx-auto">
               <Button
-                data-tour="como-funciona"
                 onClick={() => navigate("/como-funciona")}
                 size="lg"
                 className="button-3d h-20 w-full sm:flex-1 text-xl font-bold bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-2xl rounded-xl border-4 border-green-700 transition-all duration-300 group"
@@ -115,18 +112,6 @@ const Home = () => {
               <span>©</span>
               <span>Todos os direitos protegidos</span>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                localStorage.removeItem("fenotypo-tutorial-completed");
-                window.location.reload();
-              }}
-              className="mt-4 text-xs text-muted-foreground hover:text-foreground opacity-50 hover:opacity-100"
-            >
-              <Sparkles className="w-3 h-3 mr-1" />
-              Reiniciar Tutorial
-            </Button>
           </div>
         </footer>
       </div>

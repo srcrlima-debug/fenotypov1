@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { useBadgeContext } from "@/contexts/BadgeContext";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { CountdownCircleTimer } from "react-countdown-circle-timer";
@@ -41,7 +40,6 @@ export default function SessionTraining() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
-  const { checkBadges } = useBadgeContext();
 
   const [sessionData, setSessionData] = useState<SessionData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -341,11 +339,6 @@ export default function SessionTraining() {
     }
 
     console.log("Avaliacao saved successfully");
-    
-    // Check for new badges after each evaluation
-    await checkBadges('first_evaluation', sessionId);
-    await checkBadges('check_all', sessionId);
-    
     return true;
   };
 
@@ -359,7 +352,6 @@ export default function SessionTraining() {
       // Check if user completed all 30 evaluations
       if (newTotal >= 30) {
         setUserCompletedEvaluations(true);
-        await checkBadges('complete_session', sessionId);
         toast({
           title: "🎉 Parabéns!",
           description: "Você completou todas as 30 avaliações! Agora você pode deixar seu feedback sobre a experiência.",
