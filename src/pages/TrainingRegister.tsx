@@ -42,7 +42,7 @@ export default function TrainingRegister() {
     navigateWithSession,
     logAccess
   } = useSessionNavigation({
-    autoRedirectIfAuthenticated: true,
+    autoRedirectIfAuthenticated: false, // Disabled to allow registration
     antessalaPath: '/antessala'
   });
   

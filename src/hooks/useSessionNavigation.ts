@@ -139,62 +139,32 @@ export const useSessionNavigation = (config?: UseSessionNavigationConfig) => {
   }, []);
 
   /**
-   * Guard de autenticação automático
+   * Verifica se usuário é admin
    */
-  useEffect(() => {
-    if (!autoRedirectIfAuthenticated) return;
-    if (!hasActiveSession) return;
-    if (authLoading) return; // CRÍTICO: Aguardar auth carregar!
+  const checkIsAdmin = useCallback(async (userId: string): Promise<boolean> => {
+    try {
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .eq('role', 'admin')
+        .maybeSingle();
 
-    const executeAutoRedirect = async () => {
-      await logAccess('verificando_auto_redirect');
-
-      if (!user) {
-        await logAccess('usuario_nao_autenticado');
-        return;
+      if (error) {
+        console.error('[SESSION_NAV] Erro ao verificar admin:', error);
+        return false;
       }
 
-      await logAccess('usuario_autenticado_detectado', { trainingId });
+      return !!data;
+    } catch (error) {
+      console.error('[SESSION_NAV] Exceção ao verificar admin:', error);
+      return false;
+    }
+  }, []);
 
-      // Verificar participação
-      if (trainingId) {
-        const isParticipant = await checkParticipation(user.id, trainingId);
-        
-        if (!isParticipant) {
-          await logAccess('usuario_nao_participante');
-          toast.error('Você precisa se cadastrar neste treinamento primeiro.');
-          return;
-        }
-      }
-
-      // Evitar loop de redirect
-      if (window.location.pathname === antessalaPath) {
-        await logAccess('ja_na_antessala');
-        return;
-      }
-
-      await logAccess('redirecionando_para_antessala', { trainingId });
-
-      const params = new URLSearchParams();
-      params.set('sessionId', sessionId!);
-      params.set('trainingId', trainingId!);
-
-      navigate(`${antessalaPath}?${params.toString()}`, { replace: true });
-    };
-
-    executeAutoRedirect();
-  }, [
-    autoRedirectIfAuthenticated, 
-    hasActiveSession, 
-    sessionId, 
-    trainingId,
-    antessalaPath,
-    navigate,
-    checkParticipation,
-    logAccess,
-    user,
-    authLoading // Dependência crítica!
-  ]);
+  /**
+   * Guard de autenticação automático - REMOVIDO (causava race condition)
+   */
 
   /**
    * Navega para um caminho preservando automaticamente sessionId e trainingId
