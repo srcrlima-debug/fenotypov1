@@ -5,7 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { toast as sonnerToast } from 'sonner';
-import { ArrowLeft, Filter, Users, TrendingUp, AlertCircle, Download } from 'lucide-react';
+import { ArrowLeft, Filter, Users, TrendingUp, AlertCircle, Download, ArrowUp, ArrowDown, FileArchive } from 'lucide-react';
+import JSZip from 'jszip';
 import { Header } from '@/components/Header';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
@@ -24,6 +25,13 @@ interface DemographicData {
   total: number;
   percentDeferido: number;
   percentIndeferido: number;
+}
+
+interface ComparisonStats {
+  current: number;
+  previous: number;
+  change: number;
+  percentChange: number;
 }
 
 interface CrossAnalysis {
@@ -47,6 +55,12 @@ const AdminDemographicDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [sessionName, setSessionName] = useState('');
   const [comparisonPeriod, setComparisonPeriod] = useState<'month' | 'year'>('month');
+  const [sessionDate, setSessionDate] = useState<string>('');
+  
+  // Comparison stats
+  const [participantComparison, setParticipantComparison] = useState<ComparisonStats | null>(null);
+  const [avaliacoesComparison, setAvaliacoesComparison] = useState<ComparisonStats | null>(null);
+  const [deferimentoComparison, setDeferimentoComparison] = useState<ComparisonStats | null>(null);
   
   // Chart refs for export
   const generoChartRef = useRef<HTMLDivElement>(null);
@@ -119,7 +133,7 @@ const AdminDemographicDashboard = () => {
   const fetchSessionData = async () => {
     const { data, error } = await supabase
       .from('sessions')
-      .select('nome')
+      .select('nome, data')
       .eq('id', sessionId)
       .single();
 
@@ -133,6 +147,75 @@ const AdminDemographicDashboard = () => {
     }
 
     setSessionName(data.nome);
+    setSessionDate(data.data);
+    
+    // Fetch comparison data
+    await fetchComparisonData(data.data);
+  };
+
+  const fetchComparisonData = async (currentDate: string) => {
+    try {
+      const current = new Date(currentDate);
+      let previousStart: Date;
+      let previousEnd: Date;
+
+      if (comparisonPeriod === 'month') {
+        previousStart = new Date(current.getFullYear(), current.getMonth() - 1, 1);
+        previousEnd = new Date(current.getFullYear(), current.getMonth(), 0);
+      } else {
+        previousStart = new Date(current.getFullYear() - 1, 0, 1);
+        previousEnd = new Date(current.getFullYear() - 1, 11, 31);
+      }
+
+      // Fetch previous period sessions
+      const { data: previousSessions, error: sessionsError } = await supabase
+        .from('sessions')
+        .select('id')
+        .gte('data', previousStart.toISOString().split('T')[0])
+        .lte('data', previousEnd.toISOString().split('T')[0]);
+
+      if (sessionsError) throw sessionsError;
+
+      if (previousSessions && previousSessions.length > 0) {
+        const sessionIds = previousSessions.map(s => s.id);
+        
+        // Fetch evaluations from previous period
+        const { data: prevAvaliacoes, error: avalError } = await supabase
+          .from('avaliacoes')
+          .select('resposta, user_id')
+          .in('session_id', sessionIds);
+
+        if (avalError) throw avalError;
+
+        const prevParticipants = new Set(prevAvaliacoes?.map(a => a.user_id) || []).size;
+        const prevTotal = prevAvaliacoes?.length || 0;
+        const prevDeferido = prevAvaliacoes?.filter(a => a.resposta === 'DEFERIDO').length || 0;
+        const prevTaxa = prevTotal > 0 ? (prevDeferido / prevTotal) * 100 : 0;
+
+        setParticipantComparison({
+          current: totalParticipantes,
+          previous: prevParticipants,
+          change: totalParticipantes - prevParticipants,
+          percentChange: prevParticipants > 0 ? ((totalParticipantes - prevParticipants) / prevParticipants) * 100 : 0
+        });
+
+        setAvaliacoesComparison({
+          current: totalAvaliacoes,
+          previous: prevTotal,
+          change: totalAvaliacoes - prevTotal,
+          percentChange: prevTotal > 0 ? ((totalAvaliacoes - prevTotal) / prevTotal) * 100 : 0
+        });
+
+        setDeferimentoComparison({
+          current: taxaDeferimento,
+          previous: prevTaxa,
+          change: taxaDeferimento - prevTaxa,
+          percentChange: prevTaxa > 0 ? ((taxaDeferimento - prevTaxa) / prevTaxa) * 100 : 0
+        });
+      }
+    } catch (error: any) {
+      console.error('Error fetching comparison data:', error);
+    }
   };
 
   const fetchDemographicData = async () => {
@@ -336,6 +419,58 @@ const AdminDemographicDashboard = () => {
     }
   };
 
+  const exportAllChartsAsZip = async () => {
+    try {
+      const zip = new JSZip();
+      const charts = [
+        { ref: generoChartRef, name: 'distribuicao-genero' },
+        { ref: racaChartRef, name: 'distribuicao-raca' },
+        { ref: regiaoChartRef, name: 'distribuicao-regiao' },
+        { ref: experienciaChartRef, name: 'distribuicao-experiencia' }
+      ];
+
+      for (const chart of charts) {
+        if (chart.ref.current) {
+          const svg = chart.ref.current.querySelector("svg");
+          if (svg) {
+            const serializer = new XMLSerializer();
+            let source = serializer.serializeToString(svg);
+            if (!source.match(/^<\?xml/)) {
+              source = '<?xml version="1.0" standalone="no"?>\r\n' + source;
+            }
+            zip.file(`${chart.name}.svg`, source);
+          }
+        }
+      }
+
+      const content = await zip.generateAsync({ type: 'blob' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(content);
+      link.download = `graficos-demograficos-${new Date().toISOString().split('T')[0]}.zip`;
+      link.click();
+
+      sonnerToast.success("Todos os gráficos exportados com sucesso!");
+    } catch (error) {
+      console.error("Error exporting charts:", error);
+      sonnerToast.error("Erro ao exportar gráficos");
+    }
+  };
+
+  const renderChangeIndicator = (comparison: ComparisonStats | null) => {
+    if (!comparison) return null;
+    
+    const isPositive = comparison.change >= 0;
+    const Icon = isPositive ? ArrowUp : ArrowDown;
+    const colorClass = isPositive ? 'text-success' : 'text-destructive';
+
+    return (
+      <div className={`flex items-center gap-1 text-sm ${colorClass}`}>
+        <Icon className="w-4 h-4" />
+        <span>{Math.abs(comparison.percentChange).toFixed(1)}%</span>
+      </div>
+    );
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -366,6 +501,21 @@ const AdminDemographicDashboard = () => {
                 <p className="text-muted-foreground">{sessionName}</p>
               </div>
             </div>
+            <div className="flex items-center gap-2">
+              <Select value={comparisonPeriod} onValueChange={(value: 'month' | 'year') => setComparisonPeriod(value)}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="month">Comparar com mês anterior</SelectItem>
+                  <SelectItem value="year">Comparar com ano anterior</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button onClick={exportAllChartsAsZip} variant="outline">
+                <FileArchive className="w-4 h-4 mr-2" />
+                Exportar Todos (ZIP)
+              </Button>
+            </div>
           </div>
 
           {/* Real-time indicator */}
@@ -378,37 +528,61 @@ const AdminDemographicDashboard = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-scale-in">
             <Card className="hover:shadow-lg transition-shadow">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <Users className="w-4 h-4 text-primary" />
-                  Total de Participantes
+                <CardTitle className="text-sm font-medium flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Users className="w-4 h-4 text-primary" />
+                    Total de Participantes
+                  </div>
+                  {renderChangeIndicator(participantComparison)}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold">{totalParticipantes}</div>
+                {participantComparison && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    vs {participantComparison.previous} no período anterior
+                  </p>
+                )}
               </CardContent>
             </Card>
 
             <Card className="hover:shadow-lg transition-shadow">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-success" />
-                  Total de Avaliações
+                <CardTitle className="text-sm font-medium flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4 text-success" />
+                    Total de Avaliações
+                  </div>
+                  {renderChangeIndicator(avaliacoesComparison)}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold">{totalAvaliacoes}</div>
+                {avaliacoesComparison && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    vs {avaliacoesComparison.previous} no período anterior
+                  </p>
+                )}
               </CardContent>
             </Card>
 
             <Card className="hover:shadow-lg transition-shadow">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 text-primary" />
-                  Taxa de Deferimento
+                <CardTitle className="text-sm font-medium flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 text-primary" />
+                    Taxa de Deferimento
+                  </div>
+                  {renderChangeIndicator(deferimentoComparison)}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-success">{taxaDeferimento.toFixed(1)}%</div>
+                {deferimentoComparison && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    vs {deferimentoComparison.previous.toFixed(1)}% no período anterior
+                  </p>
+                )}
               </CardContent>
             </Card>
           </div>
