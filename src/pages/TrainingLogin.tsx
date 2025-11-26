@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSessionNavigation } from '@/hooks/useSessionNavigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,35 +10,64 @@ import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function TrainingLogin() {
-  const { trainingId } = useParams<{ trainingId: string }>();
+  const { trainingId: trainingIdFromUrl } = useParams<{ trainingId: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [searchParams] = useSearchParams();
+  
+  const {
+    sessionId,
+    trainingId: trainingIdFromHook,
+    isValidSessionId,
+    navigateWithSession,
+    logAccess
+  } = useSessionNavigation({
+    autoRedirectIfAuthenticated: true,
+    antessalaPath: '/antessala'
+  });
+
   const redirectUrl = searchParams.get('redirect');
-  const sessionId = searchParams.get('sessionId');
+  const trainingIdFromQuery = searchParams.get('trainingId');
+  const finalTrainingId = trainingIdFromHook || trainingIdFromUrl || trainingIdFromQuery;
+
   const [loading, setLoading] = useState(false);
   const [training, setTraining] = useState<any>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
+  // Validar sessionId se presente
   useEffect(() => {
-    loadTraining();
-  }, [trainingId]);
+    if (sessionId && !isValidSessionId) {
+      toast.error('Link de acesso inválido. Solicite um novo link ao administrador.');
+      logAccess('invalid_sessionid_on_login', { 
+        error: 'Invalid UUID format',
+        trainingId: finalTrainingId 
+      });
+    }
+  }, [sessionId, isValidSessionId, logAccess, finalTrainingId]);
 
   useEffect(() => {
-    if (user && trainingId) {
+    if (finalTrainingId) {
+      loadTraining();
+    }
+  }, [finalTrainingId]);
+
+  useEffect(() => {
+    if (authLoading) return; // Aguardar auth carregar!
+    
+    if (user && finalTrainingId) {
       checkParticipation();
     }
-  }, [user, trainingId]);
+  }, [user, finalTrainingId, authLoading]);
 
   const loadTraining = async () => {
-    if (!trainingId) return;
+    if (!finalTrainingId) return;
 
     try {
       const { data, error } = await supabase
         .from('trainings')
         .select('*')
-        .eq('id', trainingId)
+        .eq('id', finalTrainingId)
         .single();
 
       if (error) throw error;
@@ -50,13 +80,13 @@ export default function TrainingLogin() {
   };
 
   const checkParticipation = async () => {
-    if (!user || !trainingId) return;
+    if (!user || !finalTrainingId) return;
 
     try {
       const { data, error } = await supabase
         .from('training_participants')
         .select('*')
-        .eq('training_id', trainingId)
+        .eq('training_id', finalTrainingId)
         .eq('user_id', user.id)
         .maybeSingle();
 
@@ -64,7 +94,9 @@ export default function TrainingLogin() {
 
       if (!data) {
         toast.info('Você precisa se cadastrar neste treinamento primeiro');
-        navigate(`/training/${trainingId}/register${sessionId ? `?sessionId=${sessionId}` : ''}`);
+        await navigateWithSession(`/training/register`, {
+          additionalParams: finalTrainingId ? { trainingId: finalTrainingId } : {}
+        });
         return;
       }
 
@@ -74,12 +106,9 @@ export default function TrainingLogin() {
         return;
       }
 
-      // Redireciona para antessala com sessionId se disponível
-      if (sessionId) {
-        navigate(`/antessala?sessionId=${sessionId}&trainingId=${trainingId}`);
-      } else {
-        navigate(`/training/${trainingId}/antessala`);
-      }
+      await navigateWithSession('/antessala', {
+        additionalParams: finalTrainingId ? { trainingId: finalTrainingId } : {}
+      });
     } catch (error) {
       console.error('Error checking participation:', error);
     }
@@ -90,6 +119,11 @@ export default function TrainingLogin() {
     setLoading(true);
 
     try {
+      if (!finalTrainingId) {
+        toast.error('ID do treinamento não encontrado');
+        return;
+      }
+
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password
@@ -107,7 +141,7 @@ export default function TrainingLogin() {
       // Get session to confirm user
       const { data: { session } } = await supabase.auth.getSession();
       
-      if (!session?.user || !trainingId) {
+      if (!session?.user) {
         toast.error('Erro ao obter sessão');
         return;
       }
@@ -118,23 +152,25 @@ export default function TrainingLogin() {
       const { data: participant } = await supabase
         .from('training_participants')
         .select('*')
-        .eq('training_id', trainingId)
+        .eq('training_id', finalTrainingId)
         .eq('user_id', session.user.id)
         .maybeSingle();
 
       if (!participant) {
         toast.info('Você precisa se cadastrar neste treinamento primeiro');
-        navigate(`/training/${trainingId}/register${sessionId ? `?sessionId=${sessionId}` : ''}`);
+        await navigateWithSession(`/training/register`, {
+          additionalParams: finalTrainingId ? { trainingId: finalTrainingId } : {}
+        });
         return;
       }
 
       // Redirect directly
       if (redirectUrl) {
         navigate(redirectUrl);
-      } else if (sessionId) {
-        navigate(`/antessala?sessionId=${sessionId}&trainingId=${trainingId}`);
       } else {
-        navigate(`/training/${trainingId}/antessala`);
+        await navigateWithSession('/antessala', {
+          additionalParams: finalTrainingId ? { trainingId: finalTrainingId } : {}
+        });
       }
       
     } catch (error: any) {
@@ -189,9 +225,15 @@ export default function TrainingLogin() {
             <div className="text-center text-sm space-y-2">
               <p className="text-muted-foreground">
                 Não possui cadastro?{' '}
-                <Link to={`/training/${trainingId}/register${sessionId ? `?sessionId=${sessionId}` : ''}`} className="text-primary hover:underline">
+                <button
+                  type="button"
+                  onClick={() => navigateWithSession(`/training/register`, {
+                    additionalParams: finalTrainingId ? { trainingId: finalTrainingId } : {}
+                  })}
+                  className="text-primary hover:underline"
+                >
                   Cadastre-se
-                </Link>
+                </button>
               </p>
               <p className="text-muted-foreground">
                 <Link to="/forgot-password" className="text-primary hover:underline">
