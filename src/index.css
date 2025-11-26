@@ -291,37 +291,6 @@ All colors MUST be HSL.
     }
   }
 
-  @keyframes fade-slide-up {
-    from {
-      opacity: 0;
-      transform: translateY(20px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  @keyframes fade-slide-in {
-    from {
-      opacity: 0;
-      transform: translateX(-20px);
-    }
-    to {
-      opacity: 1;
-      transform: translateX(0);
-    }
-  }
-
-  @keyframes float-gentle {
-    0%, 100% {
-      transform: translateY(0px);
-    }
-    50% {
-      transform: translateY(-10px);
-    }
-  }
-
   @keyframes slide-in {
     from {
       opacity: 0;
@@ -344,15 +313,6 @@ All colors MUST be HSL.
     }
   }
 
-  @keyframes shimmer {
-    0% {
-      background-position: -200% 0;
-    }
-    100% {
-      background-position: 200% 0;
-    }
-  }
-
   .animate-pulse-zoom {
     animation: pulse-zoom 2s ease-in-out infinite;
   }
@@ -365,18 +325,6 @@ All colors MUST be HSL.
     animation: fade-in 0.4s ease-out forwards;
   }
 
-  .animate-fade-slide-up {
-    animation: fade-slide-up 0.6s ease-out forwards;
-  }
-
-  .animate-fade-slide-in {
-    animation: fade-slide-in 0.5s ease-out forwards;
-  }
-
-  .animate-float-gentle {
-    animation: float-gentle 3s ease-in-out infinite;
-  }
-
   .animate-slide-in {
     animation: slide-in 0.5s ease-out forwards;
   }
@@ -384,11 +332,6 @@ All colors MUST be HSL.
   .animate-scale-in {
     animation: scale-in 0.4s ease-out forwards;
   }
-
-  .animate-shimmer {
-    animation: shimmer 2s linear infinite;
-  }
-
   .dark {
     --background: 0 0% 9%;
     --foreground: 0 0% 98%;
