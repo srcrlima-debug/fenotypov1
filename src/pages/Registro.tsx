@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
 import { getRegiaoFromEstado } from '@/lib/regionMapping';
+import { CheckCircle2 } from 'lucide-react';
 
 const registroSchema = z.object({
   email: z.string().email({ message: 'Email inválido' }),
@@ -43,21 +44,25 @@ const Registro = () => {
     experienciaBancas: '',
   });
   const [loading, setLoading] = useState(false);
+  const [fieldValidation, setFieldValidation] = useState({
+    email: false,
+    password: false,
+    confirmPassword: false,
+  });
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
   const { toast } = useToast();
 
-  // Get redirect URL and email from query params
   const searchParams = new URLSearchParams(location.search);
   const redirectParam = searchParams.get('redirect');
   const emailParam = searchParams.get('email');
   const from = redirectParam || (location.state as any)?.from || '/';
 
-  // Pre-fill email if provided
   useEffect(() => {
     if (emailParam) {
       setFormData(prev => ({ ...prev, email: emailParam }));
+      validateEmail(emailParam);
     }
   }, [emailParam]);
 
@@ -66,6 +71,22 @@ const Registro = () => {
       navigate(from, { replace: true });
     }
   }, [user, navigate, from]);
+
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    setFieldValidation(prev => ({ ...prev, email: emailRegex.test(email) }));
+  };
+
+  const validatePassword = (password: string) => {
+    setFieldValidation(prev => ({ ...prev, password: password.length >= 6 }));
+  };
+
+  const validateConfirmPassword = (confirmPassword: string) => {
+    setFieldValidation(prev => ({ 
+      ...prev, 
+      confirmPassword: confirmPassword.length >= 6 && confirmPassword === formData.password 
+    }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -143,73 +164,100 @@ const Registro = () => {
     }
   };
 
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4 py-8">
       <div className="w-full max-w-md">
-        <div className="bg-card rounded-lg shadow-soft p-8">
-          <h1 className="text-3xl font-bold text-center mb-2">Criar Conta</h1>
-          <p className="text-muted-foreground text-center mb-8">
-            Preencha os dados para começar
-          </p>
+        <div className="bg-card rounded-lg shadow-lg p-8 border border-border">
+          <div className="text-center mb-2">
+            <div className="inline-flex items-center justify-center gap-2 mb-4">
+              <span className="text-2xl">👤</span>
+            </div>
+          </div>
 
           <form onSubmit={handleSubmit} className="space-y-4" autoComplete="on">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                placeholder="seu@email.com"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                onInput={(e) => setFormData({ ...formData, email: (e.target as HTMLInputElement).value })}
-                autoComplete="email"
-                required
-              />
+              <Label htmlFor="email" className="text-sm font-medium">Email</Label>
+              <div className="relative">
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  placeholder="cristhianlima@gmail.com"
+                  value={formData.email}
+                  onChange={(e) => {
+                    setFormData({ ...formData, email: e.target.value });
+                    validateEmail(e.target.value);
+                  }}
+                  autoComplete="email"
+                  required
+                  className="pr-10 bg-muted/30 border-border"
+                />
+                {fieldValidation.email && (
+                  <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-green-500" />
+                )}
+              </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Senha</Label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                placeholder="••••••••"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                onInput={(e) => setFormData({ ...formData, password: (e.target as HTMLInputElement).value })}
-                autoComplete="new-password"
-                required
-              />
+              <Label htmlFor="password" className="text-sm font-medium">Senha</Label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  name="password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={formData.password}
+                  onChange={(e) => {
+                    setFormData({ ...formData, password: e.target.value });
+                    validatePassword(e.target.value);
+                    if (formData.confirmPassword) {
+                      validateConfirmPassword(formData.confirmPassword);
+                    }
+                  }}
+                  autoComplete="new-password"
+                  required
+                  className="pr-10 bg-muted/30 border-border"
+                />
+                {fieldValidation.password && (
+                  <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-green-500" />
+                )}
+              </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirmar Senha</Label>
-              <Input
-                id="confirmPassword"
-                name="confirmPassword"
-                type="password"
-                placeholder="••••••••"
-                value={formData.confirmPassword}
-                onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                onInput={(e) => setFormData({ ...formData, confirmPassword: (e.target as HTMLInputElement).value })}
-                autoComplete="new-password"
-                required
-              />
+              <Label htmlFor="confirmPassword" className="text-sm font-medium">Confirmar Senha</Label>
+              <div className="relative">
+                <Input
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  type="password"
+                  placeholder="••••••••"
+                  value={formData.confirmPassword}
+                  onChange={(e) => {
+                    setFormData({ ...formData, confirmPassword: e.target.value });
+                    validateConfirmPassword(e.target.value);
+                  }}
+                  autoComplete="new-password"
+                  required
+                  className="pr-10 bg-muted/30 border-border"
+                />
+                {fieldValidation.confirmPassword && (
+                  <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-green-500" />
+                )}
+              </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="genero">Identidade de Gênero</Label>
+              <Label htmlFor="genero" className="text-sm font-medium">Identidade de Gênero</Label>
               <Select value={formData.genero} onValueChange={(value) => setFormData({ ...formData, genero: value })}>
-                <SelectTrigger>
+                <SelectTrigger className="bg-muted/30 border-border">
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-popover border-border z-50">
                   <SelectItem value="Mulher cisgênero">Mulher cisgênero</SelectItem>
                   <SelectItem value="Mulher transexual/transgênero">Mulher transexual/transgênero</SelectItem>
                   <SelectItem value="Não binário">Não binário</SelectItem>
-                  <SelectItem value="Homem cisgênero">Homem cisgênero</SelectItem>
+                  <SelectItem value="Homem cisgênero" className="bg-amber-50 dark:bg-amber-950/20">Homem cisgênero</SelectItem>
                   <SelectItem value="Homem transexual/transgênero">Homem transexual/transgênero</SelectItem>
                   <SelectItem value="Outro">Outro</SelectItem>
                   <SelectItem value="Prefiro não responder">Prefiro não responder</SelectItem>
@@ -221,12 +269,12 @@ const Registro = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="faixaEtaria">Faixa Etária</Label>
+              <Label htmlFor="faixaEtaria" className="text-sm font-medium">Faixa Etária</Label>
               <Select value={formData.faixaEtaria} onValueChange={(value) => setFormData({ ...formData, faixaEtaria: value })}>
-                <SelectTrigger>
+                <SelectTrigger className="bg-muted/30 border-border">
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-popover border-border z-50">
                   <SelectItem value="18-25">18-25</SelectItem>
                   <SelectItem value="26-35">26-35</SelectItem>
                   <SelectItem value="36-45">36-45</SelectItem>
@@ -237,7 +285,7 @@ const Registro = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="estado">Estado</Label>
+              <Label htmlFor="estado" className="text-sm font-medium">Estado</Label>
               <Select 
                 value={formData.estado} 
                 onValueChange={(value) => {
@@ -249,10 +297,10 @@ const Registro = () => {
                   });
                 }}
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione" />
+                <SelectTrigger className="bg-muted/30 border-border">
+                  <SelectValue placeholder="Selecione o estado primeiro" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-popover border-border z-50">
                   {estadosBrasileiros.map((estado) => (
                     <SelectItem key={estado} value={estado}>
                       {estado}
@@ -261,40 +309,17 @@ const Registro = () => {
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
-                A região é automaticamente definida pelo estado selecionado
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="regiao">Região de Origem</Label>
-              <Select 
-                value={formData.regiao} 
-                onValueChange={(value) => setFormData({ ...formData, regiao: value })}
-                disabled={true}
-              >
-                <SelectTrigger className="opacity-70">
-                  <SelectValue placeholder="Preenchida automaticamente" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Norte">Norte</SelectItem>
-                  <SelectItem value="Nordeste">Nordeste</SelectItem>
-                  <SelectItem value="Centro-Oeste">Centro-Oeste</SelectItem>
-                  <SelectItem value="Sudeste">Sudeste</SelectItem>
-                  <SelectItem value="Sul">Sul</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
                 A região é preenchida automaticamente baseada no estado selecionado
               </p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="pertencimentoRacial">Pertencimento Racial</Label>
+              <Label htmlFor="pertencimentoRacial" className="text-sm font-medium">Pertencimento Racial</Label>
               <Select value={formData.pertencimentoRacial} onValueChange={(value) => setFormData({ ...formData, pertencimentoRacial: value })}>
-                <SelectTrigger>
+                <SelectTrigger className="bg-muted/30 border-border">
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-popover border-border z-50">
                   <SelectItem value="Preto">Preto</SelectItem>
                   <SelectItem value="Parda">Parda</SelectItem>
                   <SelectItem value="Indígena">Indígena</SelectItem>
@@ -307,12 +332,12 @@ const Registro = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="experienciaBancas">Experiência com Bancas de Heteroidentificação</Label>
+              <Label htmlFor="experienciaBancas" className="text-sm font-medium">Experiência com Bancas de Heteroidentificação</Label>
               <Select value={formData.experienciaBancas} onValueChange={(value) => setFormData({ ...formData, experienciaBancas: value })}>
-                <SelectTrigger>
+                <SelectTrigger className="bg-muted/30 border-border">
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-popover border-border z-50">
                   <SelectItem value="É minha primeira formação">É minha primeira formação</SelectItem>
                   <SelectItem value="Já participo de Bancas de heteroidentificação">Já participo de Bancas de heteroidentificação</SelectItem>
                 </SelectContent>
@@ -321,16 +346,16 @@ const Registro = () => {
 
             <Button 
               type="submit" 
-              className="w-full" 
+              className="w-full bg-[hsl(20,70%,65%)] hover:bg-[hsl(20,70%,55%)] text-white font-medium py-6 mt-6" 
               disabled={loading}
             >
-              {loading ? 'Criando conta...' : 'Criar conta'}
+              {loading ? 'Criando conta...' : 'Criar Conta'}
             </Button>
           </form>
 
           <p className="text-center mt-6 text-sm text-muted-foreground">
             Já tem uma conta?{' '}
-            <Link to="/login" className="text-primary hover:underline">
+            <Link to="/login" className="text-primary hover:underline font-medium">
               Fazer login
             </Link>
           </p>
