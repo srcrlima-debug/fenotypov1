@@ -64,7 +64,7 @@ export default function AdminSessions() {
 
       let query = supabase
         .from("sessions")
-        .select('*', { count: 'exact' })
+        .select('*, participant_count:training_participants(count)', { count: 'exact' })
         .range((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage - 1);
 
       if (statusFilter !== "all") {
@@ -87,16 +87,10 @@ export default function AdminSessions() {
       
       if (error) throw error;
 
-      const sessionsWithCounts = await Promise.all(
-        (data || []).map(async (session) => {
-          const { count: participantCount } = await supabase
-            .from("training_participants")
-            .select("*", { count: "exact", head: true })
-            .eq("training_id", session.training_id || "");
-          
-          return { ...session, participant_count: participantCount || 0 };
-        })
-      );
+      const sessionsWithCounts = (data || []).map(session => ({
+        ...session,
+        participant_count: session.participant_count?.[0]?.count || 0
+      }));
 
       if (sortBy === "participants") {
         sessionsWithCounts.sort((a, b) => 
