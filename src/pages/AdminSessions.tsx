@@ -183,8 +183,9 @@ export default function AdminSessions() {
     }
   };
 
-  const copySessionLink = (sessionId: string, sessionName: string) => {
-    const link = `${window.location.origin}/session/${sessionId}/acesso`;
+  const copySessionLink = (sessionId: string, sessionName: string, trainingId?: string | null) => {
+    const baseLink = `${window.location.origin}/session/${sessionId}/acesso`;
+    const link = trainingId ? `${baseLink}?trainingId=${trainingId}` : baseLink;
     navigator.clipboard.writeText(link);
     toast.success(`Link da sessão "${sessionName}" copiado!`);
   };
@@ -677,7 +678,7 @@ export default function AdminSessions() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => copySessionLink(session.id, session.nome)}
+                    onClick={() => copySessionLink(session.id, session.nome, session.training_id)}
                     className="hover:scale-105 transition-transform duration-300"
                   >
                     <Link2 className="w-4 h-4 mr-2" />

@@ -116,7 +116,8 @@ export default function AdminTrainings() {
   };
 
   const copySessionLink = (trainingId: string, sessionId: string, sessionName: string) => {
-    const link = `${window.location.origin}/session/${sessionId}/acesso`;
+    const baseLink = `${window.location.origin}/session/${sessionId}/acesso`;
+    const link = trainingId ? `${baseLink}?trainingId=${trainingId}` : baseLink;
     navigator.clipboard.writeText(link);
     toast.success(`Link da sessão "${sessionName}" copiado!`);
   };
