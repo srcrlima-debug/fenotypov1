@@ -115,13 +115,45 @@ export default function TrainingLogin() {
 
       console.log('[TrainingLogin] Usuário é participante, redirecionando para antessala');
 
-      // If there's a redirect URL, use it
-      if (redirectUrl) {
-        await navigateWithSession(redirectUrl);
+      // ✅ CORREÇÃO: Validar que temos os parâmetros necessários
+      if (!sessionId || !finalTrainingId) {
+        console.error('[TrainingLogin] sessionId ou trainingId ausentes:', { 
+          sessionId, 
+          finalTrainingId 
+        });
+        toast.error('Erro: Parâmetros de sessão ausentes. Redirecionando para página do treinamento.');
+        navigate(`/training/${finalTrainingId}`);
         return;
       }
 
-      await navigateWithSession('/antessala');
+      // ✅ CORREÇÃO: Construir URL com query params explícitos
+      const params = new URLSearchParams();
+      params.set('sessionId', sessionId);
+      params.set('trainingId', finalTrainingId);
+
+      console.log('[TrainingLogin] Redirecionando com params:', { 
+        sessionId, 
+        trainingId: finalTrainingId, 
+        url: `/antessala?${params.toString()}` 
+      });
+
+      // If there's a redirect URL, append params
+      if (redirectUrl) {
+        const redirectParams = new URLSearchParams();
+        redirectParams.set('sessionId', sessionId);
+        redirectParams.set('trainingId', finalTrainingId);
+        
+        const urlWithParams = redirectUrl.includes('?') 
+          ? `${redirectUrl}&${redirectParams.toString()}` 
+          : `${redirectUrl}?${redirectParams.toString()}`;
+        
+        console.log('[TrainingLogin] Redirecionando para redirectUrl com params:', urlWithParams);
+        navigate(urlWithParams);
+        return;
+      }
+
+      // Navegar para antessala com query params explícitos
+      navigate(`/antessala?${params.toString()}`);
     } catch (error) {
       console.error('[TrainingLogin] Erro ao verificar participação:', error);
     }
