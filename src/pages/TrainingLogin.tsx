@@ -8,6 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { CheckCircle2, Eye, EyeOff } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export default function TrainingLogin() {
   const { trainingId: trainingIdFromUrl } = useParams<{ trainingId: string }>();
@@ -22,7 +24,7 @@ export default function TrainingLogin() {
     navigateWithSession,
     logAccess
   } = useSessionNavigation({
-    autoRedirectIfAuthenticated: false, // Disabled to allow login
+    autoRedirectIfAuthenticated: false,
     antessalaPath: '/antessala'
   });
 
@@ -34,6 +36,8 @@ export default function TrainingLogin() {
   const [training, setTraining] = useState<any>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [emailValid, setEmailValid] = useState(false);
 
   // Validar sessionId se presente
   useEffect(() => {
@@ -52,6 +56,18 @@ export default function TrainingLogin() {
       loadTraining();
     }
   }, [finalTrainingId]);
+
+  // Validar email
+  const validateEmail = (value: string) => {
+    const isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+    setEmailValid(isValid);
+    return isValid;
+  };
+
+  const handleEmailChange = (value: string) => {
+    setEmail(value);
+    validateEmail(value);
+  };
 
   const loadTraining = async () => {
     if (!finalTrainingId) return;
@@ -164,31 +180,65 @@ export default function TrainingLogin() {
           <form onSubmit={handleSubmit} className="space-y-4" autoComplete="on">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                autoComplete="email"
-              />
+              <div className="relative">
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => handleEmailChange(e.target.value)}
+                  required
+                  autoComplete="email"
+                  placeholder="seu@email.com"
+                  className={cn(
+                    "bg-muted/30 border-border",
+                    emailValid && "border-green-500"
+                  )}
+                />
+                {emailValid && (
+                  <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-green-500" />
+                )}
+              </div>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="password">Senha</Label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                autoComplete="current-password"
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  autoComplete="current-password"
+                  placeholder="••••••••"
+                  className="bg-muted/30 border-border pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
+                </button>
+              </div>
             </div>
 
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button 
+              type="submit" 
+              className="w-full bg-[hsl(20,70%,65%)] hover:bg-[hsl(20,70%,55%)] text-white relative" 
+              disabled={loading}
+            >
+              {loading && (
+                <div className="absolute left-4">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                </div>
+              )}
               {loading ? 'Entrando...' : 'Entrar'}
             </Button>
 
@@ -197,12 +247,12 @@ export default function TrainingLogin() {
                 Não possui cadastro?{' '}
                 <button
                   type="button"
-                  onClick={() => navigateWithSession(`/training/register`, {
+                  onClick={() => navigateWithSession(`/training/signup`, {
                     additionalParams: finalTrainingId ? { trainingId: finalTrainingId } : {}
                   })}
-                  className="text-primary hover:underline"
+                  className="text-primary hover:underline font-medium"
                 >
-                  Cadastre-se
+                  Criar conta
                 </button>
               </p>
               <p className="text-muted-foreground">

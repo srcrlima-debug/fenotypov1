@@ -133,6 +133,23 @@ export default function TrainingRegister() {
     return touched[fieldName as keyof typeof touched] && errors[fieldName];
   };
 
+  // Calcular progresso do formulário
+  const calculateProgress = () => {
+    const requiredFields = ['genero', 'faixa_etaria', 'estado', 'regiao', 'consent'];
+    const filledFields = requiredFields.filter(field => {
+      const value = formData[field as keyof typeof formData];
+      if (typeof value === 'boolean') return value === true;
+      return value && value.toString().trim() !== '';
+    });
+    return {
+      filled: filledFields.length,
+      total: requiredFields.length,
+      percentage: (filledFields.length / requiredFields.length) * 100
+    };
+  };
+
+  const progress = calculateProgress();
+
   useEffect(() => {
     if (sessionId && !isValidSessionId) {
       toast.error('Link de acesso inválido. Solicite um novo link ao administrador.');
@@ -142,6 +159,16 @@ export default function TrainingRegister() {
       });
     }
   }, [sessionId, isValidSessionId, logAccess, finalTrainingId]);
+
+  // Redirecionar para login se não autenticado
+  useEffect(() => {
+    if (!authLoading && !user) {
+      toast.info('Faça login para continuar o cadastro');
+      navigateWithSession(`/training/login`, {
+        additionalParams: finalTrainingId ? { trainingId: finalTrainingId } : {}
+      });
+    }
+  }, [user, authLoading, finalTrainingId, navigateWithSession]);
 
   useEffect(() => {
     loadTraining();
@@ -453,6 +480,30 @@ export default function TrainingRegister() {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4" autoComplete="on">
+              {/* Indicador de Progresso */}
+              <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 space-y-3">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-medium text-foreground">
+                    Progresso do Cadastro
+                  </span>
+                  <span className="text-muted-foreground">
+                    {progress.filled} de {progress.total} campos obrigatórios
+                  </span>
+                </div>
+                <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                  <div 
+                    className="bg-primary h-2 rounded-full transition-all duration-500 ease-out"
+                    style={{ width: `${progress.percentage}%` }}
+                  />
+                </div>
+                {progress.percentage === 100 && (
+                  <p className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
+                    <CheckCircle className="w-4 h-4" />
+                    Todos os campos obrigatórios preenchidos!
+                  </p>
+                )}
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="genero" className="flex items-center gap-2">
                   Identidade de Gênero
