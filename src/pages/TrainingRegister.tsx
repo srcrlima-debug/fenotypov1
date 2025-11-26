@@ -186,7 +186,30 @@ export default function TrainingRegister() {
         if (data) {
           console.log('[TrainingRegister] Usuário já é participante, redirecionando para antessala');
           toast.info('Você já está cadastrado neste treinamento');
-          await navigateWithSession('/antessala');
+          
+          // ✅ CORREÇÃO: Validar que temos os parâmetros necessários
+          if (!sessionId || !finalTrainingId) {
+            console.warn('[TrainingRegister] sessionId ou trainingId ausentes para redirect:', { 
+              sessionId, 
+              finalTrainingId 
+            });
+            // Redirecionar para TrainingAccess que vai buscar a sessão ativa
+            navigate(`/training/${finalTrainingId}`);
+            return;
+          }
+          
+          // ✅ CORREÇÃO: Construir URL com query params explícitos
+          const params = new URLSearchParams();
+          params.set('sessionId', sessionId);
+          params.set('trainingId', finalTrainingId);
+          
+          console.log('[TrainingRegister] Redirecionando participante existente com params:', { 
+            sessionId, 
+            trainingId: finalTrainingId, 
+            url: `/antessala?${params.toString()}` 
+          });
+          
+          navigate(`/antessala?${params.toString()}`);
         }
       };
 
@@ -411,7 +434,29 @@ export default function TrainingRegister() {
       console.log('[TrainingRegister] Cadastro concluído com sucesso!');
       toast.success('Cadastro realizado com sucesso!');
       
-      await navigateWithSession('/antessala');
+      // ✅ CORREÇÃO: Validar parâmetros antes de redirecionar
+      if (!sessionId || !finalTrainingId) {
+        console.warn('[TrainingRegister] sessionId ou trainingId ausentes após cadastro:', { 
+          sessionId, 
+          finalTrainingId 
+        });
+        // Redirecionar para TrainingAccess que vai buscar a sessão ativa
+        navigate(`/training/${finalTrainingId}`);
+        return;
+      }
+
+      // ✅ CORREÇÃO: Construir URL com query params explícitos
+      const params = new URLSearchParams();
+      params.set('sessionId', sessionId);
+      params.set('trainingId', finalTrainingId);
+
+      console.log('[TrainingRegister] Redirecionando para antessala com params:', { 
+        sessionId, 
+        trainingId: finalTrainingId, 
+        url: `/antessala?${params.toString()}` 
+      });
+
+      navigate(`/antessala?${params.toString()}`);
     } catch (error: any) {
       console.error('Error during registration:', error);
       toast.error(error.message || 'Erro ao realizar cadastro');
