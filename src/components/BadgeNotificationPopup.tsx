@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { X, Sparkles } from "lucide-react";
-import confetti from "canvas-confetti";
 
 interface BadgeNotificationPopupProps {
   badge: {
@@ -20,37 +19,6 @@ export function BadgeNotificationPopup({ badge, onClose }: BadgeNotificationPopu
   useEffect(() => {
     if (badge) {
       setIsVisible(true);
-      
-      // Confetti animation
-      const duration = 3000;
-      const animationEnd = Date.now() + duration;
-      const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 10000 };
-
-      const randomInRange = (min: number, max: number) => {
-        return Math.random() * (max - min) + min;
-      };
-
-      const interval = setInterval(() => {
-        const timeLeft = animationEnd - Date.now();
-
-        if (timeLeft <= 0) {
-          clearInterval(interval);
-          return;
-        }
-
-        const particleCount = 50 * (timeLeft / duration);
-
-        confetti({
-          ...defaults,
-          particleCount,
-          origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 },
-        });
-        confetti({
-          ...defaults,
-          particleCount,
-          origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 },
-        });
-      }, 250);
 
       // Auto close after 8 seconds
       const timeout = setTimeout(() => {
@@ -58,7 +26,6 @@ export function BadgeNotificationPopup({ badge, onClose }: BadgeNotificationPopu
       }, 8000);
 
       return () => {
-        clearInterval(interval);
         clearTimeout(timeout);
       };
     }
