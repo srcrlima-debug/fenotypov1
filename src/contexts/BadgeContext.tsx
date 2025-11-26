@@ -18,7 +18,7 @@ interface BadgeContextType {
 const BadgeContext = createContext<BadgeContextType | undefined>(undefined);
 
 export function BadgeProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const [currentBadge, setCurrentBadge] = useState<Badge | null>(null);
   const [badgeQueue, setBadgeQueue] = useState<Badge[]>([]);
 
@@ -62,7 +62,7 @@ export function BadgeProvider({ children }: { children: ReactNode }) {
   return (
     <BadgeContext.Provider value={{ checkBadges, notifyBadge }}>
       {children}
-      <BadgeNotificationPopup badge={currentBadge} onClose={handleCloseBadge} />
+      {!loading && <BadgeNotificationPopup badge={currentBadge} onClose={handleCloseBadge} />}
     </BadgeContext.Provider>
   );
 }
