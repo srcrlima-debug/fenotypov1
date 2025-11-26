@@ -9,10 +9,13 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Plus, Link2, BarChart3, GitCompare, Play, Edit, Trash2, Copy, Search, Filter, FileDown, FileSpreadsheet, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 import { logSessionAction } from "@/lib/auditLogger";
 import { exportSessionsToPDF, exportSessionsToExcel } from "@/lib/reportExport";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 interface Session {
   id: string;
@@ -31,6 +34,7 @@ export default function AdminSessions() {
   const [loading, setLoading] = useState(true);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [newSession, setNewSession] = useState({ nome: "", data: "", descricao: "" });
+  const [selectedDate, setSelectedDate] = useState<Date>();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [dateFilter, setDateFilter] = useState<string>("");
@@ -111,15 +115,21 @@ export default function AdminSessions() {
   const handleCreateSession = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!selectedDate) {
+      toast.error("Por favor, selecione uma data");
+      return;
+    }
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
+      const formattedDate = format(selectedDate, "yyyy-MM-dd");
 
       // First, create the training
       const { data: training, error: trainingError } = await supabase
         .from("trainings")
         .insert({
           nome: newSession.nome,
-          data: newSession.data,
+          data: formattedDate,
           descricao: newSession.descricao || null,
           created_by: user?.id,
           status: "active",
@@ -134,7 +144,7 @@ export default function AdminSessions() {
         .from("sessions")
         .insert({
           nome: newSession.nome,
-          data: newSession.data,
+          data: formattedDate,
           descricao: newSession.descricao || null,
           training_id: training.id,
           created_by: user?.id,
@@ -151,13 +161,14 @@ export default function AdminSessions() {
         training_id: training.id,
       });
 
-      toast.success("Session criada com sucesso!");
+      toast.success("Sessão criada com sucesso!");
       setCreateDialogOpen(false);
       setNewSession({ nome: "", data: "", descricao: "" });
+      setSelectedDate(undefined);
       loadSessions();
     } catch (error) {
       console.error("Error creating session:", error);
-      toast.error("Erro ao criar session");
+      toast.error("Erro ao criar sessão");
     }
   };
 
@@ -405,19 +416,21 @@ export default function AdminSessions() {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="container mx-auto p-6 space-y-6 animate-fade-slide-up">
       <div className="flex justify-between items-center flex-wrap gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">Gestão de Sessões</h1>
-          <p className="text-muted-foreground">
+        <div className="animate-fade-slide-in">
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+            Gestão de Sessões
+          </h1>
+          <p className="text-muted-foreground mt-1">
             {totalCount} {totalCount === 1 ? 'sessão' : 'sessões'} cadastrada{totalCount !== 1 ? 's' : ''}
           </p>
         </div>
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-2 flex-wrap animate-fade-slide-in" style={{ animationDelay: "0.1s" }}>
           <Button
             variant="outline"
             onClick={() => navigate('/admin/sessions/dashboard')}
-            className="gap-2"
+            className="gap-2 hover:scale-105 transition-transform duration-300"
           >
             <TrendingUp className="w-4 h-4" />
             Dashboard
@@ -426,7 +439,7 @@ export default function AdminSessions() {
             variant="outline"
             onClick={handleExportPDF}
             disabled={isExporting || sessions.length === 0}
-            className="gap-2"
+            className="gap-2 hover:scale-105 transition-transform duration-300"
           >
             <FileDown className="w-4 h-4" />
             Exportar PDF
@@ -435,7 +448,7 @@ export default function AdminSessions() {
             variant="outline"
             onClick={handleExportExcel}
             disabled={isExporting || sessions.length === 0}
-            className="gap-2"
+            className="gap-2 hover:scale-105 transition-transform duration-300"
           >
             <FileSpreadsheet className="w-4 h-4" />
             Exportar Excel
@@ -443,40 +456,38 @@ export default function AdminSessions() {
         </div>
         <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
             <DialogTrigger asChild>
-              <Button>
+              <Button className="hover:scale-105 transition-transform duration-300 animate-fade-slide-in" style={{ animationDelay: "0.2s" }}>
                 <Plus className="w-4 h-4 mr-2" />
                 Nova Sessão
               </Button>
             </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="animate-scale-in">
             <DialogHeader>
               <DialogTitle>Criar Nova Sessão</DialogTitle>
               <DialogDescription>
                 Preencha as informações da sessão de treinamento
               </DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleCreateSession} className="space-y-4">
+            <form onSubmit={handleCreateSession} className="space-y-4 animate-fade-slide-up">
               <div className="space-y-2">
-                <Label htmlFor="nome">Nome da Session</Label>
+                <Label htmlFor="nome">Nome da Sessão</Label>
                 <Input
                   id="nome"
                   value={newSession.nome}
                   onChange={(e) =>
                     setNewSession({ ...newSession, nome: e.target.value })
                   }
+                  className="transition-all duration-300 focus:scale-[1.01]"
+                  placeholder="Ex: Treinamento de Avaliação Fotográfica"
                   required
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="data">Data</Label>
-                <Input
-                  id="data"
-                  type="date"
-                  value={newSession.data}
-                  onChange={(e) =>
-                    setNewSession({ ...newSession, data: e.target.value })
-                  }
-                  required
+                <Label htmlFor="data">Data da Sessão</Label>
+                <DatePicker
+                  date={selectedDate}
+                  onDateChange={setSelectedDate}
+                  placeholder="Escolha a data da sessão"
                 />
               </div>
               <div className="space-y-2">
@@ -487,11 +498,17 @@ export default function AdminSessions() {
                   onChange={(e) =>
                     setNewSession({ ...newSession, descricao: e.target.value })
                   }
+                  className="transition-all duration-300 focus:scale-[1.01]"
+                  placeholder="Descreva os objetivos e detalhes da sessão..."
                   rows={3}
                 />
               </div>
-              <Button type="submit" className="w-full">
-                Criar Session
+              <Button 
+                type="submit" 
+                className="w-full hover:scale-[1.02] transition-transform duration-300"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Criar Sessão
               </Button>
             </form>
           </DialogContent>
@@ -499,7 +516,7 @@ export default function AdminSessions() {
       </div>
 
       {/* Ordenação */}
-      <Card className="mb-4">
+      <Card className="mb-4 animate-fade-slide-up hover:shadow-lg transition-shadow duration-300">
         <CardContent className="pt-6">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm font-medium text-muted-foreground">Ordenar por:</span>
@@ -507,7 +524,7 @@ export default function AdminSessions() {
               variant={sortBy === 'nome' ? 'default' : 'outline'}
               size="sm"
               onClick={() => handleSort('nome')}
-              className="gap-2"
+              className="gap-2 hover:scale-105 transition-transform duration-300"
             >
               Nome
               {getSortIcon('nome')}
@@ -516,7 +533,7 @@ export default function AdminSessions() {
               variant={sortBy === 'data' ? 'default' : 'outline'}
               size="sm"
               onClick={() => handleSort('data')}
-              className="gap-2"
+              className="gap-2 hover:scale-105 transition-transform duration-300"
             >
               Data
               {getSortIcon('data')}
@@ -525,7 +542,7 @@ export default function AdminSessions() {
               variant={sortBy === 'status' ? 'default' : 'outline'}
               size="sm"
               onClick={() => handleSort('status')}
-              className="gap-2"
+              className="gap-2 hover:scale-105 transition-transform duration-300"
             >
               Status
               {getSortIcon('status')}
@@ -534,7 +551,7 @@ export default function AdminSessions() {
               variant={sortBy === 'participants' ? 'default' : 'outline'}
               size="sm"
               onClick={() => handleSort('participants')}
-              className="gap-2"
+              className="gap-2 hover:scale-105 transition-transform duration-300"
             >
               Participantes
               {getSortIcon('participants')}
@@ -544,7 +561,7 @@ export default function AdminSessions() {
       </Card>
 
       {/* Filtros */}
-      <Card className="mb-6">
+      <Card className="mb-6 animate-fade-slide-up hover:shadow-lg transition-shadow duration-300" style={{ animationDelay: "0.1s" }}>
         <CardContent className="pt-6">
           <div className="grid gap-4 md:grid-cols-3">
             <div className="relative">
@@ -553,7 +570,7 @@ export default function AdminSessions() {
                 placeholder="Buscar por nome..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
+                className="pl-9 transition-all duration-300 focus:scale-[1.01]"
               />
             </div>
             <div className="relative">
@@ -561,7 +578,7 @@ export default function AdminSessions() {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full h-10 pl-9 pr-4 rounded-md border border-input bg-background text-sm"
+                className="w-full h-10 pl-9 pr-4 rounded-md border border-input bg-background text-sm transition-all duration-300 focus:scale-[1.01] focus:ring-2 focus:ring-ring focus:ring-offset-2"
               >
                 <option value="all">Todos os Status</option>
                 <option value="waiting">Aguardando</option>
@@ -576,6 +593,7 @@ export default function AdminSessions() {
                 value={dateFilter}
                 onChange={(e) => setDateFilter(e.target.value)}
                 placeholder="Filtrar por data"
+                className="transition-all duration-300 focus:scale-[1.01]"
               />
             </div>
           </div>
@@ -584,18 +602,25 @@ export default function AdminSessions() {
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
         {sessions.length === 0 && !loading ? (
-          <Card className="col-span-full">
+          <Card className="col-span-full animate-fade-slide-up">
             <CardContent className="flex flex-col items-center justify-center py-12">
-              <p className="text-muted-foreground mb-4">Nenhuma session criada ainda</p>
-              <Button onClick={() => setCreateDialogOpen(true)}>
+              <p className="text-muted-foreground mb-4">Nenhuma sessão criada ainda</p>
+              <Button 
+                onClick={() => setCreateDialogOpen(true)}
+                className="hover:scale-105 transition-transform duration-300"
+              >
                 <Plus className="w-4 h-4 mr-2" />
-                Criar Primeira Session
+                Criar Primeira Sessão
               </Button>
             </CardContent>
           </Card>
         ) : (
-          sessions.map((session) => (
-            <Card key={session.id}>
+          sessions.map((session, index) => (
+            <Card 
+              key={session.id}
+              className="card-3d hover:shadow-xl transition-all duration-500 animate-fade-slide-up"
+              style={{ animationDelay: `${index * 0.05}s` }}
+            >
               <CardHeader>
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
@@ -623,6 +648,7 @@ export default function AdminSessions() {
                     variant="outline"
                     size="sm"
                     onClick={() => copySessionLink(session.id, session.nome)}
+                    className="hover:scale-105 transition-transform duration-300"
                   >
                     <Link2 className="w-4 h-4 mr-2" />
                     Link
@@ -631,6 +657,7 @@ export default function AdminSessions() {
                     variant="outline"
                     size="sm"
                     onClick={() => navigate(`/admin/live/${session.id}`)}
+                    className="hover:scale-105 transition-transform duration-300"
                   >
                     <Play className="w-4 h-4 mr-2" />
                     Controlar
@@ -639,6 +666,7 @@ export default function AdminSessions() {
                     variant="outline"
                     size="sm"
                     onClick={() => navigate(`/admin/dashboard/${session.id}`)}
+                    className="hover:scale-105 transition-transform duration-300"
                   >
                     <BarChart3 className="w-4 h-4 mr-2" />
                     Dashboard
@@ -647,6 +675,7 @@ export default function AdminSessions() {
                     variant="outline"
                     size="sm"
                     onClick={() => handleDuplicateSession(session)}
+                    className="hover:scale-105 transition-transform duration-300"
                   >
                     <Copy className="w-4 h-4" />
                   </Button>
@@ -654,6 +683,7 @@ export default function AdminSessions() {
                     variant="outline"
                     size="sm"
                     onClick={() => openEditDialog(session)}
+                    className="hover:scale-105 transition-transform duration-300"
                   >
                     <Edit className="w-4 h-4" />
                   </Button>
@@ -661,11 +691,10 @@ export default function AdminSessions() {
                     variant="outline"
                     size="sm"
                     onClick={() => toggleComparison(session.id)}
-                    className={
-                      selectedForComparison.includes(session.id)
-                        ? "border-primary"
-                        : ""
-                    }
+                    className={cn(
+                      "hover:scale-105 transition-all duration-300",
+                      selectedForComparison.includes(session.id) && "border-primary ring-2 ring-primary ring-offset-2"
+                    )}
                   >
                     <GitCompare className="w-4 h-4 mr-2" />
                     {selectedForComparison.includes(session.id)
@@ -676,6 +705,7 @@ export default function AdminSessions() {
                     variant="destructive"
                     size="sm"
                     onClick={() => openDeleteDialog(session.id)}
+                    className="hover:scale-105 transition-transform duration-300"
                   >
                     <Trash2 className="w-4 h-4" />
                   </Button>
@@ -688,7 +718,7 @@ export default function AdminSessions() {
 
       {/* Paginação */}
       {totalPages > 1 && (
-        <Card className="mt-6">
+        <Card className="mt-6 animate-fade-slide-up hover:shadow-lg transition-shadow duration-300">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div className="text-sm text-muted-foreground">
@@ -700,6 +730,7 @@ export default function AdminSessions() {
                   size="sm"
                   onClick={() => goToPage(currentPage - 1)}
                   disabled={currentPage === 1}
+                  className="hover:scale-105 transition-transform duration-300"
                 >
                   <ChevronLeft className="w-4 h-4" />
                   Anterior
@@ -725,7 +756,7 @@ export default function AdminSessions() {
                         variant={currentPage === pageNum ? "default" : "outline"}
                         size="sm"
                         onClick={() => goToPage(pageNum)}
-                        className="w-10"
+                        className="w-10 hover:scale-105 transition-transform duration-300"
                       >
                         {pageNum}
                       </Button>
@@ -738,6 +769,7 @@ export default function AdminSessions() {
                   size="sm"
                   onClick={() => goToPage(currentPage + 1)}
                   disabled={currentPage === totalPages}
+                  className="hover:scale-105 transition-transform duration-300"
                 >
                   Próximo
                   <ChevronRight className="w-4 h-4" />
