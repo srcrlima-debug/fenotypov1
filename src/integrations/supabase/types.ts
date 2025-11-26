@@ -610,6 +610,15 @@ export type Database = {
         }[]
       }
       cleanup_old_rate_limit_logs: { Args: never; Returns: undefined }
+      create_session_with_training: {
+        Args: {
+          p_data: string
+          p_descricao: string
+          p_nome: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
