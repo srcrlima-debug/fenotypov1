@@ -20,10 +20,7 @@ const estadosBrasileiros = [
   'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'
 ];
 
-const registerSchema = z.object({
-  email: z.string().email({ message: 'Email inválido' }),
-  password: z.string().min(6, { message: 'A senha deve ter pelo menos 6 caracteres' }),
-  confirmPassword: z.string(),
+const profileSchema = z.object({
   genero: z.string().min(1, { message: 'Selecione o gênero' }),
   faixa_etaria: z.string().min(1, { message: 'Selecione a faixa etária' }),
   estado: z.string().min(1, { message: 'Selecione o estado' }),
@@ -33,9 +30,6 @@ const registerSchema = z.object({
   consent: z.boolean().refine(val => val === true, {
     message: 'Você deve concordar com os termos para continuar'
   })
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "As senhas não coincidem",
-  path: ["confirmPassword"],
 });
 
 export default function TrainingRegister() {
@@ -66,9 +60,6 @@ export default function TrainingRegister() {
   const DEBOUNCE_TIME = 2000;
 
   const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    confirmPassword: '',
     genero: '',
     faixa_etaria: '',
     estado: '',
@@ -79,9 +70,6 @@ export default function TrainingRegister() {
   });
 
   const [touched, setTouched] = useState({
-    email: false,
-    password: false,
-    confirmPassword: false,
     genero: false,
     faixa_etaria: false,
     estado: false,
@@ -93,27 +81,11 @@ export default function TrainingRegister() {
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const [fieldValidation, setFieldValidation] = useState({
-    email: false,
-    password: false,
-    confirmPassword: false
-  });
-
   // Validate field on change
   const validateField = (fieldName: keyof typeof formData, value: string | boolean) => {
     try {
       // Define schemas para cada campo individualmente
-      if (fieldName === 'email') {
-        z.string().email({ message: 'Email inválido' }).parse(value);
-      } else if (fieldName === 'password') {
-        z.string().min(6, { message: 'A senha deve ter pelo menos 6 caracteres' }).parse(value);
-      } else if (fieldName === 'confirmPassword') {
-        if (formData.password !== value) {
-          setErrors(prev => ({ ...prev, [fieldName]: 'As senhas não coincidem' }));
-          return false;
-        }
-        z.string().parse(value);
-      } else if (fieldName === 'genero') {
+      if (fieldName === 'genero') {
         z.string().min(1, { message: 'Selecione o gênero' }).parse(value);
       } else if (fieldName === 'faixa_etaria') {
         z.string().min(1, { message: 'Selecione a faixa etária' }).parse(value);
@@ -159,24 +131,6 @@ export default function TrainingRegister() {
 
   const isFieldInvalid = (fieldName: string) => {
     return touched[fieldName as keyof typeof touched] && errors[fieldName];
-  };
-
-  const validateEmail = (email: string) => {
-    const isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-    setFieldValidation(prev => ({ ...prev, email: isValid }));
-    return isValid;
-  };
-
-  const validatePassword = (password: string) => {
-    const isValid = password.length >= 6;
-    setFieldValidation(prev => ({ ...prev, password: isValid }));
-    return isValid;
-  };
-
-  const validateConfirmPassword = (confirmPassword: string, password: string) => {
-    const isValid = confirmPassword === password && confirmPassword.length >= 6;
-    setFieldValidation(prev => ({ ...prev, confirmPassword: isValid }));
-    return isValid;
   };
 
   useEffect(() => {
@@ -345,67 +299,63 @@ export default function TrainingRegister() {
     if (loading) {
       return;
     }
+
+    // Verificar se usuário está autenticado
+    if (!user) {
+      toast.error('Você precisa estar autenticado para completar o cadastro');
+      await navigateWithSession(`/training/login`, {
+        additionalParams: finalTrainingId ? { trainingId: finalTrainingId } : {}
+      });
+      return;
+    }
     
     setLoading(true);
     setLastSubmitTime(now);
 
     try {
-      const sanitizedEmail = formData.email.trim().toLowerCase();
-      const sanitizedPassword = formData.password.trim();
-
-      const validationResult = registerSchema.safeParse({
-        ...formData,
-        email: sanitizedEmail,
-        password: sanitizedPassword
-      });
+      const validationResult = profileSchema.safeParse(formData);
 
       if (!validationResult.success) {
         toast.error(validationResult.error.errors[0].message);
         return;
       }
 
-      let userId = user?.id;
+      // Atualizar/criar perfil do usuário
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .upsert(
+          {
+            user_id: user.id,
+            email: user.email || '',
+            genero: formData.genero.trim(),
+            faixa_etaria: formData.faixa_etaria.trim(),
+            estado: formData.estado.trim(),
+            pertencimento_racial: formData.pertencimento_racial?.trim() || null,
+            experiencia_bancas: formData.experiencia_bancas?.trim() || null,
+            regiao: formData.regiao
+          },
+          { onConflict: 'user_id' }
+        );
 
-      if (!user) {
-        const { data: authData, error: authError } = await supabase.auth.signUp({
-          email: sanitizedEmail,
-          password: sanitizedPassword,
-          options: {
-            emailRedirectTo: `${window.location.origin}/training/login?trainingId=${finalTrainingId}`
-          }
-        });
+      if (profileError) throw profileError;
 
-        if (authError) {
-          if (authError.message.includes('already registered')) {
-            toast.error('Este email já está cadastrado. Faça login.');
-            await navigateWithSession(`/training/login`, {
-              additionalParams: finalTrainingId ? { trainingId: finalTrainingId } : {}
-            });
-            return;
-          }
-          throw authError;
-        }
-
-        userId = authData.user?.id;
-      }
-
-      if (!userId) {
-        throw new Error('Erro ao criar conta');
-      }
-
+      // Registrar como participante do treinamento
       const { error: participantError } = await supabase
         .from('training_participants')
-        .insert({
-          training_id: finalTrainingId,
-          user_id: userId,
-          email: sanitizedEmail,
-          genero: formData.genero.trim(),
-          faixa_etaria: formData.faixa_etaria.trim(),
-          estado: formData.estado.trim(),
-          pertencimento_racial: formData.pertencimento_racial?.trim() || null,
-          experiencia_bancas: formData.experiencia_bancas?.trim() || null,
-          regiao: formData.regiao
-        });
+        .upsert(
+          {
+            training_id: finalTrainingId,
+            user_id: user.id,
+            email: user.email || '',
+            genero: formData.genero.trim(),
+            faixa_etaria: formData.faixa_etaria.trim(),
+            estado: formData.estado.trim(),
+            pertencimento_racial: formData.pertencimento_racial?.trim() || null,
+            experiencia_bancas: formData.experiencia_bancas?.trim() || null,
+            regiao: formData.regiao
+          },
+          { onConflict: 'training_id,user_id' }
+        );
 
       if (participantError) throw participantError;
 
@@ -503,119 +453,6 @@ export default function TrainingRegister() {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4" autoComplete="on">
-              <div className="space-y-2">
-                <Label htmlFor="email" className="flex items-center gap-2">
-                  Email
-                  {isFieldValid('email') && <CheckCircle className="h-4 w-4 text-green-500" />}
-                  {isFieldInvalid('email') && <AlertCircle className="h-4 w-4 text-destructive" />}
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      handleFieldChange('email', value);
-                      validateEmail(value);
-                    }}
-                    required
-                    autoComplete="email"
-                    placeholder="seu@email.com"
-                    className={cn(
-                      "bg-muted/30 border-border",
-                      isFieldValid('email') && "border-green-500",
-                      isFieldInvalid('email') && "border-destructive"
-                    )}
-                  />
-                  {fieldValidation.email && (
-                    <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-green-500" />
-                  )}
-                </div>
-                {isFieldInvalid('email') && (
-                  <p className="text-xs text-destructive">{errors.email}</p>
-                )}
-              </div>
-
-              {!user && (
-                <>
-                  <div className="space-y-2">
-                    <Label htmlFor="password" className="flex items-center gap-2">
-                      Senha
-                      {isFieldValid('password') && <CheckCircle className="h-4 w-4 text-green-500" />}
-                      {isFieldInvalid('password') && <AlertCircle className="h-4 w-4 text-destructive" />}
-                    </Label>
-                    <div className="relative">
-                      <Input
-                        id="password"
-                        name="password"
-                        type="password"
-                        value={formData.password}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          handleFieldChange('password', value);
-                          validatePassword(value);
-                          if (formData.confirmPassword) {
-                            validateConfirmPassword(formData.confirmPassword, value);
-                            handleFieldChange('confirmPassword', formData.confirmPassword);
-                          }
-                        }}
-                        required
-                        autoComplete="new-password"
-                        placeholder="••••••••"
-                        className={cn(
-                          "bg-muted/30 border-border",
-                          isFieldValid('password') && "border-green-500",
-                          isFieldInvalid('password') && "border-destructive"
-                        )}
-                      />
-                      {fieldValidation.password && (
-                        <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-green-500" />
-                      )}
-                    </div>
-                    {isFieldInvalid('password') && (
-                      <p className="text-xs text-destructive">{errors.password}</p>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="confirmPassword" className="flex items-center gap-2">
-                      Confirmar Senha
-                      {isFieldValid('confirmPassword') && <CheckCircle className="h-4 w-4 text-green-500" />}
-                      {isFieldInvalid('confirmPassword') && <AlertCircle className="h-4 w-4 text-destructive" />}
-                    </Label>
-                    <div className="relative">
-                      <Input
-                        id="confirmPassword"
-                        name="confirmPassword"
-                        type="password"
-                        value={formData.confirmPassword}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          handleFieldChange('confirmPassword', value);
-                          validateConfirmPassword(value, formData.password);
-                        }}
-                        required
-                        autoComplete="new-password"
-                        placeholder="••••••••"
-                        className={cn(
-                          "bg-muted/30 border-border",
-                          isFieldValid('confirmPassword') && "border-green-500",
-                          isFieldInvalid('confirmPassword') && "border-destructive"
-                        )}
-                      />
-                      {fieldValidation.confirmPassword && (
-                        <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-green-500" />
-                      )}
-                    </div>
-                    {isFieldInvalid('confirmPassword') && (
-                      <p className="text-xs text-destructive">{errors.confirmPassword}</p>
-                    )}
-                  </div>
-                </>
-              )}
-
               <div className="space-y-2">
                 <Label htmlFor="genero" className="flex items-center gap-2">
                   Identidade de Gênero
