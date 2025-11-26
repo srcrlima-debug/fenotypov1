@@ -130,7 +130,6 @@ export default function AdminSessions() {
 
     setIsCreating(true);
     try {
-      // Verificar permissão antes de criar
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
@@ -138,73 +137,20 @@ export default function AdminSessions() {
         return;
       }
 
-      // Verificar se é admin
-      const { data: roleData } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
-        .eq('role', 'admin')
-        .single();
-
-      if (!roleData) {
-        toast.error("Você não tem permissão para criar sessões");
-        return;
-      }
-
       const formattedDate = format(selectedDate, "yyyy-MM-dd");
 
-      // First, create the training
-      const { data: training, error: trainingError } = await supabase
-        .from("trainings")
-        .insert({
-          nome: newSession.nome,
-          data: formattedDate,
-          descricao: newSession.descricao || null,
-          created_by: user.id,
-          status: "active",
-        })
-        .select()
-        .single();
+      const { data, error } = await supabase.rpc('create_session_with_training', {
+        p_nome: newSession.nome,
+        p_data: formattedDate,
+        p_descricao: newSession.descricao || null,
+        p_user_id: user.id
+      });
 
-      if (trainingError) {
-        console.error('Training creation failed:', trainingError);
-        throw new Error(`Falha ao criar treinamento: ${trainingError.message}`);
-      }
+      if (error) throw error;
 
-      // Then create the session linked to the training
-      const { data: session, error: sessionError } = await supabase
-        .from("sessions")
-        .insert({
-          nome: newSession.nome,
-          data: formattedDate,
-          descricao: newSession.descricao || null,
-          training_id: training.id,
-          created_by: user.id,
-          session_status: "waiting",
-        })
-        .select()
-        .single();
-
-      // Log detalhado para debugging
-      console.log('Session insert result:', { session, sessionError });
-
-      if (sessionError) {
-        console.error('Session creation failed:', sessionError);
-        // Se session falhou, deletar o training criado
-        await supabase.from("trainings").delete().eq("id", training.id);
-        throw new Error(`Falha ao criar sessão: ${sessionError.message}`);
-      }
-
-      if (!session) {
-        console.error('Session was not created (no data returned)');
-        await supabase.from("trainings").delete().eq("id", training.id);
-        throw new Error('Sessão não foi criada. Verifique suas permissões de administrador.');
-      }
-
-      // Log audit action
-      await logSessionAction("create_session", session.id, {
+      await logSessionAction("create_session", data.session_id, {
         session_name: newSession.nome,
-        training_id: training.id,
+        training_id: data.training_id,
       });
 
       toast.success("Sessão criada com sucesso!");
@@ -213,7 +159,6 @@ export default function AdminSessions() {
       setSelectedDate(undefined);
       loadSessions();
     } catch (error: any) {
-      console.error("Error creating session:", error);
       toast.error(error.message || "Erro ao criar sessão");
     } finally {
       setIsCreating(false);
