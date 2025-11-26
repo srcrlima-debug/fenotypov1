@@ -14,6 +14,7 @@ export default function TrainingLogin() {
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const redirectUrl = searchParams.get('redirect');
+  const sessionId = searchParams.get('sessionId');
   const [loading, setLoading] = useState(false);
   const [training, setTraining] = useState<any>(null);
   const [email, setEmail] = useState('');
@@ -63,7 +64,7 @@ export default function TrainingLogin() {
 
       if (!data) {
         toast.info('Você precisa se cadastrar neste treinamento primeiro');
-        navigate(`/training/${trainingId}/register`);
+        navigate(`/training/${trainingId}/register${sessionId ? `?sessionId=${sessionId}` : ''}`);
         return;
       }
 
@@ -73,8 +74,12 @@ export default function TrainingLogin() {
         return;
       }
 
-      // Sempre redireciona para antessala - ela cuidará da sessão
-      navigate(`/training/${trainingId}/antessala`);
+      // Redireciona para antessala com sessionId se disponível
+      if (sessionId) {
+        navigate(`/antessala?sessionId=${sessionId}&trainingId=${trainingId}`);
+      } else {
+        navigate(`/training/${trainingId}/antessala`);
+      }
     } catch (error) {
       console.error('Error checking participation:', error);
     }
@@ -119,13 +124,15 @@ export default function TrainingLogin() {
 
       if (!participant) {
         toast.info('Você precisa se cadastrar neste treinamento primeiro');
-        navigate(`/training/${trainingId}/register`);
+        navigate(`/training/${trainingId}/register${sessionId ? `?sessionId=${sessionId}` : ''}`);
         return;
       }
 
       // Redirect directly
       if (redirectUrl) {
         navigate(redirectUrl);
+      } else if (sessionId) {
+        navigate(`/antessala?sessionId=${sessionId}&trainingId=${trainingId}`);
       } else {
         navigate(`/training/${trainingId}/antessala`);
       }
@@ -182,7 +189,7 @@ export default function TrainingLogin() {
             <div className="text-center text-sm space-y-2">
               <p className="text-muted-foreground">
                 Não possui cadastro?{' '}
-                <Link to={`/training/${trainingId}/register`} className="text-primary hover:underline">
+                <Link to={`/training/${trainingId}/register${sessionId ? `?sessionId=${sessionId}` : ''}`} className="text-primary hover:underline">
                   Cadastre-se
                 </Link>
               </p>
