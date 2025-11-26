@@ -276,7 +276,7 @@ export default function TrainingRegister() {
         if (authError) {
           if (authError.message.includes('already registered')) {
             toast.error('Este email já está cadastrado. Faça login.');
-            navigate(`/training/${trainingId}/login`);
+            navigate(`/training/${trainingId}/login${sessionId ? `?sessionId=${sessionId}` : ''}`);
             return;
           }
           throw authError;
@@ -606,7 +606,7 @@ export default function TrainingRegister() {
               <div className="text-center text-sm">
                 <p className="text-muted-foreground">
                   Já possui cadastro?{' '}
-                  <Link to={`/training/${trainingId}/login`} className="text-primary hover:underline">
+                  <Link to={`/training/${trainingId}/login${sessionId ? `?sessionId=${sessionId}` : ''}`} className="text-primary hover:underline">
                     Fazer login
                   </Link>
                 </p>
