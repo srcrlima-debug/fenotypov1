@@ -80,14 +80,6 @@ export default function TrainingRegister() {
   }, [sessionId, isValidSessionId, logAccess, finalTrainingId]);
 
   useEffect(() => {
-    if (authLoading) return; // Aguardar auth carregar!
-    
-    if (user && finalTrainingId) {
-      checkExistingParticipation();
-    }
-  }, [user, finalTrainingId, authLoading]);
-
-  useEffect(() => {
     loadTraining();
   }, [finalTrainingId]);
 
@@ -105,7 +97,6 @@ export default function TrainingRegister() {
 
       if (data.status !== 'active') {
         toast.error('Este treinamento não está mais aceitando inscrições');
-        navigate('/');
         return;
       }
 
@@ -113,13 +104,14 @@ export default function TrainingRegister() {
     } catch (error) {
       console.error('Error loading training:', error);
       toast.error('Treinamento não encontrado');
-      navigate('/');
     } finally {
       setLoadingTraining(false);
     }
   };
 
   const checkExistingParticipation = async () => {
+    if (!user || !finalTrainingId) return;
+
     try {
       const { data } = await supabase
         .from('training_participants')

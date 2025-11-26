@@ -32,12 +32,10 @@ export default function SessionAccess() {
   }, [sessionId, user, trainingIdFromQuery, authLoading]);
 
   const handleSessionAccess = async () => {
-    console.log('=== SESSION ACCESS START ===');
+    console.log('=== SESSION ACCESS START (SessionAccess bridge) ===');
     console.log('sessionId:', sessionId);
     console.log('trainingIdFromQuery:', trainingIdFromQuery);
-    console.log('user:', user?.id || 'NOT_LOGGED_IN');
-    console.log('authLoading:', authLoading);
-    
+
     await logAccess('started', { trainingId: trainingIdFromQuery || undefined });
 
     if (!sessionId) {
@@ -56,113 +54,52 @@ export default function SessionAccess() {
     }
 
     try {
-      let trainingId = trainingIdFromQuery;
+      // Se já veio com trainingId na URL, usamos direto
+      let trainingId = trainingIdFromQuery || undefined;
 
-      // Se não tem trainingId na URL, buscar da sessão
+      // Caso contrário, buscamos a sessão para descobrir o treinamento vinculado
       if (!trainingId) {
-        console.log('[SessionAccess] Buscando trainingId da sessão no banco...');
-        
+        console.log('[SessionAccess] Buscando sessão no banco para obter trainingId...');
+
         const { data: session, error } = await supabase
           .from('sessions')
           .select('id, training_id, nome')
           .eq('id', sessionId)
-          .single();
+          .maybeSingle();
 
         console.log('[SessionAccess] Resposta do banco:', { session, error });
 
         if (error) {
-          console.error('[SessionAccess] Erro do banco:', error);
-          await logAccess('session_not_found', { 
-            error: error.message, 
-            errorCode: error.code 
-          });
+          console.error('[SessionAccess] Erro ao buscar sessão:', error);
+          await logAccess('session_not_found', { error: error.message, errorCode: error.code });
           toast.error('Sessão não encontrada. Verifique se o link está correto.');
           navigate('/');
           return;
         }
 
-        if (!session) {
-          await logAccess('session_not_found', { 
-            error: 'No session data', 
-            errorCode: 'NO_DATA' 
-          });
-          toast.error('Sessão não encontrada.');
+        if (!session || !session.training_id) {
+          await logAccess('session_not_found', { error: 'No session or training_id', errorCode: 'NO_DATA' });
+          toast.error('Sessão ou treinamento não encontrados.');
           navigate('/');
           return;
         }
 
-        await logAccess('session_found', { trainingId: session.training_id });
         trainingId = session.training_id;
-      } else {
-        await logAccess('trainingid_from_url', { trainingId });
+        await logAccess('session_found', { trainingId });
       }
 
-      if (!trainingId) {
-        await logAccess('error', { 
-          error: 'No trainingId', 
-          errorCode: 'MISSING_TRAINING_ID' 
-        });
-        toast.error('Treinamento não vinculado a esta sessão');
-        navigate('/');
-        return;
-      }
+      // Neste ponto temos sessionId + trainingId
+      console.log('[SessionAccess] Redirecionando para TrainingAccess com sessão vinculada');
+      await logAccess('redirect_to_training_access', { trainingId });
 
-      // Se não logado, vai para registro
-      if (!user) {
-        await logAccess('redirecting_to_register', { trainingId });
-        console.log('[SessionAccess] Usuário não autenticado, redirecionando para registro');
-        navigate(`/training/register?trainingId=${trainingId}&sessionId=${sessionId}`);
-        return;
-      }
+      const params = new URLSearchParams();
+      params.set('sessionId', sessionId);
+      params.set('trainingId', trainingId!);
 
-      // Se logado, verificar se é admin ou participante
-      console.log('[SessionAccess] Verificando se usuário é admin...');
-      const { data: adminRole } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
-        .eq('role', 'admin')
-        .maybeSingle();
-
-      const isAdmin = !!adminRole;
-
-      if (isAdmin) {
-        await logAccess('admin_access_granted', { trainingId });
-        console.log('[SessionAccess] Usuário é admin, acesso permitido');
-        navigate(`/antessala?sessionId=${sessionId}&trainingId=${trainingId}`);
-        return;
-      }
-
-      // Se não é admin, verificar participação
-      console.log('[SessionAccess] Verificando participação do usuário...');
-      await logAccess('checking_participation', { trainingId });
-
-      const { data: participant, error: participantError } = await supabase
-        .from('training_participants')
-        .select('id')
-        .eq('training_id', trainingId)
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      console.log('[SessionAccess] Resultado da verificação:', { participant, participantError });
-
-      if (!participant) {
-        await logAccess('user_not_participant', { trainingId });
-        console.log('[SessionAccess] Usuário não é participante, redirecionando para registro');
-        navigate(`/training/register?trainingId=${trainingId}&sessionId=${sessionId}`);
-        return;
-      }
-
-      // Usuário registrado, vai para antessala
-      await logAccess('redirecting_to_antessala', { trainingId });
-      console.log('[SessionAccess] Usuário é participante, redirecionando para antessala');
-      navigate(`/antessala?sessionId=${sessionId}&trainingId=${trainingId}`);
+      navigate(`/training/${trainingId}/acesso?${params.toString()}`);
     } catch (error: any) {
       console.error('[SessionAccess] Exceção:', error);
-      await logAccess('exception', { 
-        error: error.message, 
-        errorCode: 'EXCEPTION' 
-      });
+      await logAccess('exception', { error: error.message, errorCode: 'EXCEPTION' });
       toast.error('Erro ao processar acesso. Tente novamente.');
       navigate('/');
     } finally {
