@@ -21,7 +21,6 @@ export default function TrainingLogin() {
     sessionId,
     trainingId: trainingIdFromHook,
     isValidSessionId,
-    navigateWithSession,
     logAccess
   } = useSessionNavigation({
     autoRedirectIfAuthenticated: false,
@@ -90,8 +89,6 @@ export default function TrainingLogin() {
   const checkParticipationForUser = async (userId: string) => {
     if (!finalTrainingId) return;
 
-    console.log('[TrainingLogin] Verificando participação para userId:', userId);
-
     try {
       const { data, error } = await supabase
         .from('training_participants')
@@ -100,44 +97,24 @@ export default function TrainingLogin() {
         .eq('user_id', userId)
         .maybeSingle();
 
-      if (error) {
-        console.error('[TrainingLogin] Erro ao verificar participação:', error);
-        throw error;
-      }
+      if (error) throw error;
 
       if (!data) {
-        console.log('[TrainingLogin] Usuário não é participante, redirecionando para registro');
         toast.info('Você precisa se cadastrar neste treinamento primeiro');
-        
-        await navigateWithSession(`/training/${finalTrainingId}/register`);
+        navigate(`/training/${finalTrainingId}/register?sessionId=${sessionId}&trainingId=${finalTrainingId}`);
         return;
       }
 
-      console.log('[TrainingLogin] Usuário é participante, redirecionando para antessala');
-
-      // ✅ CORREÇÃO: Validar que temos os parâmetros necessários
       if (!sessionId || !finalTrainingId) {
-        console.error('[TrainingLogin] sessionId ou trainingId ausentes:', { 
-          sessionId, 
-          finalTrainingId 
-        });
         toast.error('Erro: Parâmetros de sessão ausentes. Redirecionando para página do treinamento.');
         navigate(`/training/${finalTrainingId}`);
         return;
       }
 
-      // ✅ CORREÇÃO: Construir URL com query params explícitos
       const params = new URLSearchParams();
       params.set('sessionId', sessionId);
       params.set('trainingId', finalTrainingId);
 
-      console.log('[TrainingLogin] Redirecionando com params:', { 
-        sessionId, 
-        trainingId: finalTrainingId, 
-        url: `/antessala?${params.toString()}` 
-      });
-
-      // If there's a redirect URL, append params
       if (redirectUrl) {
         const redirectParams = new URLSearchParams();
         redirectParams.set('sessionId', sessionId);
@@ -147,15 +124,13 @@ export default function TrainingLogin() {
           ? `${redirectUrl}&${redirectParams.toString()}` 
           : `${redirectUrl}?${redirectParams.toString()}`;
         
-        console.log('[TrainingLogin] Redirecionando para redirectUrl com params:', urlWithParams);
         navigate(urlWithParams);
         return;
       }
 
-      // Navegar para antessala com query params explícitos
       navigate(`/antessala?${params.toString()}`);
     } catch (error) {
-      console.error('[TrainingLogin] Erro ao verificar participação:', error);
+      console.error('Erro ao verificar participação:', error);
     }
   };
 
@@ -168,8 +143,6 @@ export default function TrainingLogin() {
         toast.error('ID do treinamento não encontrado');
         return;
       }
-
-      console.log('[TrainingLogin] Iniciando login...');
 
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -190,27 +163,20 @@ export default function TrainingLogin() {
         return;
       }
 
-      console.log('[TrainingLogin] Login bem-sucedido, userId:', data.session.user.id);
       toast.success('Login realizado com sucesso!');
-
       await checkParticipationForUser(data.session.user.id);
       
     } catch (error: any) {
-      console.error('[TrainingLogin] Erro durante login:', error);
+      console.error('Erro durante login:', error);
       toast.error(error.message || 'Erro ao fazer login');
     } finally {
       setLoading(false);
     }
   };
 
-  // Auto-redirect para usuário já logado
   useEffect(() => {
-    if (authLoading) return;
-    
-    if (user && finalTrainingId) {
-      console.log('[TrainingLogin] Usuário já está logado, verificando participação automaticamente');
-      checkParticipationForUser(user.id);
-    }
+    if (authLoading || !user || !finalTrainingId) return;
+    checkParticipationForUser(user.id);
   }, [user, finalTrainingId, authLoading]);
 
   return (
@@ -293,9 +259,7 @@ export default function TrainingLogin() {
                 Não possui cadastro?{' '}
                 <button
                   type="button"
-                  onClick={() => navigateWithSession(`/training/signup`, {
-                    additionalParams: finalTrainingId ? { trainingId: finalTrainingId } : {}
-                  })}
+                  onClick={() => navigate(`/training/signup?sessionId=${sessionId}&trainingId=${finalTrainingId}`)}
                   className="text-primary hover:underline font-medium"
                 >
                   Criar conta
